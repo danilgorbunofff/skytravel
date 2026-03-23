@@ -1,0 +1,62 @@
+// Prisma schema placeholder. We'll hook it up after you confirm DB credentials.
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tour {
+  id          Int      @id @default(autoincrement())
+  destination String
+  title       String
+  price       Int
+  startDate   DateTime
+  endDate     DateTime
+  transport   String
+  image       String
+  description String? @db.Text
+  photos      Json?
+  i18n        Json?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  leads       Lead[]
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Lead {
+  id               Int      @id @default(autoincrement())
+  email            String
+  destination      String?
+  tourId           Int?
+  marketingConsent Boolean  @default(false)
+  gdprConsent      Boolean  @default(false)
+  source           String?
+  createdAt        DateTime @default(now())
+  tour             Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
+
+  @@index([marketingConsent])
+  @@index([tourId])
+}
+
+model EmailCampaign {
+  id             Int      @id @default(autoincrement())
+  subject        String
+  preheader      String?
+  fromEmail      String?
+  html           String
+  segment        String
+  recipientCount Int      @default(0)
+  sentAt         DateTime?
+  createdAt      DateTime @default(now())
+}
