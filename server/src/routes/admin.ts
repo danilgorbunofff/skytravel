@@ -284,7 +284,7 @@ router.post("/campaigns/send", async (req, res) => {
   await transporter.sendMail({
     from: fromValue,
     to: fromValue,
-    bcc: leads.map((lead) => lead.email),
+    bcc: leads.map((lead: { email: string }) => lead.email),
     subject: subjectValue,
     html: htmlValue,
     headers: preheader

@@ -46,7 +46,7 @@ router.post("/inquiries", async (req, res) => {
       if (!newDestination) {
         newDestination = destinationValue;
       } else {
-        const destinations = newDestination.split(",").map((d) => d.trim());
+        const destinations = newDestination.split(",").map((d: string) => d.trim());
         if (!destinations.includes(destinationValue)) {
           newDestination += `, ${destinationValue}`;
         }
