@@ -4,7 +4,7 @@ import fs from "node:fs";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
-import prisma from "../prisma";
+import prisma from "../prisma.js";
 
 const router = Router();
 const uploadDir = path.resolve(process.cwd(), "uploads");
