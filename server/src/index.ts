@@ -4,9 +4,9 @@ import cors from "cors";
 import session from "express-session";
 import path from "node:path";
 import bcrypt from "bcrypt";
-import publicRoutes from "./routes/public";
-import adminRoutes from "./routes/admin";
-import prisma from "./prisma";
+import publicRoutes from "./routes/public.js";
+import adminRoutes from "./routes/admin.js";
+import prisma from "./prisma.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
