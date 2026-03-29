@@ -9,6 +9,7 @@ import adminRoutes from "./routes/admin.js";
 import prisma from "./prisma.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const port = Number(process.env.PORT) || 4000;
 const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const allowedOrigins = clientOrigin.split(",").map((item) => item.trim()).filter(Boolean);
@@ -29,7 +30,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
     },
   })
