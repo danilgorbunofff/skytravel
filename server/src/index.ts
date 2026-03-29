@@ -37,8 +37,14 @@ app.use(
 );
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
-app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+app.get("/api/test-ip", async (_req, res) => {
+  try {
+    const response = await fetch("https://api64.ipify.org?format=json");
+    const data = (await response.json()) as { ip: string };
+    res.json({ outboundIp: data.ip });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to discover outbound IP" });
+  }
 });
 
 app.use("/api", publicRoutes);
