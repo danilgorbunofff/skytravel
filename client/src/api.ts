@@ -2,62 +2,94 @@ import type { OwnTour } from "./data";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-// ── Shared request helpers ────────────────────────────────────────────
-
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body && !(options.body instanceof FormData)
-        ? { "Content-Type": "application/json" }
-        : {}),
-      ...options.headers,
-    },
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || `Request failed: ${res.status}`);
-  }
-
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
-
-function publicGet<T>(path: string) {
-  return request<T>(path);
-}
-
-function adminRequest<T>(path: string, options: RequestInit = {}) {
-  return request<T>(path, { credentials: "include", ...options });
-}
-
-function adminPost<T>(path: string, body?: unknown) {
-  return adminRequest<T>(path, {
-    method: "POST",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-}
-
-function adminPut<T>(path: string, body?: unknown) {
-  return adminRequest<T>(path, {
-    method: "PUT",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-}
-
-function adminDelete<T>(path: string) {
-  return adminRequest<T>(path, { method: "DELETE" });
-}
-
-// ── Public API ────────────────────────────────────────────────────────
-
 export async function fetchTours() {
-  const data = await publicGet<{ items: OwnTour[] }>("/api/tours");
-  return data.items;
+  const res = await fetch(`${API_URL}/api/tours`);
+  if (!res.ok) throw new Error("Failed to load tours");
+  const data = await res.json();
+  return data.items as OwnTour[];
+}
+
+export async function fetchAdminTours() {
+  const res = await fetch(`${API_URL}/api/admin/tours`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load tours");
+  const data = await res.json();
+  return data.items as OwnTour[];
+}
+
+export async function fetchAdminMe() {
+  const res = await fetch(`${API_URL}/api/admin/me`, { credentials: "include" });
+  if (!res.ok) throw new Error("Not authenticated");
+  return res.json();
+}
+
+export async function loginAdmin(login: string, password: string) {
+  const res = await fetch(`${API_URL}/api/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ login, password }),
+  });
+  if (!res.ok) throw new Error("Invalid credentials");
+  return res.json();
+}
+
+export async function logoutAdmin() {
+  await fetch(`${API_URL}/api/admin/logout`, { method: "POST", credentials: "include" });
+}
+
+export async function createTour(payload: OwnTour) {
+  const res = await fetch(`${API_URL}/api/admin/tours`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to create tour");
+  const data = await res.json();
+  return data.item as OwnTour;
+}
+
+export async function updateTour(id: number, payload: OwnTour) {
+  const res = await fetch(`${API_URL}/api/admin/tours/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to update tour");
+  const data = await res.json();
+  return data.item as OwnTour;
+}
+
+export async function deleteTour(id: number) {
+  const res = await fetch(`${API_URL}/api/admin/tours/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok && res.status !== 204) throw new Error("Failed to delete tour");
+}
+
+export async function updateTourOrder(ids: number[]) {
+  const res = await fetch(`${API_URL}/api/admin/tours/order`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error("Failed to update order");
+  return res.json();
+}
+
+export async function uploadAdminImages(files: FileList | File[]) {
+  const body = new FormData();
+  Array.from(files).forEach((file) => body.append("images", file));
+  const res = await fetch(`${API_URL}/api/admin/uploads`, {
+    method: "POST",
+    body,
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to upload images");
+  return res.json() as Promise<{ urls: string[] }>;
 }
 
 export async function createInquiry(data: {
@@ -68,69 +100,28 @@ export async function createInquiry(data: {
   gdprConsent?: boolean;
   source?: string;
 }) {
-  return request<{ ok: boolean }>("/api/inquiries", {
+  const res = await fetch(`${API_URL}/api/inquiries`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error("Failed to submit inquiry");
+  return res.json();
 }
-
-// ── Admin API ─────────────────────────────────────────────────────────
-
-export async function fetchAdminTours() {
-  const data = await adminRequest<{ items: OwnTour[] }>("/api/admin/tours");
-  return data.items;
-}
-
-export async function fetchAdminMe() {
-  return adminRequest<{ ok: boolean; login: string }>("/api/admin/me");
-}
-
-export async function loginAdmin(login: string, password: string) {
-  return adminPost<{ ok: boolean; login: string }>("/api/admin/login", { login, password });
-}
-
-export async function logoutAdmin() {
-  return adminPost<void>("/api/admin/logout");
-}
-
-export async function createTour(payload: OwnTour) {
-  const data = await adminPost<{ item: OwnTour }>("/api/admin/tours", payload);
-  return data.item;
-}
-
-export async function updateTour(id: number, payload: OwnTour) {
-  const data = await adminPut<{ item: OwnTour }>(`/api/admin/tours/${id}`, payload);
-  return data.item;
-}
-
-export async function deleteTour(id: number) {
-  return adminDelete<void>(`/api/admin/tours/${id}`);
-}
-
-export async function updateTourOrder(ids: number[]) {
-  return adminPut<{ ok: boolean }>("/api/admin/tours/order", { ids });
-}
-
-export async function uploadAdminImages(files: FileList | File[]) {
-  const body = new FormData();
-  Array.from(files).forEach((file) => body.append("images", file));
-  return adminRequest<{ urls: string[] }>("/api/admin/uploads", {
-    method: "POST",
-    body,
-  });
-}
-
-// ── Leads ─────────────────────────────────────────────────────────────
 
 export async function fetchLeads() {
-  return adminRequest<{ items: unknown[] }>("/api/admin/leads");
+  const res = await fetch(`${API_URL}/api/admin/leads`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch leads");
+  return res.json();
 }
 
 export async function deleteLead(id: number) {
-  return adminDelete<void>(`/api/admin/leads/${id}`);
+  const res = await fetch(`${API_URL}/api/admin/leads/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok && res.status !== 204) throw new Error("Failed to delete lead");
 }
-
-// ── Campaigns ─────────────────────────────────────────────────────────
 
 export async function sendCampaign(payload: {
   subject: string;
@@ -139,10 +130,17 @@ export async function sendCampaign(payload: {
   html: string;
   segment: string;
 }) {
-  return adminPost<{ ok: boolean; campaignId: number; recipients: number }>(
-    "/api/admin/campaigns/send",
-    payload,
-  );
+  const res = await fetch(`${API_URL}/api/admin/campaigns/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to send campaign");
+  }
+  return res.json();
 }
 
 export async function sendTestCampaign(payload: {
@@ -152,23 +150,49 @@ export async function sendTestCampaign(payload: {
   html: string;
   testEmail: string;
 }) {
-  return adminPost<{ ok: boolean }>("/api/admin/campaigns/test", payload);
+  const res = await fetch(`${API_URL}/api/admin/campaigns/test`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to send test email");
+  }
+  return res.json();
 }
 
-// ── Alexandria ────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// Alexandria XML feed integration
+// ──────────────────────────────────────────────────────────────
 
 export async function importAlexandria(options?: { zeme?: number; dryRun?: boolean }) {
-  return adminPost<{
+  const res = await fetch(`${API_URL}/api/admin/alexandria/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(options ?? {}),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Alexandria import failed");
+  }
+  return res.json() as Promise<{
     ok: boolean;
     created?: number;
     updated?: number;
     total?: number;
     dryRun?: boolean;
     message?: string;
-  }>("/api/admin/alexandria/import", options ?? {});
+  }>;
 }
 
 export async function previewAlexandria(zeme?: number): Promise<Record<string, unknown>> {
   const params = zeme !== undefined ? `?zeme=${zeme}` : "";
-  return adminRequest<Record<string, unknown>>(`/api/admin/alexandria/preview/json${params}`);
+  const res = await fetch(`${API_URL}/api/admin/alexandria/preview/json${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch Alexandria preview");
+  return res.json();
 }

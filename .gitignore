@@ -14,3 +14,5 @@ tsconfig.tsbuildinfo
 .vercel/
 .netlify/
 Thumbs.db
+*.key
+*.pem

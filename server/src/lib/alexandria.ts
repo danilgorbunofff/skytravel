@@ -1,8 +1,9 @@
 import { XMLParser } from "fast-xml-parser";
-import { config } from "../config.js";
 
-const { url: ALEXANDRIA_URL, apiKey: ALEXANDRIA_API_KEY, country: ALEXANDRIA_COUNTRY } =
-  config.alexandria;
+const ALEXANDRIA_URL =
+  process.env.ALEXANDRIA_API_URL || "http://export.alexandria.cz/export";
+const ALEXANDRIA_API_KEY = process.env.ALEXANDRIA_API_KEY || "";
+const ALEXANDRIA_COUNTRY = Number(process.env.ALEXANDRIA_COUNTRY || 107);
 
 // ──────────────────────────────────────────────
 // Raw fetch – returns the XML string as-is
