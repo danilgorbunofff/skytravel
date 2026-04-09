@@ -1,16 +1,17 @@
 import { Router } from "express";
 import prisma from "../prisma.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 const router = Router();
 
-router.get("/tours", async (_req, res) => {
+router.get("/tours", asyncHandler(async (_req, res) => {
   const tours = await prisma.tour.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
   res.json({ items: tours });
-});
+}));
 
-router.post("/inquiries", async (req, res) => {
+router.post("/inquiries", asyncHandler(async (req, res) => {
   const { email, destination, tourId, marketingConsent, gdprConsent, source } = req.body ?? {};
   const emailValue = String(email ?? "").trim();
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
@@ -78,6 +79,6 @@ router.post("/inquiries", async (req, res) => {
   }
 
   return res.status(201).json({ ok: true, item: lead });
-});
+}));
 
 export default router;

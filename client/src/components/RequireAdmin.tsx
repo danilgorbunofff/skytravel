@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { fetchAdminMe } from "../api";
 import "../site.css";
 
 export default function RequireAdmin({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState<"checking" | "authed" | "unauth">("checking");
 
-  useEffect(() => {
+  const checkAuth = useCallback(() => {
+    setStatus("checking");
     fetchAdminMe()
       .then(() => setStatus("authed"))
       .catch(() => {
@@ -15,6 +17,20 @@ export default function RequireAdmin({ children }: { children: React.ReactNode }
         navigate("/admin-login", { replace: true });
       });
   }, [navigate]);
+
+  // Re-check auth on route change
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth, location.pathname]);
+
+  // Re-check auth when window regains focus (catches expired sessions)
+  useEffect(() => {
+    const onFocus = () => {
+      if (status === "authed") checkAuth();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [checkAuth, status]);
 
   if (status !== "authed") {
     return <div className="admin-guard" aria-busy="true" />;

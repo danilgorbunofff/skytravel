@@ -10,6 +10,10 @@ import TermsPage from "./pages/TermsPage";
 import RequireAdmin from "./components/RequireAdmin";
 import ScrollToTop from "./components/ScrollToTop";
 
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  return <RequireAdmin>{children}</RequireAdmin>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -20,35 +24,16 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
-            <RequireAdmin>
-              <AdminPage />
-            </RequireAdmin>
-          }
-        />
-        <Route
-          path="/admin/statistics"
-          element={
-            <RequireAdmin>
-              <AdminStatisticsPage />
-            </RequireAdmin>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <RequireAdmin>
-              <AdminSettingsPage />
-            </RequireAdmin>
-          }
-        />
-        <Route
-          path="/admin/emails"
-          element={
-            <RequireAdmin>
-              <AdminEmailPage />
-            </RequireAdmin>
+            <AdminGuard>
+              <Routes>
+                <Route index element={<AdminPage />} />
+                <Route path="statistics" element={<AdminStatisticsPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="emails" element={<AdminEmailPage />} />
+              </Routes>
+            </AdminGuard>
           }
         />
       </Routes>

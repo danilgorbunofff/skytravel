@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createTour, deleteTour, fetchAdminMe, fetchAdminTours, updateTour, updateTourOrder } from "../api";
+import { createTour, deleteTour, fetchAdminMe, fetchAdminTours, importAlexandria, updateTour, updateTourOrder } from "../api";
 import { type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { useLanguage } from "../hooks/useLanguage";
@@ -37,6 +37,8 @@ export default function AdminPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [alexImporting, setAlexImporting] = useState(false);
+  const [alexResult, setAlexResult] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -63,6 +65,27 @@ export default function AdminPage() {
     setForm(emptyForm);
     setEditingId(null);
     setPhotos([]);
+  }
+
+  async function handleAlexandriaImport() {
+    setAlexImporting(true);
+    setAlexResult(null);
+    try {
+      const result = await importAlexandria();
+      if (result.ok && result.total !== undefined) {
+        setAlexResult(
+          `Import dokončen: ${result.created ?? 0} nových, ${result.updated ?? 0} aktualizovaných (celkem ${result.total}).`
+        );
+        const refreshed = await fetchAdminTours();
+        setTours(refreshed);
+      } else {
+        setAlexResult(result.message ?? "Import se nezdařil – zkontrolujte strukturu XML.");
+      }
+    } catch (err) {
+      setAlexResult(err instanceof Error ? err.message : "Chyba při importu.");
+    } finally {
+      setAlexImporting(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -504,6 +527,23 @@ export default function AdminPage() {
               </div>
             </aside>
           </div>
+        </section>
+
+        <section className="admin-card">
+          <h2>Import CK Alexandria</h2>
+          <p className="note">
+            Načte nabídky z XML feedu CK Alexandria a uloží je jako zájezdy. Stávající zájezdy se aktualizují, nové se přidají.
+          </p>
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={handleAlexandriaImport}
+              disabled={alexImporting}
+            >
+              {alexImporting ? "Importuji…" : "Importovat nabídky z Alexandrie"}
+            </button>
+          </div>
+          {alexResult && <p className="note">{alexResult}</p>}
         </section>
 
         <section className="admin-card">

@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  defaultOwnTours,
   favorites,
   heroImages,
   partnerTours,
   type OwnTour,
   type PartnerTour,
 } from "../data";
-import { createInquiry, fetchTours } from "../api";
 import { formatPrice, normalizeText } from "../utils";
 import { useLanguage } from "../hooks/useLanguage";
+import { useTours } from "../hooks/useTours";
+import { useLeadPopup } from "../hooks/useLeadPopup";
+import { useCookieConsent } from "../hooks/useCookieConsent";
+import TourModal, { type ModalDetail } from "../components/TourModal";
+import TourCard from "../components/TourCard";
+import LeadPopup from "../components/LeadPopup";
+import CookieConsent from "../components/CookieConsent";
 import "../site.css";
 
 function inBudgetRange(price: number, activeBudget: number) {
@@ -20,21 +25,11 @@ function inBudgetRange(price: number, activeBudget: number) {
   return price > 20000;
 }
 
-type ModalDetail = {
-  type: string;
-  title: string;
-  description: string;
-  location: string;
-  term: string;
-  meta: string;
-  source: string;
-  photos: string[];
-  isOwnTour: boolean;
-  tourId?: number;
-};
-
 export default function HomePage() {
   const { lang, setLang, t } = useLanguage();
+  const ownTours = useTours();
+  const leadPopup = useLeadPopup();
+  const cookies = useCookieConsent();
   
   const budgetOptions = [
     { value: 10000, label: t("budget1") },
@@ -44,7 +39,7 @@ export default function HomePage() {
   ];
 
   function formatDateRange(start?: string, end?: string) {
-    if (!start || !end) return t("transportOffer"); // Reuse or use a specific fallback
+    if (!start || !end) return t("transportOffer");
     const startDate = new Date(start);
     const endDate = new Date(end);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
@@ -53,25 +48,11 @@ export default function HomePage() {
     return `${startDate.toLocaleDateString("cs-CZ")} - ${endDate.toLocaleDateString("cs-CZ")}`;
   }
 
-  const [ownTours, setOwnTours] = useState<OwnTour[]>(defaultOwnTours);
   const [activeBudget, setActiveBudget] = useState(10000);
   const [activeDestination, setActiveDestination] = useState("");
   const [activeTransport, setActiveTransport] = useState("");
   const [heroIndex, setHeroIndex] = useState(0);
   const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
-  const [modalIndex, setModalIndex] = useState(0);
-  const [modalEmail, setModalEmail] = useState("");
-  const [modalConsent, setModalConsent] = useState(true);
-  const [modalGdpr, setModalGdpr] = useState(false);
-  const [inquiryMsg, setInquiryMsg] = useState("");
-  const [showCookies, setShowCookies] = useState(true);
-  const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
-  const [showLeadPopup, setShowLeadPopup] = useState(false);
-  const [leadEmail, setLeadEmail] = useState("");
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
-  const [leadConsent, setLeadConsent] = useState(true);
-  const [leadGdpr, setLeadGdpr] = useState(false);
-  const [leadError, setLeadError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isPeoplePickerOpen, setIsPeoplePickerOpen] = useState(false);
@@ -80,44 +61,10 @@ export default function HomePage() {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
 
-  const [cookiePrefs, setCookiePrefs] = useState({
-    necessary: true,
-    analytics: false,
-    marketing: false,
-  });
-
-  function applyCookiePrefs(prefs: typeof cookiePrefs) {
-    setCookiePrefs(prefs);
-    setShowCookies(false);
-    setCookieSettingsOpen(false);
-  }
-
   const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
   const budgetRef = useRef<HTMLDivElement | null>(null);
   const indicatorRef = useRef<HTMLSpanElement | null>(null);
-
-  useEffect(() => {
-    fetchTours()
-      .then((items) => {
-        if (items.length > 0) {
-          const sorted = [...items].sort((a, b) => {
-            const orderA = a.sortOrder ?? 0;
-            const orderB = b.sortOrder ?? 0;
-            if (orderA !== orderB) return orderA - orderB;
-            const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
-            const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
-            return dateB - dateA;
-          });
-          setOwnTours(sorted);
-        } else {
-          setOwnTours(defaultOwnTours);
-        }
-      })
-      .catch(() => {
-        setOwnTours(defaultOwnTours);
-      });
-  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -189,10 +136,7 @@ export default function HomePage() {
     setModalDetail({
       type: t("modalTypeOwn"),
       title: i18n.destination || tour.destination,
-      description:
-        i18n.description ||
-        tour.description ||
-        t("modalDescOwn"),
+      description: i18n.description || tour.description || t("modalDescOwn"),
       location: i18n.destination || tour.destination,
       term: formatDateRange(tour.startDate, tour.endDate),
       meta: `${t("from")} ${formatPrice(tour.price)}`,
@@ -201,11 +145,6 @@ export default function HomePage() {
       isOwnTour: true,
       tourId: tour.id,
     });
-    setModalIndex(0);
-    setInquiryMsg("");
-    setModalEmail("");
-    setModalConsent(true);
-    setModalGdpr(false);
   }
 
   async function openPartnerModal(tour: PartnerTour) {
@@ -221,7 +160,6 @@ export default function HomePage() {
       photos: [tour.image],
       isOwnTour: false,
     });
-    setModalIndex(0);
   }
 
   function openFavoriteModal(item: { destination: string; price: number; image: string }) {
@@ -236,12 +174,9 @@ export default function HomePage() {
       photos: [item.image],
       isOwnTour: false,
     });
-    setModalIndex(0);
   }
 
-  function closeModal() {
-    setModalDetail(null);
-  }
+  const closeModal = useCallback(() => setModalDetail(null), []);
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
@@ -249,28 +184,6 @@ export default function HomePage() {
 
   function handleTransportChange(event: React.ChangeEvent<HTMLSelectElement>) {
     setActiveTransport(event.target.value);
-  }
-
-  function handleModalSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!modalEmail || !modalDetail) return;
-    createInquiry({
-      email: modalEmail,
-      destination: modalDetail.title,
-      tourId: modalDetail.isOwnTour ? modalDetail.tourId : undefined,
-      marketingConsent: modalConsent,
-      gdprConsent: modalGdpr,
-      source: "tour-inquiry",
-    })
-      .then(() => {
-        setInquiryMsg(`${t("modalSuccess")} ${modalEmail}.`);
-        setModalEmail("");
-        setModalConsent(true);
-        setModalGdpr(false);
-      })
-      .catch(() => {
-        setInquiryMsg(t("modalError"));
-      });
   }
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
@@ -283,57 +196,6 @@ export default function HomePage() {
     const headerOffset = header ? header.offsetHeight : 0;
     const top = target.getBoundingClientRect().top + window.scrollY - headerOffset - 8;
     window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
-  }
-
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && modalDetail) closeModal();
-    }
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [modalDetail]);
-
-  useEffect(() => {
-    if (!modalDetail) return;
-    const timer = window.setInterval(() => {
-      setModalIndex((prev) => (prev + 1) % modalDetail.photos.length);
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [modalDetail]);
-
-  useEffect(() => {
-    document.body.style.overflow = modalDetail ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [modalDetail]);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("leadPopupEnabled");
-    const enabled = raw === null ? true : raw === "true";
-    if (!enabled) return;
-    const timer = window.setTimeout(() => {
-      setShowLeadPopup(true);
-    }, 5000);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  function handleLeadSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!leadEmail) return;
-    setLeadError("");
-    createInquiry({
-      email: leadEmail,
-      marketingConsent: leadConsent,
-      gdprConsent: leadGdpr,
-      source: "lead-popup",
-    })
-      .then(() => {
-        setLeadSubmitted(true);
-      })
-      .catch(() => {
-        setLeadError("Odeslání se nepodařilo, zkuste to prosím znovu.");
-      });
   }
 
   return (
@@ -590,20 +452,11 @@ export default function HomePage() {
             </header>
             <div id="ownGrid" className="destination-grid">
               {ownTours.map((tour) => (
-                <article
+                <TourCard
                   key={`${tour.id ?? tour.destination}`}
-                  className="destination-card"
-                  style={{ backgroundImage: `url('${tour.image}')` }}
+                  tour={tour}
                   onClick={() => openOwnTourModal(tour)}
-                >
-                  <div className="destination-card__body">
-                    <h3>{tour.i18n?.[lang]?.destination || tour.destination}</h3>
-                    <div className="destination-card__meta">
-                      <span className="own-badge">{tour.i18n?.[lang]?.title || tour.title}</span>
-                      <span className="price-pill">{t("from")} {formatPrice(tour.price)}</span>
-                    </div>
-                  </div>
-                </article>
+                />
               ))}
             </div>
           </div>
@@ -797,293 +650,19 @@ export default function HomePage() {
       </footer>
 
       {modalDetail && (
-        <div id="detailModal" className="detail-modal" aria-hidden={!modalDetail}>
-          <div className="detail-modal__backdrop" onClick={closeModal} />
-          <div className="detail-modal__content">
-            <button className="detail-modal__close" type="button" onClick={closeModal}>
-              ✕
-            </button>
-            <div className="detail-modal__gallery">
-              <div id="modalCarouselTrack" className="modal-carousel-track">
-                {modalDetail.photos.map((photo, index) => (
-                  <img
-                    key={photo}
-                    className={`modal-carousel-slide${index === modalIndex ? " is-active" : ""}`}
-                    src={photo}
-                    alt=""
-                    loading="lazy"
-                  />
-                ))}
-              </div>
-              <button
-                id="modalPrev"
-                className="modal-carousel-arrow modal-carousel-arrow--prev"
-                type="button"
-                onClick={() =>
-                  setModalIndex(
-                    (prev) => (prev - 1 + modalDetail.photos.length) % modalDetail.photos.length
-                  )
-                }
-                hidden={modalDetail.photos.length <= 1}
-              >
-                ‹
-              </button>
-              <button
-                id="modalNext"
-                className="modal-carousel-arrow modal-carousel-arrow--next"
-                type="button"
-                onClick={() => setModalIndex((prev) => (prev + 1) % modalDetail.photos.length)}
-                hidden={modalDetail.photos.length <= 1}
-              >
-                ›
-              </button>
-              <div id="modalDots" className="modal-carousel-dots" hidden={modalDetail.photos.length <= 1}>
-                {modalDetail.photos.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    className={`modal-carousel-dot${index === modalIndex ? " is-active" : ""}`}
-                    aria-label={`Slide ${index + 1}`}
-                    onClick={() => setModalIndex(index)}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="detail-modal__body">
-              <p id="modalType" className="detail-modal__type">
-                {modalDetail.type}
-              </p>
-              <h3 id="modalTitle">{modalDetail.title}</h3>
-              <p id="modalDescription" className="detail-modal__description">
-                {modalDetail.description}
-              </p>
-              <div className="modal-info-grid">
-                <div className="modal-info-item">
-                  <span>{t("modalLoc")}</span>
-                  <strong id="modalLocation">{modalDetail.location}</strong>
-                </div>
-                <div className="modal-info-item">
-                  <span>{t("modalTerm")}</span>
-                  <strong id="modalTerm">{modalDetail.term}</strong>
-                </div>
-                <div className="modal-info-item">
-                  <span>{t("modalTransportTop")}</span>
-                  <strong id="modalSource">{modalDetail.source}</strong>
-                </div>
-                <div className="modal-info-item modal-info-item--price">
-                  <span>{t("modalPriceFrom")}</span>
-                  <strong id="modalMeta">{modalDetail.meta}</strong>
-                </div>
-              </div>
-
-              {modalDetail.isOwnTour && (
-                <form id="modalInquiryForm" className="modal-inquiry-form" onSubmit={handleModalSubmit}>
-                  <label htmlFor="modalEmail">{t("modalEmailLabel")}</label>
-                  <input
-                    id="modalEmail"
-                    type="email"
-                    placeholder={t("modalEmailPlaceholder")}
-                    value={modalEmail}
-                    required
-                    onChange={(event) => setModalEmail(event.target.value)}
-                  />
-                  <label className="modal-consent">
-                    <input
-                      type="checkbox"
-                      checked={modalConsent}
-                      onChange={(event) => setModalConsent(event.target.checked)}
-                    />
-                    {t("modalConsentNews")}
-                  </label>
-                  <label className="modal-consent">
-                    <input
-                      type="checkbox"
-                      checked={modalGdpr}
-                      onChange={(event) => setModalGdpr(event.target.checked)}
-                      required
-                    />
-                    {t("modalConsentGdpr")} <Link to="/gdpr">{t("modalGdprLink")}.</Link>
-                  </label>
-                  <button type="submit">{t("modalSubmit")}</button>
-                </form>
-              )}
-              {inquiryMsg && (
-                <p id="modalInquiryMsg" className="modal-inquiry-msg">
-                  {inquiryMsg}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <TourModal detail={modalDetail} onClose={closeModal} />
       )}
 
-      {showCookies && (
-        <>
-          <div className="cookie-banner" role="dialog" aria-live="polite" aria-label="Cookie consent">
-            <div className="cookie-banner__content">
-              <div className="cookie-banner__text">
-                <strong>{t("cookieTitle")}</strong>
-                <span>{t("cookieText")}</span>
-              </div>
-              <div className="cookie-banner__actions">
-                <button
-                  type="button"
-                  className="cookie-btn cookie-btn--primary"
-                  onClick={() => applyCookiePrefs({ necessary: true, analytics: true, marketing: true })}
-                >
-                  {t("cookieAccept")}
-                </button>
-                <button
-                  type="button"
-                  className="cookie-btn"
-                  onClick={() => applyCookiePrefs({ necessary: true, analytics: false, marketing: false })}
-                >
-                  {t("cookieReject")}
-                </button>
-              </div>
-              <button
-                type="button"
-                className="cookie-manage"
-                onClick={() => setCookieSettingsOpen(true)}
-              >
-                {t("cookieManage")}
-              </button>
-            </div>
-          </div>
-          {cookieSettingsOpen && (
-            <div className="cookie-modal" role="dialog" aria-modal="true" aria-label={t("cookieSettingsTitle")}>
-              <div className="cookie-modal__backdrop" onClick={() => setCookieSettingsOpen(false)} />
-              <div className="cookie-modal__card">
-                <div className="cookie-modal__head">
-                  <strong>{t("cookieSettingsTitle")}</strong>
-                  <button type="button" onClick={() => setCookieSettingsOpen(false)}>
-                    ✕
-                  </button>
-                </div>
-                <p className="cookie-modal__intro">{t("cookieSettingsIntro")}</p>
-                <div className="cookie-modal__list">
-                  <div className="cookie-modal__item">
-                    <div>
-                      <strong>{t("cookieMarketing")}</strong>
-                      <span>{t("cookieMarketingDesc")}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className={`cookie-toggle${cookiePrefs.marketing ? " is-on" : ""}`}
-                      aria-pressed={cookiePrefs.marketing}
-                      onClick={() =>
-                        setCookiePrefs((prev) => ({ ...prev, marketing: !prev.marketing }))
-                      }
-                    />
-                  </div>
-                  <div className="cookie-modal__item">
-                    <div>
-                      <strong>{t("cookieAnalytics")}</strong>
-                      <span>{t("cookieAnalyticsDesc")}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className={`cookie-toggle${cookiePrefs.analytics ? " is-on" : ""}`}
-                      aria-pressed={cookiePrefs.analytics}
-                      onClick={() =>
-                        setCookiePrefs((prev) => ({ ...prev, analytics: !prev.analytics }))
-                      }
-                    />
-                  </div>
-                  <div className="cookie-modal__item">
-                    <div>
-                      <strong>{t("cookieNecessary")}</strong>
-                      <span>{t("cookieNecessaryDesc")}</span>
-                    </div>
-                    <button type="button" className="cookie-toggle is-on is-disabled" disabled aria-pressed />
-                  </div>
-                </div>
-                <div className="cookie-modal__actions">
-                  <button
-                    type="button"
-                    className="cookie-btn"
-                    onClick={() => applyCookiePrefs({ necessary: true, analytics: false, marketing: false })}
-                  >
-                    {t("cookieReject")}
-                  </button>
-                  <button
-                    type="button"
-                    className="cookie-btn cookie-btn--ghost"
-                    onClick={() =>
-                      applyCookiePrefs({ necessary: true, analytics: true, marketing: true })
-                    }
-                  >
-                    {t("cookieAllowAll")}
-                  </button>
-                  <button
-                    type="button"
-                    className="cookie-btn cookie-btn--primary"
-                    onClick={() =>
-                      applyCookiePrefs({
-                        necessary: true,
-                        analytics: cookiePrefs.analytics,
-                        marketing: cookiePrefs.marketing,
-                      })
-                    }
-                  >
-                    {t("cookieSave")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      <CookieConsent
+        showCookies={cookies.showCookies}
+        cookieSettingsOpen={cookies.cookieSettingsOpen}
+        setCookieSettingsOpen={cookies.setCookieSettingsOpen}
+        cookiePrefs={cookies.cookiePrefs}
+        setCookiePrefs={cookies.setCookiePrefs}
+        applyCookiePrefs={cookies.applyCookiePrefs}
+      />
 
-      {showLeadPopup && (
-        <div className="lead-modal" role="dialog" aria-modal="true" aria-label="Exkluzivní nabídky">
-          <div className="lead-modal__backdrop" onClick={() => setShowLeadPopup(false)} />
-          <div className="lead-modal__card">
-            <button className="lead-modal__close" type="button" onClick={() => setShowLeadPopup(false)}>
-              ✕
-            </button>
-            <div className="lead-modal__content">
-              <div className="lead-modal__badge">{t("leadBadge")}</div>
-              <h3>{t("leadTitle")}</h3>
-              <p>{t("leadDesc")}</p>
-              {!leadSubmitted ? (
-                <form className="lead-modal__form" onSubmit={handleLeadSubmit}>
-                  <input
-                    type="email"
-                    placeholder={t("modalEmailPlaceholder")}
-                    value={leadEmail}
-                    onChange={(event) => setLeadEmail(event.target.value)}
-                    required
-                  />
-                  <label className="lead-modal__consent">
-                    <input
-                      type="checkbox"
-                      checked={leadConsent}
-                      onChange={(event) => setLeadConsent(event.target.checked)}
-                    />
-                    {t("leadConsentNews")}
-                  </label>
-                  <label className="lead-modal__consent">
-                    <input
-                      type="checkbox"
-                      checked={leadGdpr}
-                      onChange={(event) => setLeadGdpr(event.target.checked)}
-                      required
-                    />
-                    {t("modalConsentGdpr")} <Link to="/gdpr">{t("modalGdprLink")}.</Link>
-                  </label>
-                  {leadError && <p className="lead-modal__error">{leadError}</p>}
-                  <button type="submit">{t("leadSubmit")}</button>
-                </form>
-              ) : (
-                <div className="lead-modal__success">
-                  {t("leadSuccess")} {leadEmail}.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <LeadPopup {...leadPopup} />
     </div>
   );
 }

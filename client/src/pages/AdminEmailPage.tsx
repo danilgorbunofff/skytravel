@@ -35,7 +35,7 @@ export default function AdminEmailPage() {
   useEffect(() => {
     fetchLeads()
       .then((data) => {
-        setLeads(data.items ?? []);
+        setLeads((data.items ?? []) as Lead[]);
         setError("");
       })
       .catch(() => setError("Nepodařilo se načíst e-maily."))
