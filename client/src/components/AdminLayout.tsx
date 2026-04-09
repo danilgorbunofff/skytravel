@@ -28,6 +28,9 @@ export default function AdminLayout({
           <NavLink to="/admin/emails" className={({ isActive }) => (isActive ? "is-active" : "")}>
             E-maily
           </NavLink>
+          <NavLink to="/admin/alexandria" className={({ isActive }) => (isActive ? "is-active" : "")}>
+            Alexandria
+          </NavLink>
           <NavLink to="/admin/settings" className={({ isActive }) => (isActive ? "is-active" : "")}>
             Nastavení
           </NavLink>

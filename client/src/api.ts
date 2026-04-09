@@ -167,7 +167,58 @@ export async function sendTestCampaign(payload: {
 // Alexandria XML feed integration
 // ──────────────────────────────────────────────────────────────
 
-export async function importAlexandria(options?: { zeme?: number; dryRun?: boolean }) {
+export type AlexandriaTour = {
+  externalId: string;
+  destination: string;
+  title: string;
+  price: number;
+  startDate: string;
+  endDate: string;
+  transport: string;
+  image: string;
+  description: string | null;
+  photos: string[];
+};
+
+export type AlexandriaFilters = {
+  q?: string;
+  transport?: string;
+  priceMin?: number;
+  priceMax?: number;
+  dateStart?: string;
+  dateEnd?: string;
+  zeme?: number;
+  refresh?: boolean;
+};
+
+export async function fetchAlexandriaTours(
+  filters?: AlexandriaFilters,
+): Promise<{ total: number; filtered: number; items: AlexandriaTour[] }> {
+  const params = new URLSearchParams();
+  if (filters?.q) params.set("q", filters.q);
+  if (filters?.transport) params.set("transport", filters.transport);
+  if (filters?.priceMin !== undefined) params.set("priceMin", String(filters.priceMin));
+  if (filters?.priceMax !== undefined) params.set("priceMax", String(filters.priceMax));
+  if (filters?.dateStart) params.set("dateStart", filters.dateStart);
+  if (filters?.dateEnd) params.set("dateEnd", filters.dateEnd);
+  if (filters?.zeme !== undefined) params.set("zeme", String(filters.zeme));
+  if (filters?.refresh) params.set("refresh", "true");
+  const qs = params.toString();
+  const res = await fetch(`${API_URL}/api/admin/alexandria/tours${qs ? `?${qs}` : ""}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to fetch Alexandria tours");
+  }
+  return res.json();
+}
+
+export async function importAlexandria(options?: {
+  zeme?: number;
+  dryRun?: boolean;
+  ids?: string[];
+}) {
   const res = await fetch(`${API_URL}/api/admin/alexandria/import`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -186,6 +237,15 @@ export async function importAlexandria(options?: { zeme?: number; dryRun?: boole
     dryRun?: boolean;
     message?: string;
   }>;
+}
+
+export async function refreshAlexandriaCache() {
+  const res = await fetch(`${API_URL}/api/admin/alexandria/refresh`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to refresh cache");
+  return res.json();
 }
 
 export async function previewAlexandria(zeme?: number): Promise<Record<string, unknown>> {

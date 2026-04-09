@@ -5,6 +5,7 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminStatisticsPage from "./pages/AdminStatisticsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminEmailPage from "./pages/AdminEmailPage";
+import AdminAlexandriaPage from "./pages/AdminAlexandriaPage";
 import GdprPage from "./pages/GdprPage";
 import TermsPage from "./pages/TermsPage";
 import RequireAdmin from "./components/RequireAdmin";
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="statistics" element={<AdminStatisticsPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="emails" element={<AdminEmailPage />} />
+                <Route path="alexandria" element={<AdminAlexandriaPage />} />
               </Routes>
             </AdminGuard>
           }
