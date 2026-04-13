@@ -178,10 +178,10 @@ export function extractToursFromParsed(
             if (!startDate || !endDate || !price) continue;
 
             const akce = attr(objekt, "akce");
-            const terminId = attr(termin, "ident_hl");
-            const externalId = akce && terminId
-              ? `${akce}-${terminId}`
-              : `${hotelId}-${startDate.toISOString().slice(0, 10)}`;
+            const dateKey = startDate.toISOString().slice(0, 10);
+            const externalId = akce
+              ? `${akce}-${dateKey}-${transportType}`
+              : `${hotelId}-${dateKey}-${transportType}`;
 
             results.push({
               externalId,
