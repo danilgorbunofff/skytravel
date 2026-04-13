@@ -49,7 +49,8 @@ export async function fetchAlexandriaRaw(countryId?: number): Promise<string> {
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
-  isArray: (_name, _jpath, isLeaf) => !isLeaf,
+  isArray: (name) =>
+    ["zeme", "oblast", "misto", "hotel", "objekt", "obrazek", "termin", "cena", "ikona", "katalog"].includes(name),
 });
 
 export async function fetchAlexandriaParsed(
