@@ -114,15 +114,14 @@ function mapTransport(raw: string): string {
   return "bus";
 }
 
-/** Extract lowest non-zero price from cena elements */
+/** Extract the first (main adult) non-zero price from cena elements */
 function extractPrice(termin: Record<string, unknown>): number {
   const cenaNodes = ensureArray(termin.cena);
-  let min = Infinity;
   for (const c of cenaNodes) {
     const p = Number(attr(c, "cena"));
-    if (p > 0 && p < min) min = p;
+    if (p > 0) return p;
   }
-  return min === Infinity ? 0 : min;
+  return 0;
 }
 
 // ──────────────────────────────────────────────
