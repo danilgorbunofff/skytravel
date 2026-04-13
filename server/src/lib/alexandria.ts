@@ -114,14 +114,15 @@ function mapTransport(raw: string): string {
   return "bus";
 }
 
-/** Extract the first (main adult) non-zero price from cena elements */
+/** Extract the lowest positive adult price from cena elements */
 function extractPrice(termin: Record<string, unknown>): number {
   const cenaNodes = ensureArray(termin.cena);
+  let min = Infinity;
   for (const c of cenaNodes) {
     const p = Number(attr(c, "cena"));
-    if (p > 0) return p;
+    if (p > 0 && p < min) min = p;
   }
-  return 0;
+  return min === Infinity ? 0 : min;
 }
 
 // ──────────────────────────────────────────────
@@ -155,6 +156,10 @@ export function extractToursFromParsed(
           const hotelId = attr(objekt, "ident_hotel");
           const hotelUrl = attr(objekt, "url");
           const stars = attr(objekt, "hvezdy");
+          const hotelDesc =
+            attr(objekt, "popis") ||
+            String((objekt as Record<string, unknown>)["#text"] ?? "").trim() ||
+            null;
 
           // Hotel-level images
           const hotelImages = ensureArray((hotel as any)?.obrazek)
@@ -180,8 +185,8 @@ export function extractToursFromParsed(
             const akce = attr(objekt, "akce");
             const dateKey = startDate.toISOString().slice(0, 10);
             const externalId = akce
-              ? `${akce}-${dateKey}-${transportType}`
-              : `${hotelId}-${dateKey}-${transportType}`;
+              ? `${akce}-${dateKey}-${transportType}-${board}`
+              : `${hotelId}-${dateKey}-${transportType}-${board}`;
 
             results.push({
               externalId,
@@ -192,7 +197,7 @@ export function extractToursFromParsed(
               endDate,
               transport: transportType,
               image: hotelImages[0] ?? "",
-              description: null,
+              description: hotelDesc,
               photos: hotelImages,
               url: hotelUrl,
               stars,

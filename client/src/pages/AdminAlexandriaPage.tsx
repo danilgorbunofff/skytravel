@@ -10,6 +10,31 @@ import {
 import { formatPrice } from "../utils";
 import "../admin.css";
 
+// ── Labels ────────────────────────────────────────────────────────────────
+const boardLabel: Record<string, string> = {
+  AI: "All Inclusive",
+  UAI: "Ultra AI",
+  FB: "Plná penze",
+  HB: "Polopenze",
+  BB: "Snídaně",
+  RO: "Bez stravy",
+  SC: "Vlastní doprava",
+};
+
+const transportLabel: Record<string, string> = {
+  plane: "✈ Letecky",
+  bus: "🚌 Autobusem",
+  train: "🚆 Vlakem",
+  car: "🚗 Vlastní",
+  boat: "🚢 Lodí",
+};
+
+function starsDisplay(stars: string | undefined): string {
+  const n = parseInt(stars ?? "", 10);
+  if (!n || n < 1 || n > 5) return "";
+  return "★".repeat(n) + "☆".repeat(5 - n);
+}
+
 export default function AdminAlexandriaPage() {
   // ── Data ──
   const [tours, setTours] = useState<AlexandriaTour[]>([]);
@@ -21,45 +46,72 @@ export default function AdminAlexandriaPage() {
   // ── Filters ──
   const [search, setSearch] = useState("");
   const [transport, setTransport] = useState("");
+  const [board, setBoard] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // ── Sort (client-side) ──
+  const [sortBy, setSortBy] = useState<"price" | "date">("price");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // ── Selection & import ──
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
 
-  // ── Fetch with current filters ──
-  const loadTours = useCallback(
-    async (refresh = false) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const filters: AlexandriaFilters = {};
-        if (search) filters.q = search;
-        if (transport) filters.transport = transport;
-        if (priceMin) filters.priceMin = Number(priceMin);
-        if (priceMax) filters.priceMax = Number(priceMax);
-        if (dateStart) filters.dateStart = dateStart;
-        if (dateEnd) filters.dateEnd = dateEnd;
-        if (refresh) filters.refresh = true;
-
-        const result = await fetchAlexandriaTours(filters);
-        setTours(result.items);
-        setTotalCount(result.total);
-        setFilteredCount(result.filtered);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Nepodařilo se načíst nabídky");
-      } finally {
-        setLoading(false);
+  // ── Sorted tours (client-side, no extra fetch) ──
+  const sortedTours = useMemo(() => {
+    const arr = [...tours];
+    arr.sort((a, b) => {
+      if (sortBy === "date") {
+        const d = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        return sortDir === "asc" ? d : -d;
       }
-    },
-    [search, transport, priceMin, priceMax, dateStart, dateEnd],
+      const d = a.price - b.price;
+      return sortDir === "asc" ? d : -d;
+    });
+    return arr;
+  }, [tours, sortBy, sortDir]);
+
+  // ── Unique board options extracted from loaded data ──
+  const boardOptions = useMemo(
+    () => [...new Set(tours.map((t) => t.board).filter((b): b is string => Boolean(b)))].sort(),
+    [tours],
   );
 
-  // initial load
+  // ── Core fetch – accepts explicit filter object ──
+  const loadTours = useCallback(async (filters: AlexandriaFilters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchAlexandriaTours(filters);
+      setTours(result.items);
+      setTotalCount(result.total);
+      setFilteredCount(result.filtered);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nepodařilo se načíst nabídky");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Build filter object from current state
+  function buildFilters(): AlexandriaFilters {
+    const f: AlexandriaFilters = {};
+    if (search) f.q = search;
+    if (transport) f.transport = transport;
+    if (board) f.board = board;
+    if (priceMin) f.priceMin = Number(priceMin);
+    if (priceMax) f.priceMax = Number(priceMax);
+    if (dateStart) f.dateStart = dateStart;
+    if (dateEnd) f.dateEnd = dateEnd;
+    return f;
+  }
+
+  // Initial load
   useEffect(() => {
     loadTours();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -67,23 +119,61 @@ export default function AdminAlexandriaPage() {
   // ── Handlers ──
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    loadTours();
+    const errors: Record<string, string> = {};
+    if (priceMin && priceMax && Number(priceMin) > Number(priceMax)) {
+      errors.price = "Minimální cena nesmí být větší než maximální.";
+    }
+    if (dateStart && dateEnd && dateStart > dateEnd) {
+      errors.date = "Datum od nesmí být po datu do.";
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+    loadTours(buildFilters());
   }
 
   function handleReset() {
     setSearch("");
     setTransport("");
+    setBoard("");
     setPriceMin("");
     setPriceMax("");
     setDateStart("");
     setDateEnd("");
     setSelected(new Set());
     setImportResult(null);
+    setValidationErrors({});
+    loadTours();
   }
 
   async function handleRefresh() {
     await refreshAlexandriaCache();
-    loadTours(true);
+    loadTours({ ...buildFilters(), refresh: true });
+  }
+
+  function toggleSort(field: "price" | "date") {
+    if (sortBy === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortDir("asc");
+    }
+  }
+
+  // Remove a single active filter chip and immediately reload
+  function removeFilter(field: keyof AlexandriaFilters, clearFn: () => void) {
+    clearFn();
+    const f: AlexandriaFilters = {};
+    if (field !== "q" && search) f.q = search;
+    if (field !== "transport" && transport) f.transport = transport;
+    if (field !== "board" && board) f.board = board;
+    if (field !== "priceMin" && priceMin) f.priceMin = Number(priceMin);
+    if (field !== "priceMax" && priceMax) f.priceMax = Number(priceMax);
+    if (field !== "dateStart" && dateStart) f.dateStart = dateStart;
+    if (field !== "dateEnd" && dateEnd) f.dateEnd = dateEnd;
+    loadTours(f);
   }
 
   function toggleSelect(id: string) {
@@ -96,10 +186,10 @@ export default function AdminAlexandriaPage() {
   }
 
   function toggleSelectAll() {
-    if (selected.size === tours.length) {
+    if (selected.size === sortedTours.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(tours.map((t) => t.externalId)));
+      setSelected(new Set(sortedTours.map((t) => t.externalId)));
     }
   }
 
@@ -139,13 +229,50 @@ export default function AdminAlexandriaPage() {
     return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
   };
 
-  const transportLabel: Record<string, string> = {
-    plane: "✈ Letecky",
-    bus: "🚌 Autobusem",
-    train: "🚆 Vlakem",
-    car: "🚗 Vlastní",
-    boat: "🚢 Lodí",
-  };
+  // ── Active filter chips ──
+  type FilterChip = { key: string; label: string; clear: () => void };
+  const activeChips: FilterChip[] = (
+    [
+      search && {
+        key: "q",
+        label: `Hledám: „${search}"`,
+        clear: () => removeFilter("q", () => setSearch("")),
+      },
+      transport && {
+        key: "transport",
+        label: `Doprava: ${transportLabel[transport] ?? transport}`,
+        clear: () => removeFilter("transport", () => setTransport("")),
+      },
+      board && {
+        key: "board",
+        label: `Strava: ${boardLabel[board] ?? board}`,
+        clear: () => removeFilter("board", () => setBoard("")),
+      },
+      priceMin && {
+        key: "priceMin",
+        label: `Cena od: ${formatPrice(Number(priceMin))}`,
+        clear: () => removeFilter("priceMin", () => setPriceMin("")),
+      },
+      priceMax && {
+        key: "priceMax",
+        label: `Cena do: ${formatPrice(Number(priceMax))}`,
+        clear: () => removeFilter("priceMax", () => setPriceMax("")),
+      },
+      dateStart && {
+        key: "dateStart",
+        label: `Od: ${fmtDate(dateStart)}`,
+        clear: () => removeFilter("dateStart", () => setDateStart("")),
+      },
+      dateEnd && {
+        key: "dateEnd",
+        label: `Do: ${fmtDate(dateEnd)}`,
+        clear: () => removeFilter("dateEnd", () => setDateEnd("")),
+      },
+    ] as (FilterChip | false)[]
+  ).filter(Boolean) as FilterChip[];
+
+  const sortIcon = (field: "price" | "date") =>
+    sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
   return (
     <AdminLayout title="CK Alexandria – Nabídky">
@@ -214,6 +341,33 @@ export default function AdminAlexandriaPage() {
               </select>
             </div>
             <div className="alex-filter-field">
+              <label htmlFor="alexBoard">Strava</label>
+              <select
+                id="alexBoard"
+                value={board}
+                onChange={(e) => setBoard(e.target.value)}
+              >
+                <option value="">Vše</option>
+                {boardOptions.length > 0 ? (
+                  boardOptions.map((b) => (
+                    <option key={b} value={b}>
+                      {boardLabel[b] ?? b}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="AI">All Inclusive</option>
+                    <option value="UAI">Ultra AI</option>
+                    <option value="FB">Plná penze</option>
+                    <option value="HB">Polopenze</option>
+                    <option value="BB">Snídaně</option>
+                    <option value="RO">Bez stravy</option>
+                    <option value="SC">Vlastní doprava</option>
+                  </>
+                )}
+              </select>
+            </div>
+            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
               <label htmlFor="alexPriceMin">Cena od</label>
               <input
                 id="alexPriceMin"
@@ -225,7 +379,7 @@ export default function AdminAlexandriaPage() {
                 onChange={(e) => setPriceMin(e.target.value)}
               />
             </div>
-            <div className="alex-filter-field">
+            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
               <label htmlFor="alexPriceMax">Cena do</label>
               <input
                 id="alexPriceMax"
@@ -237,7 +391,7 @@ export default function AdminAlexandriaPage() {
                 onChange={(e) => setPriceMax(e.target.value)}
               />
             </div>
-            <div className="alex-filter-field">
+            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
               <label htmlFor="alexDateStart">Od</label>
               <input
                 id="alexDateStart"
@@ -246,7 +400,7 @@ export default function AdminAlexandriaPage() {
                 onChange={(e) => setDateStart(e.target.value)}
               />
             </div>
-            <div className="alex-filter-field">
+            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
               <label htmlFor="alexDateEnd">Do</label>
               <input
                 id="alexDateEnd"
@@ -256,6 +410,18 @@ export default function AdminAlexandriaPage() {
               />
             </div>
           </div>
+
+          {(validationErrors.price || validationErrors.date) && (
+            <div className="alex-filter-errors">
+              {validationErrors.price && (
+                <span className="alex-filter-error">⚠ {validationErrors.price}</span>
+              )}
+              {validationErrors.date && (
+                <span className="alex-filter-error">⚠ {validationErrors.date}</span>
+              )}
+            </div>
+          )}
+
           <div className="alex-filter-actions">
             <button type="submit" disabled={loading}>
               {loading ? "Načítám…" : "Hledat"}
@@ -268,6 +434,17 @@ export default function AdminAlexandriaPage() {
             </button>
           </div>
         </form>
+
+        {activeChips.length > 0 && (
+          <div className="alex-filter-chips">
+            <span className="alex-chips-label">Aktivní filtry:</span>
+            {activeChips.map((chip) => (
+              <button key={chip.key} type="button" className="alex-chip" onClick={chip.clear}>
+                {chip.label} <span>×</span>
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── Import controls ────────────────────────────── */}
@@ -276,8 +453,8 @@ export default function AdminAlexandriaPage() {
           <div className="alex-import-info">
             <span>
               {selected.size > 0
-                ? `Vybráno ${selected.size} z ${tours.length}`
-                : `${tours.length} nabídek`}
+                ? `Vybráno ${selected.size} z ${sortedTours.length}`
+                : `Zobrazeno ${sortedTours.length}${filteredCount !== totalCount ? ` z ${totalCount} celkem` : ""}`}
             </span>
             {importResult && <p className="note">{importResult}</p>}
           </div>
@@ -306,7 +483,9 @@ export default function AdminAlexandriaPage() {
       {/* ── Error ──────────────────────────────────────── */}
       {error && (
         <section className="admin-card">
-          <p className="note" style={{ color: "#d32f2f" }}>{error}</p>
+          <p className="note" style={{ color: "#d32f2f" }}>
+            {error}
+          </p>
         </section>
       )}
 
@@ -326,27 +505,41 @@ export default function AdminAlexandriaPage() {
         {!loading && tours.length === 0 && (
           <div className="empty-state">
             <strong>Žádné nabídky</strong>
-            <p>Zkuste změnit filtry nebo obnovte feed.</p>
+            <p>Zkuste změnit filtry nebo obnovte feed tlačítkem ↻.</p>
           </div>
         )}
 
-        {!loading && tours.length > 0 && (
+        {!loading && sortedTours.length > 0 && (
           <div className="alex-table-wrap">
             <div className="alex-table-header">
               <span className="alex-col-check">
                 <input
                   type="checkbox"
-                  checked={selected.size === tours.length && tours.length > 0}
+                  checked={selected.size === sortedTours.length && sortedTours.length > 0}
                   onChange={toggleSelectAll}
                 />
               </span>
               <span className="alex-col-img">Foto</span>
               <span className="alex-col-dest">Destinace / Hotel</span>
-              <span className="alex-col-price">Cena</span>
-              <span className="alex-col-dates">Termín</span>
+              <button
+                type="button"
+                className="alex-col-price alex-sort-btn"
+                onClick={() => toggleSort("price")}
+              >
+                Cena{sortIcon("price")}
+              </button>
+              <button
+                type="button"
+                className="alex-col-dates alex-sort-btn"
+                onClick={() => toggleSort("date")}
+              >
+                Termín{sortIcon("date")}
+              </button>
               <span className="alex-col-transport">Doprava</span>
+              <span className="alex-col-link" />
             </div>
-            {tours.map((tour) => (
+
+            {sortedTours.map((tour) => (
               <div
                 key={tour.externalId || `${tour.destination}-${tour.startDate}`}
                 className={`alex-table-row${selected.has(tour.externalId) ? " is-selected" : ""}`}
@@ -368,8 +561,20 @@ export default function AdminAlexandriaPage() {
                 <span className="alex-col-dest">
                   <strong>{tour.destination}</strong>
                   <small>{tour.title}</small>
+                  <span className="alex-row-meta">
+                    {starsDisplay(tour.stars) && (
+                      <span className="alex-badge alex-badge--stars">
+                        {starsDisplay(tour.stars)}
+                      </span>
+                    )}
+                    {tour.board && (
+                      <span className="alex-badge alex-badge--board">
+                        {boardLabel[tour.board] ?? tour.board}
+                      </span>
+                    )}
+                  </span>
                   {tour.description && (
-                    <small className="alex-desc">{tour.description.slice(0, 100)}…</small>
+                    <small className="alex-desc">{tour.description.slice(0, 120)}…</small>
                   )}
                 </span>
                 <span className="alex-col-price">
@@ -380,6 +585,19 @@ export default function AdminAlexandriaPage() {
                 </span>
                 <span className="alex-col-transport">
                   {transportLabel[tour.transport] ?? tour.transport}
+                </span>
+                <span className="alex-col-link">
+                  {tour.url && (
+                    <a
+                      href={tour.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="alex-link-btn"
+                      title="Otevřít nabídku"
+                    >
+                      ↗
+                    </a>
+                  )}
                 </span>
               </div>
             ))}

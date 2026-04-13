@@ -188,6 +188,8 @@ export type AlexandriaTour = {
 export type AlexandriaFilters = {
   q?: string;
   transport?: string;
+  board?: string;
+  stars?: string;
   priceMin?: number;
   priceMax?: number;
   dateStart?: string;
@@ -202,6 +204,8 @@ export async function fetchAlexandriaTours(
   const params = new URLSearchParams();
   if (filters?.q) params.set("q", filters.q);
   if (filters?.transport) params.set("transport", filters.transport);
+  if (filters?.board) params.set("board", filters.board);
+  if (filters?.stars) params.set("stars", filters.stars);
   if (filters?.priceMin !== undefined) params.set("priceMin", String(filters.priceMin));
   if (filters?.priceMax !== undefined) params.set("priceMax", String(filters.priceMax));
   if (filters?.dateStart) params.set("dateStart", filters.dateStart);

@@ -129,6 +129,8 @@ router.get("/tours", asyncHandler(async (req, res) => {
   const countryId = req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
   const q = typeof req.query.q === "string" ? req.query.q.toLowerCase() : "";
   const transport = typeof req.query.transport === "string" ? req.query.transport : "";
+  const board = typeof req.query.board === "string" ? req.query.board : "";
+  const stars = typeof req.query.stars === "string" ? req.query.stars : "";
   const priceMin = req.query.priceMin !== undefined ? Number(req.query.priceMin) : undefined;
   const priceMax = req.query.priceMax !== undefined ? Number(req.query.priceMax) : undefined;
   const dateStart = typeof req.query.dateStart === "string" ? new Date(req.query.dateStart) : undefined;
@@ -146,7 +148,8 @@ router.get("/tours", asyncHandler(async (req, res) => {
       (t) =>
         t.destination.toLowerCase().includes(q) ||
         t.title.toLowerCase().includes(q) ||
-        (t.description?.toLowerCase().includes(q) ?? false),
+        (t.description?.toLowerCase().includes(q) ?? false) ||
+        t.board.toLowerCase().includes(q),
     );
   }
 
@@ -168,6 +171,14 @@ router.get("/tours", asyncHandler(async (req, res) => {
 
   if (dateEnd && !Number.isNaN(dateEnd.getTime())) {
     filtered = filtered.filter((t) => t.endDate <= dateEnd);
+  }
+
+  if (board) {
+    filtered = filtered.filter((t) => t.board === board);
+  }
+
+  if (stars) {
+    filtered = filtered.filter((t) => t.stars === stars);
   }
 
   res.json({

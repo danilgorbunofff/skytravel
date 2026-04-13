@@ -1664,7 +1664,7 @@ body {
 .alex-table-header,
 .alex-table-row {
   display: grid;
-  grid-template-columns: 40px 64px 1fr 100px 170px 120px;
+  grid-template-columns: 40px 64px 1fr 100px 170px 120px 36px;
   align-items: center;
   gap: 0.6rem;
   padding: 0.6rem 0.8rem;
@@ -1765,10 +1765,151 @@ body {
 }
 
 /* Responsive */
+/* Filter chips */
+.alex-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.alex-chips-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 0.15rem;
+}
+
+.alex-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #e8eefb;
+  border: 1px solid #c5d3ee;
+  border-radius: 20px;
+  padding: 0.18rem 0.65rem;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--blue-900);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.alex-chip:hover {
+  background: #d6e0f5;
+}
+
+.alex-chip span {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+/* Filter validation */
+.alex-filter-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.2rem;
+}
+
+.alex-filter-error {
+  font-size: 0.83rem;
+  color: #c62828;
+  font-weight: 600;
+}
+
+.alex-filter-field.has-error input,
+.alex-filter-field.has-error select {
+  border-color: #e53935;
+  box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.18);
+}
+
+/* Sort buttons in table header */
+.alex-sort-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.alex-sort-btn:hover {
+  color: var(--blue-700);
+}
+
+/* Row meta badges */
+.alex-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.alex-badge {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.alex-badge--stars {
+  background: #fff8e1;
+  color: #e65100;
+  letter-spacing: 0.02em;
+}
+
+.alex-badge--board {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+/* External link column */
+.alex-col-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alex-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #eef2f9;
+  color: var(--blue-700);
+  text-decoration: none;
+  font-size: 0.88rem;
+  transition: background 120ms ease;
+}
+
+.alex-link-btn:hover {
+  background: #dde7f7;
+}
+
 @media (max-width: 900px) {
   .alex-table-header,
   .alex-table-row {
-    grid-template-columns: 36px 50px 1fr 80px;
+    grid-template-columns: 36px 50px 1fr 80px 28px;
   }
 
   .alex-col-dates,
