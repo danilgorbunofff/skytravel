@@ -184,6 +184,7 @@ export type AlexandriaTour = {
   url?: string;
   stars?: string;
   board?: string;
+  offersCount?: number;
 };
 
 export type AlexandriaFilters = {
@@ -201,6 +202,7 @@ export type AlexandriaFilters = {
   limit?: number;
   sortBy?: string;
   sortDir?: string;
+  groupBy?: string;
 };
 
 export type AlexandriaCountry = {
@@ -222,7 +224,7 @@ export async function fetchAlexandriaCountries(): Promise<{ items: AlexandriaCou
 
 export async function fetchAlexandriaTours(
   filters?: AlexandriaFilters,
-): Promise<{ total: number; filtered: number; page: number; limit: number; totalPages: number; items: AlexandriaTour[] }> {
+): Promise<{ total: number; filtered: number; uniqueDestinations: number; page: number; limit: number; totalPages: number; items: AlexandriaTour[] }> {
   const params = new URLSearchParams();
   if (filters?.q) params.set("q", filters.q);
   if (filters?.transport) params.set("transport", filters.transport);
@@ -238,6 +240,7 @@ export async function fetchAlexandriaTours(
   if (filters?.limit !== undefined) params.set("limit", String(filters.limit));
   if (filters?.sortBy) params.set("sortBy", filters.sortBy);
   if (filters?.sortDir) params.set("sortDir", filters.sortDir);
+  if (filters?.groupBy) params.set("groupBy", filters.groupBy);
   const qs = params.toString();
   const res = await fetch(`${API_URL}/api/admin/alexandria/tours${qs ? `?${qs}` : ""}`, {
     credentials: "include",

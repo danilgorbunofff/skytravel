@@ -258,18 +258,58 @@ router.get("/tours", asyncHandler(async (req, res) => {
     return sortDir === "asc" ? d : -d;
   });
 
+  // ── Optional destination grouping ──
+  // When groupBy=destination, collapse offers into one item per destination,
+  // keeping the cheapest offer as the representative.
+  const groupBy = typeof req.query.groupBy === "string" ? req.query.groupBy : "";
+  const uniqueDestinations = new Set(sorted.map((t) => t.destination)).size;
+
+  let output: AlexandriaTourInput[];
+
+  if (groupBy === "destination") {
+    // Pre-compute counts and cheapest per destination in one pass
+    const counts = new Map<string, number>();
+    const cheapest = new Map<string, AlexandriaTourInput>();
+    for (const t of sorted) {
+      counts.set(t.destination, (counts.get(t.destination) ?? 0) + 1);
+      const existing = cheapest.get(t.destination);
+      if (!existing || t.price < existing.price) {
+        cheapest.set(t.destination, t);
+      }
+    }
+    // Build grouped list preserving sort order of first appearance
+    const grouped: (AlexandriaTourInput & { offersCount: number })[] = [];
+    const seen = new Set<string>();
+    for (const t of sorted) {
+      if (seen.has(t.destination)) continue;
+      seen.add(t.destination);
+      const best = cheapest.get(t.destination)!;
+      grouped.push({ ...best, offersCount: counts.get(t.destination) ?? 1 });
+    }
+    output = grouped;
+  } else {
+    output = sorted;
+  }
+
   // Paginate
-  const totalPages = Math.ceil(sorted.length / limit);
+  const totalPages = Math.ceil(output.length / limit);
   const start = (page - 1) * limit;
-  const pageItems = sorted.slice(start, start + limit);
+  const pageItems = output.slice(start, start + limit);
 
   res.json({
     total: items.length,
-    filtered: sorted.length,
+    filtered: groupBy === "destination" ? output.length : sorted.length,
+    uniqueDestinations,
     page,
     limit,
     totalPages,
-    items: pageItems.map(serializeItem),
+    items: pageItems.map((item) => {
+      const base = serializeItem(item);
+      if ("offersCount" in item) {
+        return { ...base, offersCount: (item as any).offersCount };
+      }
+      return base;
+    }),
   });
 }));
 

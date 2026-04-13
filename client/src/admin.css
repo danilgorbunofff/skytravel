@@ -1524,13 +1524,14 @@ body {
 
 .alex-filter-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.9rem;
 }
 
 .alex-filter-field {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .alex-filter-field label {
@@ -1541,6 +1542,7 @@ body {
 
 .alex-filter-field input,
 .alex-filter-field select {
+  width: 100%;
   min-height: 40px;
   border-radius: 10px;
   border: 1px solid #d6deef;
@@ -1879,6 +1881,34 @@ body {
 .alex-badge--board {
   background: #e8f5e9;
   color: #1b5e20;
+}
+
+.alex-badge--offers {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+/* Group-by toggle */
+.alex-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.alex-group-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.alex-group-toggle small {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 /* External link column */
@@ -2314,4 +2344,144 @@ body {
 
 .alex-lightbox-close:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* ── TipTap email editor ─────────────────────────────── */
+
+.tiptap-email-editor .tiptap {
+  min-height: 240px;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  outline: none;
+  background: #ffffff;
+}
+
+/* Placeholder */
+.tiptap-email-editor .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Typography within the editor */
+.tiptap-email-editor .tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  line-height: 1.3;
+}
+
+.tiptap-email-editor .tiptap h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.4rem;
+}
+
+.tiptap-email-editor .tiptap p {
+  margin: 0 0 0.75rem;
+}
+
+.tiptap-email-editor .tiptap p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-email-editor .tiptap ul,
+.tiptap-email-editor .tiptap ol {
+  margin: 0.5rem 0 0.75rem 1.5rem;
+  padding: 0;
+}
+
+.tiptap-email-editor .tiptap li {
+  margin-bottom: 0.25rem;
+}
+
+.tiptap-email-editor .tiptap a {
+  color: #1e40af;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tiptap-email-editor .tiptap strong {
+  font-weight: 700;
+}
+
+.tiptap-email-editor .tiptap em {
+  font-style: italic;
+}
+
+.tiptap-email-editor .tiptap code {
+  background: #f1f5f9;
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+}
+
+.tiptap-email-editor .tiptap img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  display: block;
+}
+
+/* Selection highlight */
+.tiptap-email-editor .tiptap .ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+  border-radius: 3px;
+}
+
+/* ── Email preview body ──────────────────────────────── */
+
+.email-preview-body {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #0f172a;
+}
+
+.email-preview-body h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.4rem;
+}
+
+.email-preview-body h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.6rem 0 0.35rem;
+}
+
+.email-preview-body p {
+  margin: 0 0 0.65rem;
+}
+
+.email-preview-body ul,
+.email-preview-body ol {
+  margin: 0.4rem 0 0.65rem 1.25rem;
+}
+
+.email-preview-body li {
+  margin-bottom: 0.2rem;
+}
+
+.email-preview-body a {
+  color: #1e40af;
+  text-decoration: underline;
+}
+
+.email-preview-body strong {
+  font-weight: 700;
+}
+
+.email-preview-body em {
+  font-style: italic;
+}
+
+.email-preview-body img {
+  max-width: 100%;
+  border-radius: 5px;
+  margin: 0.4rem 0;
+  display: block;
 }

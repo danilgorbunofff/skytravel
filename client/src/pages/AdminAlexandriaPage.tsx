@@ -74,6 +74,9 @@ export default function AdminAlexandriaPage() {
   const [sortBy, setSortBy] = useState<"price" | "date">("price");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  // ── Group by destination ──
+  const [groupByDest, setGroupByDest] = useState(false);
+
   // ── Selection & import ──
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
@@ -82,6 +85,9 @@ export default function AdminAlexandriaPage() {
   // ── Detail drawer ──
   const [detailTour, setDetailTour] = useState<AlexandriaTour | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  // ── Unique destinations (from server) ──
+  const [uniqueDestinations, setUniqueDestinations] = useState(0);
 
   // ── Unique board options extracted from loaded data ──
   const boardOptions = useMemo(
@@ -104,6 +110,7 @@ export default function AdminAlexandriaPage() {
     f.limit = limit;
     f.sortBy = sortBy;
     f.sortDir = sortDir;
+    if (groupByDest) f.groupBy = "destination";
     return f;
   }
 
@@ -116,6 +123,7 @@ export default function AdminAlexandriaPage() {
       setTours(result.items);
       setTotalCount(result.total);
       setFilteredCount(result.filtered);
+      setUniqueDestinations(result.uniqueDestinations ?? 0);
       setPage(result.page);
       setTotalPages(result.totalPages);
     } catch (err) {
@@ -170,7 +178,7 @@ export default function AdminAlexandriaPage() {
     setImportResult(null);
     setValidationErrors({});
     setPage(1);
-    loadTours({ zeme: selectedCountry, page: 1, limit, sortBy, sortDir });
+    loadTours({ zeme: selectedCountry, page: 1, limit, sortBy, sortDir, ...(groupByDest ? { groupBy: "destination" } : {}) });
   }
 
   async function handleRefresh() {
@@ -218,6 +226,7 @@ export default function AdminAlexandriaPage() {
     clearFn();
     const f: AlexandriaFilters = { page: 1, limit, sortBy, sortDir };
     if (selectedCountry !== undefined) f.zeme = selectedCountry;
+    if (groupByDest) f.groupBy = "destination";
     if (field !== "q" && search) f.q = search;
     if (field !== "transport" && transport) f.transport = transport;
     if (field !== "board" && board) f.board = board;
@@ -386,12 +395,12 @@ export default function AdminAlexandriaPage() {
             <span>Po filtraci</span>
             <strong>{filteredCount.toLocaleString("cs")}</strong>
           </div>
+          <div className="alex-stat-tile">
+            <span>Unikátních destinací</span>
+            <strong>{uniqueDestinations.toLocaleString("cs")}</strong>
+          </div>
           {stats && (
             <>
-              <div className="alex-stat-tile">
-                <span>Destinací</span>
-                <strong>{stats.destinations}</strong>
-              </div>
               <div className="alex-stat-tile">
                 <span>Cena od</span>
                 <strong>{formatPrice(stats.minPrice)}</strong>
@@ -412,6 +421,25 @@ export default function AdminAlexandriaPage() {
       {/* ── Filters ────────────────────────────────────── */}
       <section className="admin-card">
         <h2>Filtrovat nabídky</h2>
+        <div className="alex-group-toggle">
+          <label>
+            <input
+              type="checkbox"
+              checked={groupByDest}
+              onChange={(e) => {
+                setGroupByDest(e.target.checked);
+                setPage(1);
+                setSelected(new Set());
+                const f = buildFilters(1);
+                if (e.target.checked) f.groupBy = "destination";
+                else delete f.groupBy;
+                loadTours(f);
+              }}
+            />
+            Seskupit podle destinace
+          </label>
+          <small>Zobrazí jednu nabídku za destinaci (nejlevnější), místo všech {totalCount.toLocaleString("cs")} nabídek.</small>
+        </div>
         <form className="alex-filters" onSubmit={handleSearch}>
           <div className="alex-filter-row">
             <div className="alex-filter-field">
@@ -667,6 +695,11 @@ export default function AdminAlexandriaPage() {
                   <strong>{tour.destination}</strong>
                   <small>{tour.title}</small>
                   <span className="alex-row-meta">
+                    {tour.offersCount && tour.offersCount > 1 && (
+                      <span className="alex-badge alex-badge--offers">
+                        {tour.offersCount} nabídek
+                      </span>
+                    )}
                     {starsDisplay(tour.stars) && (
                       <span className="alex-badge alex-badge--stars">
                         {starsDisplay(tour.stars)}
