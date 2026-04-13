@@ -178,6 +178,9 @@ export type AlexandriaTour = {
   image: string;
   description: string | null;
   photos: string[];
+  url?: string;
+  stars?: string;
+  board?: string;
 };
 
 export type AlexandriaFilters = {

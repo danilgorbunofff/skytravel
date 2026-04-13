@@ -4,7 +4,7 @@ import { asyncHandler } from "../../middleware/asyncHandler.js";
 import {
   fetchAlexandriaRaw,
   fetchAlexandriaParsed,
-  mapAlexandriaItem,
+  extractToursFromParsed,
   type AlexandriaTourInput,
 } from "../../lib/alexandria.js";
 
@@ -20,44 +20,32 @@ async function getCachedFeed(countryId?: number): Promise<AlexandriaTourInput[]>
   }
 
   const parsed = await fetchAlexandriaParsed(countryId);
-  const root = parsed as Record<string, unknown>;
-  const topKey = Object.keys(root).find(
-    (k) => k !== "?xml" && k !== "@_version" && k !== "@_encoding",
-  );
-  const topNode = topKey ? (root[topKey] as Record<string, unknown>) : root;
-
-  // Try every plausible root element name
-  let itemsRaw = (topNode?.zajezd ??
-    topNode?.tour ??
-    topNode?.item ??
-    topNode?.nabidka ??
-    topNode?.offer) as unknown[] | undefined;
-
-  // If none matched, look one level deeper in every child
-  if (!itemsRaw || !Array.isArray(itemsRaw)) {
-    for (const val of Object.values(topNode ?? {})) {
-      if (val && typeof val === "object" && !Array.isArray(val)) {
-        const inner = val as Record<string, unknown>;
-        const candidate = inner.zajezd ?? inner.tour ?? inner.item ?? inner.nabidka ?? inner.offer;
-        if (Array.isArray(candidate)) {
-          itemsRaw = candidate as unknown[];
-          break;
-        }
-      }
-    }
-  }
-
-  if (!itemsRaw || !Array.isArray(itemsRaw)) return [];
-
-  const mapped = itemsRaw
-    .map((item) => mapAlexandriaItem(item as Record<string, unknown>))
-    .filter((item): item is AlexandriaTourInput => item !== null);
+  const mapped = extractToursFromParsed(parsed);
 
   if (countryId === undefined) {
     feedCache = { data: mapped, ts: Date.now() };
   }
 
   return mapped;
+}
+
+/** Serialize a tour item for JSON response (dates → ISO strings) */
+function serializeItem(item: AlexandriaTourInput) {
+  return {
+    externalId: item.externalId,
+    destination: item.destination,
+    title: item.title,
+    price: item.price,
+    startDate: item.startDate.toISOString(),
+    endDate: item.endDate.toISOString(),
+    transport: item.transport,
+    image: item.image,
+    description: item.description,
+    photos: item.photos,
+    url: item.url,
+    stars: item.stars,
+    board: item.board,
+  };
 }
 
 router.get("/preview", asyncHandler(async (req, res) => {
@@ -185,7 +173,7 @@ router.get("/tours", asyncHandler(async (req, res) => {
   res.json({
     total: items.length,
     filtered: filtered.length,
-    items: filtered,
+    items: filtered.map(serializeItem),
   });
 }));
 
