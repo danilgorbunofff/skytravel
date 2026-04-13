@@ -17,16 +17,19 @@ REMOTE_PATH="${REMOTE_PROJECT_PATH:-/home/ubuntu/skytravel}"
 
 # Resolve SSH key: env var → repo-local key → ~/.ssh default
 if [[ -n "${SSH_KEY_PATH:-}" ]]; then
-  KEY_FLAG="-i ${SSH_KEY_PATH}"
+  KEY_PATH="${SSH_KEY_PATH}"
 elif [[ -f "$(dirname "$0")/../ssh-key-2026-04-03.key" ]]; then
   KEY_PATH="$(cd "$(dirname "$0")/.." && pwd)/ssh-key-2026-04-03.key"
   chmod 600 "$KEY_PATH"
-  KEY_FLAG="-i ${KEY_PATH}"
 else
-  KEY_FLAG=""
+  KEY_PATH=""
 fi
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15 -p ${SSH_PORT} ${KEY_FLAG}"
+if [[ -n "$KEY_PATH" ]]; then
+  SSH_CMD=(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p "${SSH_PORT}" -i "$KEY_PATH")
+else
+  SSH_CMD=(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p "${SSH_PORT}")
+fi
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  SkyTravel — Remote Deploy                                  ║"
@@ -38,7 +41,7 @@ echo "╚═══════════════════════�
 echo ""
 
 # shellcheck disable=SC2029
-ssh ${SSH_OPTS} "${SSH_USER}@${SSH_HOST}" bash -s <<REMOTE_SCRIPT
+"${SSH_CMD[@]}" "${SSH_USER}@${SSH_HOST}" bash -s <<REMOTE_SCRIPT
 set -euo pipefail
 
 echo "▸ Pulling latest code …"
@@ -61,11 +64,9 @@ echo "▸ Building client …"
 npm --workspace client run build
 
 echo "▸ Restarting PM2 apps …"
-if pm2 describe skytravel-api > /dev/null 2>&1; then
-  pm2 restart ecosystem.config.cjs --env production
-else
-  pm2 start ecosystem.config.cjs --env production
-fi
+pm2 kill 2>/dev/null || true
+sleep 1
+pm2 start ecosystem.config.cjs
 pm2 save
 
 echo "▸ Running Alexandria feed refresh …"

@@ -9,7 +9,8 @@ module.exports = {
       cwd: "./server",
       script: "npm",
       args: "start",
-      env_production: {
+      exec_mode: "fork",
+      env: {
         NODE_ENV: "production",
         PORT: 4000,
       },
@@ -24,7 +25,8 @@ module.exports = {
       cwd: "./client",
       script: "npm",
       args: "start",
-      env_production: {
+      exec_mode: "fork",
+      env: {
         NODE_ENV: "production",
         PORT: 4173,
       },
@@ -40,6 +42,7 @@ module.exports = {
       cwd: "./server",
       script: "npx",
       args: "tsx scripts/refresh-alexandria.ts",
+      exec_mode: "fork",
       autorestart: false,
       cron_restart: "*/30 * * * *",
       watch: false,
