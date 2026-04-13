@@ -166,7 +166,36 @@ export async function sendTestCampaign(payload: {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Alexandria XML feed integration
+// Public Alexandria last-minute feed (no auth)
+// ──────────────────────────────────────────────────────────────
+
+export type AlexandriaLastMinuteItem = {
+  externalId: string;
+  destination: string;
+  title: string;
+  price: number;
+  originalPrice: number;
+  startDate: string;
+  endDate: string;
+  transport: string;
+  image: string;
+  description: string | null;
+  photos: string[];
+  url: string;
+  stars: string;
+  board: string;
+};
+
+export async function fetchAlexandriaLastMinute(
+  limit = 8,
+): Promise<{ total: number; items: AlexandriaLastMinuteItem[] }> {
+  const res = await fetch(`${API_URL}/api/alexandria/last-minute?limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to fetch last-minute offers");
+  return res.json();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Alexandria XML feed integration (admin)
 // ──────────────────────────────────────────────────────────────
 
 export type AlexandriaTour = {

@@ -1,0 +1,60 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to remote server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          command_timeout: 8m
+          script: |
+            set -euo pipefail
+
+            REMOTE_PATH="${{ secrets.REMOTE_PROJECT_PATH || '/home/ubuntu/skytravel' }}"
+            cd "$REMOTE_PATH"
+
+            echo "▸ Pulling latest code …"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "▸ Installing dependencies …"
+            npm ci --prefer-offline 2>/dev/null || npm install
+
+            echo "▸ Building server …"
+            npm --workspace server run build
+
+            echo "▸ Running database migrations …"
+            cd server
+            npx prisma migrate deploy
+            cd ..
+
+            echo "▸ Building client …"
+            npm --workspace client run build
+
+            echo "▸ Restarting PM2 apps …"
+            if pm2 describe skytravel-api > /dev/null 2>&1; then
+              pm2 restart ecosystem.config.cjs --env production
+            else
+              pm2 start ecosystem.config.cjs --env production
+            fi
+            pm2 save
+
+            echo "▸ Refreshing Alexandria feed …"
+            cd server
+            npx tsx scripts/refresh-alexandria.ts || echo "  ⚠ Alexandria refresh failed (non-critical)"
+
+            echo "✅ Deploy complete!"

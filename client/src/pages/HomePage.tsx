@@ -8,6 +8,7 @@ import {
   type PartnerTour,
 } from "../data";
 import { formatPrice, normalizeText } from "../utils";
+import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { useLanguage } from "../hooks/useLanguage";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
@@ -106,9 +107,52 @@ export default function HomePage() {
     });
   }, [activeDestination, activeTransport, activeBudget]);
 
-  const lastMinute = useMemo(() => {
-    return [...partnerTours].sort((a, b) => a.price - b.price).slice(0, 4);
+  // ── Live Alexandria last-minute offers ──────────────────────
+  const [lastMinuteItems, setLastMinuteItems] = useState<AlexandriaLastMinuteItem[]>([]);
+  const [lastMinuteLoading, setLastMinuteLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await fetchAlexandriaLastMinute(4);
+        if (!cancelled) setLastMinuteItems(data.items);
+      } catch {
+        // fall back to empty; static partner tours still visible below
+      } finally {
+        if (!cancelled) setLastMinuteLoading(false);
+      }
+    }
+    load();
+    // Auto-refresh every 5 minutes
+    const interval = window.setInterval(load, 5 * 60 * 1000);
+    // Also refresh on tab focus
+    function onFocus() { load(); }
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
+
+  function openLastMinuteModal(item: AlexandriaLastMinuteItem) {
+    const startDate = new Date(item.startDate);
+    const endDate = new Date(item.endDate);
+    const term = `${startDate.toLocaleDateString("cs-CZ")} - ${endDate.toLocaleDateString("cs-CZ")}`;
+    const starsNum = Number(item.stars) || 0;
+    setModalDetail({
+      type: "Last minute",
+      title: item.title,
+      description: item.description || t("modalDescPartner"),
+      location: item.destination,
+      term,
+      meta: `${t("from")} ${formatPrice(item.price)}`,
+      source: `${item.transport} | ${item.board}${starsNum > 0 ? " \u2022 " + "\u2605".repeat(starsNum) : ""}`,
+      photos: item.photos.length > 0 ? item.photos : (item.image ? [item.image] : []),
+      isOwnTour: false,
+    });
+  }
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -486,21 +530,30 @@ export default function HomePage() {
             <article className="last-minute-card">
               <h3>{t("sectionLastMinute")}</h3>
               <div id="lastMinuteList" className="last-minute-list">
-                {lastMinute.map((tour) => (
-                  <article key={tour.hotel} className="last-row" onClick={() => openPartnerModal(tour)}>
-                    <div>
-                      <h4>{tour.hotel}</h4>
-                      <p>{tour.destination}</p>
-                    </div>
-                    <div>
-                      <p>{tour.term}</p>
-                      <p>{"\u2605".repeat(tour.stars)}{"\u2606".repeat(5 - tour.stars)}</p>
-                    </div>
-                    <div>
-                      <strong>{t("from")} {formatPrice(tour.price)}</strong>
-                    </div>
-                  </article>
-                ))}
+                {lastMinuteLoading && <p style={{ padding: "1rem", opacity: 0.6 }}>Načítání…</p>}
+                {!lastMinuteLoading && lastMinuteItems.length === 0 && (
+                  <p style={{ padding: "1rem", opacity: 0.6 }}>{t("emptyState")}</p>
+                )}
+                {lastMinuteItems.map((item) => {
+                  const starsNum = Number(item.stars) || 0;
+                  const startDate = new Date(item.startDate);
+                  const endDate = new Date(item.endDate);
+                  return (
+                    <article key={item.externalId} className="last-row" onClick={() => openLastMinuteModal(item)}>
+                      <div>
+                        <h4>{item.title}</h4>
+                        <p>{item.destination}</p>
+                      </div>
+                      <div>
+                        <p>{startDate.toLocaleDateString("cs-CZ")} – {endDate.toLocaleDateString("cs-CZ")}</p>
+                        <p>{starsNum > 0 ? "\u2605".repeat(starsNum) + "\u2606".repeat(5 - starsNum) : ""}</p>
+                      </div>
+                      <div>
+                        <strong>{t("from")} {formatPrice(item.price)}</strong>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </article>
           </div>

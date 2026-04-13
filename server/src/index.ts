@@ -8,6 +8,7 @@ import path from "node:path";
 import bcrypt from "bcrypt";
 import { config } from "./config.js";
 import publicRoutes from "./routes/public.js";
+import alexandriaPublicRoutes from "./routes/alexandriaPublic.js";
 import adminRoutes from "./routes/admin/index.js";
 import prisma from "./prisma.js";
 
@@ -77,6 +78,7 @@ app.get("/api/test-ip", async (_req, res) => {
 });
 
 app.use("/api", publicRoutes);
+app.use("/api/alexandria", alexandriaPublicRoutes);
 app.use("/api/admin", adminRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────
