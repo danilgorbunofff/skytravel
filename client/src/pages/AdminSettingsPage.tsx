@@ -1,6 +1,8 @@
 import { useState } from "react";
 import AdminLayout from "../components/AdminLayout";
-import "../admin.css";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Switch } from "../components/ui/switch";
+import { Label } from "../components/ui/label";
 
 export default function AdminSettingsPage() {
   const [leadPopupEnabled, setLeadPopupEnabled] = useState(() => {
@@ -8,35 +10,35 @@ export default function AdminSettingsPage() {
     return raw === null ? true : raw === "true";
   });
 
-  function handleToggle() {
-    setLeadPopupEnabled((prev) => {
-      const next = !prev;
-      localStorage.setItem("leadPopupEnabled", String(next));
-      return next;
-    });
+  function handleToggle(checked: boolean) {
+    setLeadPopupEnabled(checked);
+    localStorage.setItem("leadPopupEnabled", String(checked));
   }
 
   return (
     <AdminLayout title="Nastavení adminu">
-      <section className="admin-card">
-        <h2>Nastavení</h2>
-        <div className="settings-row">
-          <div>
-            <strong>Marketingový popup (travel guide)</strong>
-            <p className="note">
-              Zobrazí okno pro sběr e-mailu s bonusovým travel guide.
-            </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Nastavení</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+            <div className="space-y-1">
+              <Label htmlFor="lead-popup" className="text-base font-semibold">
+                Marketingový popup (travel guide)
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Zobrazí okno pro sběr e-mailu s bonusovým travel guide.
+              </p>
+            </div>
+            <Switch
+              id="lead-popup"
+              checked={leadPopupEnabled}
+              onCheckedChange={handleToggle}
+            />
           </div>
-          <button
-            type="button"
-            className={`toggle-btn${leadPopupEnabled ? " is-on" : ""}`}
-            onClick={handleToggle}
-            aria-pressed={leadPopupEnabled}
-          >
-            <span />
-          </button>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </AdminLayout>
   );
 }

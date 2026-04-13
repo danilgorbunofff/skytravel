@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { deleteLead, fetchLeads, sendCampaign, sendTestCampaign, uploadAdminImages } from "../api";
-import "../admin.css";
+import { deleteLead, fetchLeads, sendCampaign, sendTestCampaign, uploadAdminImages } from "../features/admin/services/adminApi";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Badge } from "../components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { cn } from "../lib/utils";
+import { Bold, Italic, List, Heading2, Link2, ImageIcon, Upload, Eye, Download, Trash2 } from "lucide-react";
 
 type Lead = {
   id: number;
@@ -148,10 +156,6 @@ export default function AdminEmailPage() {
     }
   }
 
-  function handlePreview() {
-    setPreviewOpen(true);
-  }
-
   function exportCsv() {
     const header = ["email", "destination", "marketingConsent", "gdprConsent", "createdAt"];
     const rows = filtered.map((lead) => [
@@ -179,178 +183,178 @@ export default function AdminEmailPage() {
     URL.revokeObjectURL(url);
   }
 
+  const segments: { value: "all" | "consented" | "pending"; label: string }[] = [
+    { value: "all", label: `Vše (${leads.length})` },
+    { value: "consented", label: `Souhlas (${consentedCount})` },
+    { value: "pending", label: `Bez souhlasu (${leads.length - consentedCount})` },
+  ];
+
   return (
     <AdminLayout title="E-maily & marketing">
-      <section className="admin-card email-card">
-        <div className="email-header">
-          <div>
-            <h2>E-maily od návštěvníků</h2>
-            <p className="note">
-              Správa poptávek a kontaktů. Marketing odesíláme pouze se souhlasem.
-            </p>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <CardTitle>E-maily od návštěvníků</CardTitle>
+              <CardDescription>Správa poptávek a kontaktů. Marketing odesíláme pouze se souhlasem.</CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {segments.map((s) => (
+                <Button
+                  key={s.value}
+                  type="button"
+                  variant={segment === s.value ? "default" : "secondary"}
+                  size="sm"
+                  onClick={() => setSegment(s.value)}
+                >
+                  {s.label}
+                </Button>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+                <Download className="mr-1 h-3.5 w-3.5" />
+                Export CSV
+              </Button>
+            </div>
           </div>
-          <div className="email-segment">
-            <button
-              type="button"
-              className={`chip${segment === "all" ? " is-active" : ""}`}
-              onClick={() => setSegment("all")}
-            >
-              Vše ({leads.length})
-            </button>
-            <button
-              type="button"
-              className={`chip${segment === "consented" ? " is-active" : ""}`}
-              onClick={() => setSegment("consented")}
-            >
-              Souhlas ({consentedCount})
-            </button>
-            <button
-              type="button"
-              className={`chip${segment === "pending" ? " is-active" : ""}`}
-              onClick={() => setSegment("pending")}
-            >
-              Bez souhlasu ({leads.length - consentedCount})
-            </button>
-            <button type="button" className="chip chip-outline" onClick={exportCsv}>
-              Export CSV
-            </button>
-          </div>
-        </div>
+        </CardHeader>
 
-        <div className="email-grid">
-          <div className="email-panel">
-            <h3>Seznam poptávek</h3>
-            {loading && <p className="note">Načítám...</p>}
-            {error && <p className="note error">{error}</p>}
-            {!loading && !error && (
-              <div className="table-wrap">
-                <div className="table-header">
-                  <span>E-mail</span>
-                  <span>Destinace</span>
-                  <span>Marketing</span>
-                  <span>GDPR</span>
-                  <span>Akce</span>
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* ── Leads table ── */}
+            <div>
+              <h3 className="mb-3 text-lg font-semibold">Seznam poptávek</h3>
+              {loading && <p className="text-sm text-muted-foreground">Načítám...</p>}
+              {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+              {!loading && !error && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Destinace</TableHead>
+                      <TableHead>Marketing</TableHead>
+                      <TableHead>GDPR</TableHead>
+                      <TableHead className="w-16" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((lead) => (
+                      <TableRow key={lead.id}>
+                        <TableCell>
+                          <p className="font-medium">{lead.email}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(lead.createdAt).toLocaleDateString("cs-CZ")}
+                          </p>
+                        </TableCell>
+                        <TableCell className="font-medium">{lead.destination || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={lead.marketingConsent ? "success" : "warning"}>
+                            {lead.marketingConsent ? "Souhlas" : "Bez souhlasu"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={lead.gdprConsent ? "success" : "warning"}>
+                            {lead.gdprConsent ? "Souhlas" : "Ne"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(lead.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            {/* ── Email composer ── */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Marketingový e-mail</h3>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Od</Label>
+                  <Input value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} />
                 </div>
-                {filtered.map((lead) => (
-                  <div key={lead.id} className="table-row">
-                    <div className="table-cell">
-                      <strong>{lead.email}</strong>
-                      <span className="table-meta">
-                        {new Date(lead.createdAt).toLocaleDateString("cs-CZ")}
-                      </span>
-                    </div>
-                    <div className="table-cell">
-                      <strong>{lead.destination || "—"}</strong>
-                    </div>
-                    <div className="table-cell">
-                      <span className={`pill ${lead.marketingConsent ? "ok" : "warn"}`}>
-                        {lead.marketingConsent ? "Souhlas" : "Bez souhlasu"}
-                      </span>
-                    </div>
-                    <div className="table-cell">
-                      <span className={`pill ${lead.gdprConsent ? "ok" : "warn"}`}>
-                        {lead.gdprConsent ? "Souhlas" : "Ne"}
-                      </span>
-                    </div>
-                    <div className="table-cell table-actions">
-                      <button type="button" className="remove" onClick={() => handleDelete(lead.id)}>
-                        Smazat
-                      </button>
-                    </div>
+                <div className="space-y-1.5">
+                  <Label>Předmět</Label>
+                  <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Preheader</Label>
+                  <Input value={preheader} onChange={(e) => setPreheader(e.target.value)} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Obsah</Label>
+                  <div className="flex flex-wrap gap-1 rounded-t-md border border-b-0 border-input bg-muted p-1.5">
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => applyFormat("bold")}><Bold className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => applyFormat("italic")}><Italic className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => applyFormat("insertUnorderedList")}><List className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => applyFormat("formatBlock", "h2")}><Heading2 className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={handleInsertLink}><Link2 className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={handleInsertImage}><ImageIcon className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" /></Button>
+                    <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleUploadImage} />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="email-panel">
-            <h3>Marketingový e-mail</h3>
-            <div className="email-form">
-              <label>Od</label>
-              <input value={fromEmail} onChange={(e) => setFromEmail(e.target.value)} />
-              <label>Předmět</label>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <label>Preheader</label>
-              <input value={preheader} onChange={(e) => setPreheader(e.target.value)} />
-              <label>Obsah</label>
-              <div className="email-toolbar">
-                <button type="button" onClick={() => applyFormat("bold")}>B</button>
-                <button type="button" onClick={() => applyFormat("italic")}>I</button>
-                <button type="button" onClick={() => applyFormat("insertUnorderedList")}>•</button>
-                <button type="button" onClick={() => applyFormat("formatBlock", "h2")}>H2</button>
-                <button type="button" onClick={handleInsertLink}>Link</button>
-                <button type="button" onClick={handleInsertImage}>Obrázek</button>
-                <button type="button" onClick={() => fileInputRef.current?.click()}>
-                  Upload
-                </button>
-                <button type="button" onClick={handlePreview}>Preview</button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={handleUploadImage}
-                />
-              </div>
-              <div
-                ref={editorRef}
-                className={`email-editor${dragOver ? " is-dragover" : ""}`}
-                contentEditable
-                suppressContentEditableWarning
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onInput={(e) => setEditorHtml((e.target as HTMLDivElement).innerHTML)}
-                dangerouslySetInnerHTML={{ __html: editorHtml }}
-              />
-              <div className="email-actions">
-                <button type="button" className="ghost">Uložit šablonu</button>
-                <button type="button" className="primary" onClick={handleSendCampaign}>
-                  Odeslat kampaň
-                </button>
-              </div>
-              <div className="email-test">
-                <label>Testovací e-mail</label>
-                <div className="email-test__row">
-                  <input
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
-                    placeholder="test@skytravel.cz"
+                  <div
+                    ref={editorRef}
+                    className={cn(
+                      "min-h-[200px] rounded-b-md border border-input bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring",
+                      dragOver && "ring-2 ring-primary"
+                    )}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onDragOver={(event) => { event.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    onInput={(e) => setEditorHtml((e.target as HTMLDivElement).innerHTML)}
+                    dangerouslySetInnerHTML={{ __html: editorHtml }}
                   />
-                  <button type="button" className="ghost" onClick={handleSendTest}>
-                    Poslat test
-                  </button>
                 </div>
-              </div>
-              {sendStatus && <p className="note">{sendStatus}</p>}
-              <p className="note">
-                Kampaň jde pouze na kontakty se souhlasem ({consentedCount} příjemců).
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {previewOpen && (
-        <div className="email-preview">
-          <div className="email-preview__backdrop" onClick={() => setPreviewOpen(false)} />
-          <div className="email-preview__card">
-            <div className="email-preview__head">
-              <strong>Náhled e-mailu</strong>
-              <button type="button" onClick={() => setPreviewOpen(false)}>✕</button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline">Uložit šablonu</Button>
+                  <Button type="button" onClick={handleSendCampaign}>Odeslat kampaň</Button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Testovací e-mail</Label>
+                  <div className="flex gap-2">
+                    <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="test@skytravel.cz" />
+                    <Button type="button" variant="outline" onClick={handleSendTest}>Poslat test</Button>
+                  </div>
+                </div>
+
+                {sendStatus && <p className="text-sm text-muted-foreground">{sendStatus}</p>}
+                <p className="text-sm text-muted-foreground">
+                  Kampaň jde pouze na kontakty se souhlasem ({consentedCount} příjemců).
+                </p>
+              </div>
             </div>
-            <div className="email-preview__meta">
-              <span>Od: {fromEmail || "info@skytravel.cz"}</span>
-              <span>Předmět: {subject}</span>
-              {preheader && <span>Preheader: {preheader}</span>}
-            </div>
-            <div className="email-preview__body" dangerouslySetInnerHTML={{ __html: editorHtml }} />
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
+
+      {/* ── Preview dialog ── */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Náhled e-mailu</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>Od: {fromEmail || "info@skytravel.cz"}</p>
+            <p>Předmět: {subject}</p>
+            {preheader && <p>Preheader: {preheader}</p>}
+          </div>
+          <div
+            className="max-w-none rounded-md border border-border p-4 text-sm"
+            dangerouslySetInnerHTML={{ __html: editorHtml }}
+          />
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         isOpen={confirmDeleteId !== null}

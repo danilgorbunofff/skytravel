@@ -1,19 +1,10 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
-import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
-import AdminStatisticsPage from "./pages/AdminStatisticsPage";
-import AdminSettingsPage from "./pages/AdminSettingsPage";
-import AdminEmailPage from "./pages/AdminEmailPage";
-import AdminAlexandriaPage from "./pages/AdminAlexandriaPage";
 import GdprPage from "./pages/GdprPage";
 import TermsPage from "./pages/TermsPage";
-import RequireAdmin from "./components/RequireAdmin";
+import AdminRoutes from "./features/admin/AdminRoutes";
 import ScrollToTop from "./components/ScrollToTop";
-
-function AdminGuard({ children }: { children: React.ReactNode }) {
-  return <RequireAdmin>{children}</RequireAdmin>;
-}
 
 export default function App() {
   return (
@@ -24,20 +15,7 @@ export default function App() {
         <Route path="/gdpr" element={<GdprPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
-        <Route
-          path="/admin/*"
-          element={
-            <AdminGuard>
-              <Routes>
-                <Route index element={<AdminPage />} />
-                <Route path="statistics" element={<AdminStatisticsPage />} />
-                <Route path="settings" element={<AdminSettingsPage />} />
-                <Route path="emails" element={<AdminEmailPage />} />
-                <Route path="alexandria" element={<AdminAlexandriaPage />} />
-              </Routes>
-            </AdminGuard>
-          }
-        />
+        <Route path="/admin/*" element={<AdminRoutes />} />
       </Routes>
     </BrowserRouter>
   );

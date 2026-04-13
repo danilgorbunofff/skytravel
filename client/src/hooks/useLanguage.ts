@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { translations } from "../data";
 
 export type LanguageKey = keyof typeof translations;
+export type TranslationKey = keyof typeof translations.cs;
 
 export function useLanguage() {
   const [lang, setLang] = useState<LanguageKey>("cs");

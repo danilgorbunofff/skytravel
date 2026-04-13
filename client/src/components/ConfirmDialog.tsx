@@ -1,4 +1,13 @@
-import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { AlertTriangle } from "lucide-react";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -21,36 +30,27 @@ export default function ConfirmDialog({
   cancelLabel = "Zrušit",
   isDanger = true,
 }: ConfirmDialogProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay">
-      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="confirm-content">
-          <div className="confirm-icon">
-            <svg viewBox="0 0 24 24" width="24" height="24">
-              <path
-                fill="currentColor"
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-              />
-            </svg>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <DialogTitle>{title}</DialogTitle>
           </div>
-          <h3>{title}</h3>
-          <p>{message}</p>
-        </div>
-        <div className="confirm-actions">
-          <button type="button" className="ghost" onClick={onCancel}>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className={isDanger ? "danger" : "primary"}
-            onClick={onConfirm}
-          >
+          </Button>
+          <Button variant={isDanger ? "destructive" : "default"} onClick={onConfirm}>
             {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

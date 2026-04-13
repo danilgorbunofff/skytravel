@@ -16,3 +16,4 @@ tsconfig.tsbuildinfo
 Thumbs.db
 *.key
 *.pem
+server-api-access.md

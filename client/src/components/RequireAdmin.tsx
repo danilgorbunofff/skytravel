@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { fetchAdminMe } from "../api";
+import { fetchAdminMe } from "../features/admin/services/adminApi";
 import "../site.css";
 
 export default function RequireAdmin({ children }: { children: React.ReactNode }) {
