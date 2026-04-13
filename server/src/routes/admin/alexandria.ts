@@ -10,22 +10,21 @@ import {
 
 const router = Router();
 
-// ── Simple in-memory cache so the dashboard doesn't hammer Alexandria ──
-let feedCache: { data: AlexandriaTourInput[]; ts: number } | null = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// ── Per-country in-memory cache ─────────────────────────────────────
+const feedCacheMap = new Map<number, { data: AlexandriaTourInput[]; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 min
+
+const ALEXANDRIA_COUNTRY = Number(process.env.ALEXANDRIA_COUNTRY || 107);
 
 async function getCachedFeed(countryId?: number): Promise<AlexandriaTourInput[]> {
-  if (feedCache && Date.now() - feedCache.ts < CACHE_TTL && countryId === undefined) {
-    return feedCache.data;
+  const zeme = countryId ?? ALEXANDRIA_COUNTRY;
+  const cached = feedCacheMap.get(zeme);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return cached.data;
   }
-
-  const parsed = await fetchAlexandriaParsed(countryId);
+  const parsed = await fetchAlexandriaParsed(zeme);
   const mapped = extractToursFromParsed(parsed);
-
-  if (countryId === undefined) {
-    feedCache = { data: mapped, ts: Date.now() };
-  }
-
+  feedCacheMap.set(zeme, { data: mapped, ts: Date.now() });
   return mapped;
 }
 
@@ -36,6 +35,7 @@ function serializeItem(item: AlexandriaTourInput) {
     destination: item.destination,
     title: item.title,
     price: item.price,
+    originalPrice: item.originalPrice,
     startDate: item.startDate.toISOString(),
     endDate: item.endDate.toISOString(),
     transport: item.transport,
@@ -47,6 +47,60 @@ function serializeItem(item: AlexandriaTourInput) {
     board: item.board,
   };
 }
+
+// ── Country discovery ────────────────────────────────────────────────
+// Known Alexandria zeme IDs (discovered via probe)
+const KNOWN_COUNTRIES: { id: number; name: string }[] = [
+  { id: 53, name: "Bulharsko" },
+  { id: 107, name: "Chorvatsko" },
+  { id: 147, name: "Itálie (zima)" },
+];
+
+let countriesCache: { data: { id: number; name: string; count: number }[]; ts: number } | null = null;
+const COUNTRIES_TTL = 24 * 60 * 60 * 1000; // 24h
+
+router.get("/countries", asyncHandler(async (_req, res) => {
+  if (countriesCache && Date.now() - countriesCache.ts < COUNTRIES_TTL) {
+    return res.json({ items: countriesCache.data });
+  }
+
+  const results: { id: number; name: string; count: number }[] = [];
+
+  // Probe known IDs + a small extra range concurrently
+  const idsToProbe = new Set(KNOWN_COUNTRIES.map((c) => c.id));
+  // Also probe a few ranges where travel countries commonly fall
+  for (let i = 1; i <= 200; i++) idsToProbe.add(i);
+
+  const BATCH = 10;
+  const ids = [...idsToProbe];
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const batch = ids.slice(i, i + BATCH);
+    const settled = await Promise.allSettled(
+      batch.map(async (zemeId) => {
+        try {
+          const parsed = await fetchAlexandriaParsed(zemeId);
+          const tours = extractToursFromParsed(parsed);
+          if (tours.length > 0) {
+            // Extract country name from first tour destination
+            const name = tours[0].destination.split(" – ")[0] || `ID ${zemeId}`;
+            feedCacheMap.set(zemeId, { data: tours, ts: Date.now() });
+            return { id: zemeId, name, count: tours.length };
+          }
+        } catch {
+          // skip
+        }
+        return null;
+      }),
+    );
+    for (const r of settled) {
+      if (r.status === "fulfilled" && r.value) results.push(r.value);
+    }
+  }
+
+  results.sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  countriesCache = { data: results, ts: Date.now() };
+  res.json({ items: results });
+}));
 
 router.get("/preview", asyncHandler(async (req, res) => {
   const countryId = req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
@@ -124,7 +178,7 @@ router.post("/import", asyncHandler(async (req, res) => {
   return res.json({ ok: true, created, updated, total: toImport.length });
 }));
 
-// ── Filtered feed browsing ───────────────────────────────────────────
+// ── Filtered feed browsing with pagination ──────────────────────────
 router.get("/tours", asyncHandler(async (req, res) => {
   const countryId = req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
   const q = typeof req.query.q === "string" ? req.query.q.toLowerCase() : "";
@@ -137,7 +191,19 @@ router.get("/tours", asyncHandler(async (req, res) => {
   const dateEnd = typeof req.query.dateEnd === "string" ? new Date(req.query.dateEnd) : undefined;
   const refresh = req.query.refresh === "true";
 
-  if (refresh) feedCache = null;
+  // Sorting
+  const sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy : "price";
+  const sortDir = req.query.sortDir === "desc" ? "desc" : "asc";
+
+  // Pagination
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+
+  if (refresh && countryId !== undefined) {
+    feedCacheMap.delete(countryId);
+  } else if (refresh) {
+    feedCacheMap.clear();
+  }
 
   const items = await getCachedFeed(countryId);
 
@@ -181,16 +247,36 @@ router.get("/tours", asyncHandler(async (req, res) => {
     filtered = filtered.filter((t) => t.stars === stars);
   }
 
+  // Server-side sort
+  const sorted = [...filtered].sort((a, b) => {
+    let d = 0;
+    if (sortBy === "date") {
+      d = a.startDate.getTime() - b.startDate.getTime();
+    } else {
+      d = a.price - b.price;
+    }
+    return sortDir === "asc" ? d : -d;
+  });
+
+  // Paginate
+  const totalPages = Math.ceil(sorted.length / limit);
+  const start = (page - 1) * limit;
+  const pageItems = sorted.slice(start, start + limit);
+
   res.json({
     total: items.length,
-    filtered: filtered.length,
-    items: filtered.map(serializeItem),
+    filtered: sorted.length,
+    page,
+    limit,
+    totalPages,
+    items: pageItems.map(serializeItem),
   });
 }));
 
 // ── Clear cache ──────────────────────────────────────────────────────
 router.post("/refresh", (_req, res) => {
-  feedCache = null;
+  feedCacheMap.clear();
+  countriesCache = null;
   res.json({ ok: true, message: "Cache cleared" });
 });
 

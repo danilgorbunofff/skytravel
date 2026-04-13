@@ -68,6 +68,7 @@ export type AlexandriaTourInput = {
   destination: string;
   title: string;
   price: number;
+  originalPrice: number;
   startDate: Date;
   endDate: Date;
   transport: string;
@@ -114,15 +115,22 @@ function mapTransport(raw: string): string {
   return "bus";
 }
 
-/** Extract the lowest positive adult price from cena elements */
+/** Extract the adult per-person price from the first cena element.
+ *  The first <cena> node is always the main adult double-room price.
+ *  Supplements, child prices, and extras come in later nodes. */
 function extractPrice(termin: Record<string, unknown>): number {
   const cenaNodes = ensureArray(termin.cena);
-  let min = Infinity;
-  for (const c of cenaNodes) {
-    const p = Number(attr(c, "cena"));
-    if (p > 0 && p < min) min = p;
-  }
-  return min === Infinity ? 0 : min;
+  if (cenaNodes.length === 0) return 0;
+  const p = Number(attr(cenaNodes[0], "cena"));
+  return p > 0 ? p : 0;
+}
+
+/** Extract the original catalog price (before discounts) */
+function extractOriginalPrice(termin: Record<string, unknown>): number {
+  const cenaNodes = ensureArray(termin.cena);
+  if (cenaNodes.length === 0) return 0;
+  const p = Number(attr(cenaNodes[0], "cena_katalog"));
+  return p > 0 ? p : 0;
 }
 
 // ──────────────────────────────────────────────
@@ -179,6 +187,7 @@ export function extractToursFromParsed(
             const transportType = mapTransport(attr(termin, "misto"));
             const board = attr(termin, "typstravy");
             const price = extractPrice(termin as Record<string, unknown>);
+            const originalPrice = extractOriginalPrice(termin as Record<string, unknown>);
 
             if (!startDate || !endDate || !price) continue;
 
@@ -193,6 +202,7 @@ export function extractToursFromParsed(
               destination,
               title: hotelName,
               price,
+              originalPrice,
               startDate,
               endDate,
               transport: transportType,

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import {
   fetchAlexandriaTours,
+  fetchAlexandriaCountries,
   importAlexandria,
   refreshAlexandriaCache,
   type AlexandriaFilters,
   type AlexandriaTour,
+  type AlexandriaCountry,
 } from "../api";
 import { formatPrice } from "../utils";
 import "../admin.css";
@@ -35,6 +37,11 @@ function starsDisplay(stars: string | undefined): string {
   return "★".repeat(n) + "☆".repeat(5 - n);
 }
 
+const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
+};
+
 export default function AdminAlexandriaPage() {
   // ── Data ──
   const [tours, setTours] = useState<AlexandriaTour[]>([]);
@@ -42,6 +49,16 @@ export default function AdminAlexandriaPage() {
   const [filteredCount, setFilteredCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Countries ──
+  const [countries, setCountries] = useState<AlexandriaCountry[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<number | undefined>(undefined);
+
+  // ── Pagination ──
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
 
   // ── Filters ──
   const [search, setSearch] = useState("");
@@ -53,7 +70,7 @@ export default function AdminAlexandriaPage() {
   const [dateEnd, setDateEnd] = useState("");
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // ── Sort (client-side) ──
+  // ── Sort (server-side now) ──
   const [sortBy, setSortBy] = useState<"price" | "date">("price");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -62,19 +79,9 @@ export default function AdminAlexandriaPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
 
-  // ── Sorted tours (client-side, no extra fetch) ──
-  const sortedTours = useMemo(() => {
-    const arr = [...tours];
-    arr.sort((a, b) => {
-      if (sortBy === "date") {
-        const d = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-        return sortDir === "asc" ? d : -d;
-      }
-      const d = a.price - b.price;
-      return sortDir === "asc" ? d : -d;
-    });
-    return arr;
-  }, [tours, sortBy, sortDir]);
+  // ── Detail drawer ──
+  const [detailTour, setDetailTour] = useState<AlexandriaTour | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   // ── Unique board options extracted from loaded data ──
   const boardOptions = useMemo(
@@ -82,24 +89,8 @@ export default function AdminAlexandriaPage() {
     [tours],
   );
 
-  // ── Core fetch – accepts explicit filter object ──
-  const loadTours = useCallback(async (filters: AlexandriaFilters = {}) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchAlexandriaTours(filters);
-      setTours(result.items);
-      setTotalCount(result.total);
-      setFilteredCount(result.filtered);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nepodařilo se načíst nabídky");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Build filter object from current state
-  function buildFilters(): AlexandriaFilters {
+  // ── Build filter object from current state ──
+  function buildFilters(pageOverride?: number): AlexandriaFilters {
     const f: AlexandriaFilters = {};
     if (search) f.q = search;
     if (transport) f.transport = transport;
@@ -108,12 +99,44 @@ export default function AdminAlexandriaPage() {
     if (priceMax) f.priceMax = Number(priceMax);
     if (dateStart) f.dateStart = dateStart;
     if (dateEnd) f.dateEnd = dateEnd;
+    if (selectedCountry !== undefined) f.zeme = selectedCountry;
+    f.page = pageOverride ?? page;
+    f.limit = limit;
+    f.sortBy = sortBy;
+    f.sortDir = sortDir;
     return f;
   }
 
+  // ── Core fetch ──
+  const loadTours = useCallback(async (filters: AlexandriaFilters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchAlexandriaTours(filters);
+      setTours(result.items);
+      setTotalCount(result.total);
+      setFilteredCount(result.filtered);
+      setPage(result.page);
+      setTotalPages(result.totalPages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nepodařilo se načíst nabídky");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load countries on mount
+  useEffect(() => {
+    setCountriesLoading(true);
+    fetchAlexandriaCountries()
+      .then((r) => setCountries(r.items))
+      .catch(() => {})
+      .finally(() => setCountriesLoading(false));
+  }, []);
+
   // Initial load
   useEffect(() => {
-    loadTours();
+    loadTours(buildFilters(1));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ──
@@ -131,7 +154,8 @@ export default function AdminAlexandriaPage() {
       return;
     }
     setValidationErrors({});
-    loadTours(buildFilters());
+    setPage(1);
+    loadTours(buildFilters(1));
   }
 
   function handleReset() {
@@ -145,27 +169,55 @@ export default function AdminAlexandriaPage() {
     setSelected(new Set());
     setImportResult(null);
     setValidationErrors({});
-    loadTours();
+    setPage(1);
+    loadTours({ zeme: selectedCountry, page: 1, limit, sortBy, sortDir });
   }
 
   async function handleRefresh() {
     await refreshAlexandriaCache();
-    loadTours({ ...buildFilters(), refresh: true });
+    setPage(1);
+    loadTours({ ...buildFilters(1), refresh: true });
+  }
+
+  function handleCountryChange(zeme: number | undefined) {
+    setSelectedCountry(zeme);
+    setPage(1);
+    setSelected(new Set());
+    const f = buildFilters(1);
+    f.zeme = zeme;
+    loadTours(f);
+  }
+
+  function handlePageChange(newPage: number) {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    setSelected(new Set());
+    loadTours(buildFilters(newPage));
+  }
+
+  function handleLimitChange(newLimit: number) {
+    setLimit(newLimit);
+    setPage(1);
+    const f = buildFilters(1);
+    f.limit = newLimit;
+    loadTours(f);
   }
 
   function toggleSort(field: "price" | "date") {
-    if (sortBy === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(field);
-      setSortDir("asc");
-    }
+    const newDir = sortBy === field ? (sortDir === "asc" ? "desc" : "asc") : "asc";
+    setSortBy(field);
+    setSortDir(newDir);
+    setPage(1);
+    const f = buildFilters(1);
+    f.sortBy = field;
+    f.sortDir = newDir;
+    loadTours(f);
   }
 
-  // Remove a single active filter chip and immediately reload
   function removeFilter(field: keyof AlexandriaFilters, clearFn: () => void) {
     clearFn();
-    const f: AlexandriaFilters = {};
+    const f: AlexandriaFilters = { page: 1, limit, sortBy, sortDir };
+    if (selectedCountry !== undefined) f.zeme = selectedCountry;
     if (field !== "q" && search) f.q = search;
     if (field !== "transport" && transport) f.transport = transport;
     if (field !== "board" && board) f.board = board;
@@ -173,6 +225,7 @@ export default function AdminAlexandriaPage() {
     if (field !== "priceMax" && priceMax) f.priceMax = Number(priceMax);
     if (field !== "dateStart" && dateStart) f.dateStart = dateStart;
     if (field !== "dateEnd" && dateEnd) f.dateEnd = dateEnd;
+    setPage(1);
     loadTours(f);
   }
 
@@ -186,10 +239,10 @@ export default function AdminAlexandriaPage() {
   }
 
   function toggleSelectAll() {
-    if (selected.size === sortedTours.length) {
+    if (selected.size === tours.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(sortedTours.map((t) => t.externalId)));
+      setSelected(new Set(tours.map((t) => t.externalId)));
     }
   }
 
@@ -197,7 +250,7 @@ export default function AdminAlexandriaPage() {
     setImporting(true);
     setImportResult(null);
     try {
-      const result = await importAlexandria({ ids });
+      const result = await importAlexandria({ ids, zeme: selectedCountry });
       if (result.ok) {
         setImportResult(
           `Import dokončen: ${result.created ?? 0} nových, ${result.updated ?? 0} aktualizovaných (celkem ${result.total}).`,
@@ -223,11 +276,6 @@ export default function AdminAlexandriaPage() {
       destinations: new Set(tours.map((t) => t.destination)).size,
     };
   }, [tours]);
-
-  const fmtDate = (iso: string) => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
-  };
 
   // ── Active filter chips ──
   type FilterChip = { key: string; label: string; clear: () => void };
@@ -274,18 +322,69 @@ export default function AdminAlexandriaPage() {
   const sortIcon = (field: "price" | "date") =>
     sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
+  // ── Close drawer on Esc ──
+  useEffect(() => {
+    if (!detailTour && !lightboxSrc) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (lightboxSrc) setLightboxSrc(null);
+        else setDetailTour(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detailTour, lightboxSrc]);
+
+  // ── Pagination helper ──
+  function pageNumbers(): (number | "…")[] {
+    const pages: (number | "…")[] = [];
+    const range = 2;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= page - range && i <= page + range)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "…") {
+        pages.push("…");
+      }
+    }
+    return pages;
+  }
+
   return (
     <AdminLayout title="CK Alexandria – Nabídky">
+      {/* ── Country selector ─────────────────────────── */}
+      <section className="admin-card">
+        <div className="alex-country-bar">
+          <label htmlFor="alexCountry"><strong>Země:</strong></label>
+          {countriesLoading ? (
+            <span className="alex-country-loading">Načítám země…</span>
+          ) : (
+            <div className="alex-country-tabs">
+              {countries.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`alex-country-tab${selectedCountry === c.id || (selectedCountry === undefined && c.id === 107) ? " is-active" : ""}`}
+                  onClick={() => handleCountryChange(c.id)}
+                >
+                  {c.name}
+                  <span className="alex-country-count">{c.count.toLocaleString("cs")}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ── Summary tiles ───────────────────────────────── */}
       <section className="admin-card">
         <div className="alex-stats">
           <div className="alex-stat-tile">
             <span>Celkem ve feedu</span>
-            <strong>{totalCount}</strong>
+            <strong>{totalCount.toLocaleString("cs")}</strong>
           </div>
           <div className="alex-stat-tile">
             <span>Po filtraci</span>
-            <strong>{filteredCount}</strong>
+            <strong>{filteredCount.toLocaleString("cs")}</strong>
           </div>
           {stats && (
             <>
@@ -453,8 +552,8 @@ export default function AdminAlexandriaPage() {
           <div className="alex-import-info">
             <span>
               {selected.size > 0
-                ? `Vybráno ${selected.size} z ${sortedTours.length}`
-                : `Zobrazeno ${sortedTours.length}${filteredCount !== totalCount ? ` z ${totalCount} celkem` : ""}`}
+                ? `Vybráno ${selected.size} z ${tours.length}`
+                : `Stránka ${page} z ${totalPages} (${filteredCount.toLocaleString("cs")} výsledků)`}
             </span>
             {importResult && <p className="note">{importResult}</p>}
           </div>
@@ -509,13 +608,13 @@ export default function AdminAlexandriaPage() {
           </div>
         )}
 
-        {!loading && sortedTours.length > 0 && (
+        {!loading && tours.length > 0 && (
           <div className="alex-table-wrap">
             <div className="alex-table-header">
               <span className="alex-col-check">
                 <input
                   type="checkbox"
-                  checked={selected.size === sortedTours.length && sortedTours.length > 0}
+                  checked={selected.size === tours.length && tours.length > 0}
                   onChange={toggleSelectAll}
                 />
               </span>
@@ -539,10 +638,16 @@ export default function AdminAlexandriaPage() {
               <span className="alex-col-link" />
             </div>
 
-            {sortedTours.map((tour) => (
+            {tours.map((tour) => (
               <div
                 key={tour.externalId || `${tour.destination}-${tour.startDate}`}
                 className={`alex-table-row${selected.has(tour.externalId) ? " is-selected" : ""}`}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("input, a")) return;
+                  setDetailTour(tour);
+                }}
+                style={{ cursor: "pointer" }}
               >
                 <span className="alex-col-check">
                   <input
@@ -573,12 +678,12 @@ export default function AdminAlexandriaPage() {
                       </span>
                     )}
                   </span>
-                  {tour.description && (
-                    <small className="alex-desc">{tour.description.slice(0, 120)}…</small>
-                  )}
                 </span>
                 <span className="alex-col-price">
                   <strong>{formatPrice(tour.price)}</strong>
+                  {tour.originalPrice > tour.price && (
+                    <small className="alex-price-orig">{formatPrice(tour.originalPrice)}</small>
+                  )}
                 </span>
                 <span className="alex-col-dates">
                   {fmtDate(tour.startDate)} – {fmtDate(tour.endDate)}
@@ -603,7 +708,161 @@ export default function AdminAlexandriaPage() {
             ))}
           </div>
         )}
+
+        {/* ── Pagination ────────────────────────────── */}
+        {!loading && totalPages > 1 && (
+          <div className="alex-pagination">
+            <button
+              type="button"
+              className="alex-page-btn"
+              disabled={page <= 1}
+              onClick={() => handlePageChange(page - 1)}
+            >
+              ← Předchozí
+            </button>
+
+            <div className="alex-page-numbers">
+              {pageNumbers().map((p, i) =>
+                p === "…" ? (
+                  <span key={`ellipsis-${i}`} className="alex-page-ellipsis">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`alex-page-num${p === page ? " is-active" : ""}`}
+                    onClick={() => handlePageChange(p)}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="alex-page-btn"
+              disabled={page >= totalPages}
+              onClick={() => handlePageChange(page + 1)}
+            >
+              Další →
+            </button>
+
+            <select
+              className="alex-page-limit"
+              value={limit}
+              onChange={(e) => handleLimitChange(Number(e.target.value))}
+            >
+              <option value={25}>25 / stránka</option>
+              <option value={50}>50 / stránka</option>
+              <option value={100}>100 / stránka</option>
+            </select>
+          </div>
+        )}
       </section>
+
+      {/* ── Detail drawer ──────────────────────────────── */}
+      {detailTour && (
+        <>
+          <div className="alex-drawer-backdrop" onClick={() => setDetailTour(null)} />
+          <aside className="alex-drawer">
+            <div className="alex-drawer-header">
+              <div>
+                <h2>{detailTour.destination}</h2>
+                <p>{detailTour.title}</p>
+              </div>
+              <button type="button" className="alex-drawer-close" onClick={() => setDetailTour(null)}>
+                ×
+              </button>
+            </div>
+
+            {/* Photo gallery */}
+            {detailTour.photos && detailTour.photos.length > 0 && (
+              <div className="alex-drawer-gallery">
+                {detailTour.photos.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`${detailTour.title} foto ${i + 1}`}
+                    loading="lazy"
+                    onClick={() => setLightboxSrc(src)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div className="alex-drawer-meta">
+              <div className="alex-drawer-meta-row">
+                <span>Cena</span>
+                <strong className="alex-drawer-price">{formatPrice(detailTour.price)}</strong>
+                {detailTour.originalPrice > detailTour.price && (
+                  <small className="alex-price-orig">{formatPrice(detailTour.originalPrice)}</small>
+                )}
+              </div>
+              <div className="alex-drawer-meta-row">
+                <span>Termín</span>
+                <strong>{fmtDate(detailTour.startDate)} – {fmtDate(detailTour.endDate)}</strong>
+              </div>
+              <div className="alex-drawer-meta-row">
+                <span>Doprava</span>
+                <strong>{transportLabel[detailTour.transport] ?? detailTour.transport}</strong>
+              </div>
+              {detailTour.board && (
+                <div className="alex-drawer-meta-row">
+                  <span>Strava</span>
+                  <strong>{boardLabel[detailTour.board] ?? detailTour.board}</strong>
+                </div>
+              )}
+              {detailTour.stars && (
+                <div className="alex-drawer-meta-row">
+                  <span>Hvězdičky</span>
+                  <strong>{starsDisplay(detailTour.stars)}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            {detailTour.description && (
+              <div className="alex-drawer-desc">
+                <h3>Popis</h3>
+                <p>{detailTour.description}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="alex-drawer-actions">
+              {detailTour.url && (
+                <a
+                  href={detailTour.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="alex-drawer-btn alex-drawer-btn--link"
+                >
+                  ↗ Otevřít na Alexandria.cz
+                </a>
+              )}
+              <button
+                type="button"
+                className="alex-drawer-btn alex-drawer-btn--import"
+                disabled={importing}
+                onClick={async () => {
+                  await handleImport([detailTour.externalId]);
+                }}
+              >
+                {importing ? "Importuji…" : "Importovat tento zájezd"}
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ── Lightbox ──────────────────────────────────── */}
+      {lightboxSrc && (
+        <div className="alex-lightbox" onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="Full size" />
+          <button type="button" className="alex-lightbox-close">×</button>
+        </div>
+      )}
     </AdminLayout>
   );
 }
