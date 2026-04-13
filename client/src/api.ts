@@ -1,6 +1,8 @@
 import type { OwnTour } from "./data";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// In production the frontend is served by the same nginx that proxies /api,
+// so use a relative base. In local dev VITE_API_URL can override to http://localhost:4000.
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export async function fetchTours() {
   const res = await fetch(`${API_URL}/api/tours`);
