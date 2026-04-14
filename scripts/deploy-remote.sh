@@ -65,9 +65,7 @@ echo "▸ Building server …"
 npm --workspace server run build
 
 echo "▸ Running database migrations …"
-cd server
-npx prisma migrate deploy
-cd ..
+(cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
 (cd client && npm install && npm run build)
