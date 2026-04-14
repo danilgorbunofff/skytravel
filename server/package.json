@@ -10,11 +10,7 @@
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "alexandria:refresh": "tsx scripts/refresh-alexandria.ts",
-    "alexandria:import": "tsx scripts/refresh-alexandria.ts --import",
-    "orextravel:refresh": "tsx scripts/refresh-orextravel.ts",
-    "orextravel:import": "tsx scripts/refresh-orextravel.ts --import"
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.18.0",

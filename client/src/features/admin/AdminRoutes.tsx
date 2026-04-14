@@ -1,13 +1,12 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import RequireAdmin from "../../components/RequireAdmin";
 
 const AdminPage = lazy(() => import("../../pages/AdminPage"));
 const AdminStatisticsPage = lazy(() => import("../../pages/AdminStatisticsPage"));
 const AdminSettingsPage = lazy(() => import("../../pages/AdminSettingsPage"));
 const AdminEmailPage = lazy(() => import("../../pages/AdminEmailPage"));
-const AdminAlexandriaPage = lazy(() => import("../../pages/AdminAlexandriaPage"));
-const AdminOrextravelPage = lazy(() => import("../../pages/AdminOrextravelPage"));
+const AdminSearchPage = lazy(() => import("../../pages/AdminSearchPage"));
 
 function AdminFallback() {
   return (
@@ -26,8 +25,9 @@ export default function AdminRoutes() {
           <Route path="statistics" element={<AdminStatisticsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="emails" element={<AdminEmailPage />} />
-          <Route path="alexandria" element={<AdminAlexandriaPage />} />
-          <Route path="orextravel" element={<AdminOrextravelPage />} />
+          <Route path="search" element={<AdminSearchPage />} />
+          <Route path="alexandria" element={<Navigate to="/admin/search?provider=alexandria" replace />} />
+          <Route path="orextravel" element={<Navigate to="/admin/search?provider=orextravel" replace />} />
         </Routes>
       </Suspense>
     </RequireAdmin>

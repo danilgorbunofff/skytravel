@@ -36,18 +36,5 @@ module.exports = {
       restart_delay: 3000,
       max_memory_restart: "256M",
     },
-    {
-      // Scheduled worker: refreshes Alexandria feed every 30 minutes
-      name: "skytravel-alexandria-refresh",
-      cwd: "./server",
-      script: "npx",
-      args: "tsx scripts/refresh-alexandria.ts",
-      exec_mode: "fork",
-      autorestart: false,
-      cron_restart: "*/30 * * * *",
-      watch: false,
-      instances: 1,
-      max_restarts: 0,
-    },
   ],
 };

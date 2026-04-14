@@ -112,5 +112,38 @@ ensureAdminUser()
   .finally(() => {
     app.listen(config.port, () => {
       console.log(`SkyTravel API running on http://localhost:${config.port}`);
+
+      // ── Cache warming (fire-and-forget) ───────────────────────────
+      const warmOnStartup = process.env.PROVIDERS_WARM_ON_STARTUP !== "false";
+      if (warmOnStartup) {
+        void (async () => {
+          const { getAllProviders, getProvider } = await import("./providers/index.js");
+          const all = getAllProviders();
+          for (const meta of all) {
+            const start = Date.now();
+            try {
+              const provider = getProvider(meta.id);
+              await provider.warmCache();
+              const status = provider.getCacheStatus();
+              console.log(
+                `[Cache] ${meta.id} warmed: ${status.itemCount} items in ${Date.now() - start}ms`,
+              );
+            } catch (err) {
+              console.error(`[Cache] ${meta.id} warm failed:`, err);
+            }
+          }
+          // Set up background refresh intervals
+          for (const meta of all) {
+            const provider = getProvider(meta.id);
+            const mins = Math.round(provider.refreshIntervalMs / 60_000);
+            setInterval(() => {
+              provider.warmCache().catch((err) =>
+                console.error(`[Cache] ${meta.id} background refresh failed:`, err),
+              );
+            }, provider.refreshIntervalMs);
+            console.log(`[Cache] ${meta.id} will refresh every ${mins} min`);
+          }
+        })();
+      }
     });
   });

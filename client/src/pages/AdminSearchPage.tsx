@@ -1,0 +1,1201 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import AdminLayout from "../components/AdminLayout";
+import ProviderFilterRenderer from "../components/admin/ProviderFilterRenderer";
+import TourDetailDrawer from "../components/admin/TourDetailDrawer";
+import {
+  fetchProviders,
+  fetchProviderRegions,
+  fetchProviderCacheStatus,
+  refreshProviderCache,
+  importProviderTours,
+} from "../api/providers";
+import { useProviderTours } from "../hooks/useProviderTours";
+import type {
+  CacheStatus,
+  ImportResult,
+  ProviderMeta,
+  ProviderRegion,
+  UnifiedFilters,
+  UnifiedTour,
+} from "../types/providers";
+import { formatPrice } from "../utils";
+import "../admin.css";
+
+// ── Labels ────────────────────────────────────────────────────────────────
+const boardLabel: Record<string, string> = {
+  AI: "All Inclusive",
+  UAI: "Ultra AI",
+  FB: "Plná penze",
+  HB: "Polopenze",
+  BB: "Snídaně",
+  RO: "Bez stravy",
+  SC: "Vlastní doprava",
+};
+
+const transportLabel: Record<string, string> = {
+  plane: "✈ Letecky",
+  bus: "🚌 Autobusem",
+  train: "🚆 Vlakem",
+  car: "🚗 Vlastní",
+  boat: "🚢 Lodí",
+};
+
+function starsDisplay(stars: string | undefined): string {
+  const n = parseInt(stars ?? "", 10);
+  if (!n || n < 1 || n > 5) return "";
+  return "★".repeat(n) + "☆".repeat(5 - n);
+}
+
+const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
+};
+
+const PLACEHOLDER_COLORS = [
+  "#e74c3c", "#3498db", "#2ecc71", "#e67e22", "#9b59b6",
+  "#1abc9c", "#f39c12", "#d35400", "#2980b9", "#c0392b",
+];
+const placeholderColor = (dest: string) =>
+  PLACEHOLDER_COLORS[dest.charCodeAt(0) % PLACEHOLDER_COLORS.length];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** Check if a provider has two-level region selection (e.g. departure→destination) */
+function hasTwoLevelRegions(provider: ProviderMeta): boolean {
+  return provider.filterFields.some((f) => f.dependsOn != null);
+}
+
+function cacheAgoText(lastRefresh: number | null): string {
+  if (lastRefresh == null) return "Zatím neproběhla";
+  const mins = Math.round((Date.now() - lastRefresh) / 60_000);
+  if (mins < 1) return "Právě teď";
+  if (mins === 1) return "Před 1 minutou";
+  if (mins < 60) return `Před ${mins} minutami`;
+  const hrs = Math.round(mins / 60);
+  return `Před ${hrs} hod.`;
+}
+
+export default function AdminSearchPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ── Provider list ──
+  const [providers, setProviders] = useState<ProviderMeta[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const selectedProvider = useMemo(
+    () => providers.find((p) => p.id === selectedProviderId) ?? null,
+    [providers, selectedProviderId],
+  );
+
+  // ── Regions ──
+  const [regions, setRegions] = useState<ProviderRegion[]>([]);
+  const [regionsLoading, setRegionsLoading] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<ProviderRegion | null>(null);
+  const [selectedSubRegion, setSelectedSubRegion] = useState<ProviderRegion | null>(null);
+
+  // ── Cache ──
+  const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
+
+  // ── Provider-specific filters ──
+  const [providerFilters, setProviderFilters] = useState<Record<string, unknown>>({});
+
+  // ── Shared filters ──
+  const [search, setSearch] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [sortBy, setSortBy] = useState<"price" | "date">("price");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [limit, setLimit] = useState(50);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // ── Selection & import ──
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+
+  // ── Detail drawer ──
+  const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
+
+  // ── Hook ──
+  const {
+    tours,
+    loading,
+    error,
+    totalCount,
+    filteredCount,
+    page,
+    totalPages,
+    uniqueDestinations,
+    streaming,
+    streamLoaded,
+    loadTours,
+    loadToursStream,
+    reset: resetHook,
+  } = useProviderTours();
+
+  // ── Debounce ref ──
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // ── Derived: two-level region helpers ──
+  const isTwoLevel = selectedProvider ? hasTwoLevelRegions(selectedProvider) : false;
+
+  // For two-level: unique departure cities from regions meta
+  const departureCities = useMemo(() => {
+    if (!isTwoLevel) return [];
+    const map = new Map<number, string>();
+    for (const r of regions) {
+      const depId = r.meta?.departureId as number | undefined;
+      const depName = r.meta?.departureName as string | undefined;
+      if (depId != null && depName) map.set(depId, depName);
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  }, [regions, isTwoLevel]);
+
+  // For two-level: destination countries filtered by selected departure
+  const destinationCountries = useMemo(() => {
+    if (!isTwoLevel) return [];
+    const filtered = selectedRegion
+      ? regions.filter((r) => (r.meta?.departureId as number) === selectedRegion.id)
+      : regions;
+    const map = new Map<number, string>();
+    for (const r of filtered) map.set(r.id, r.name);
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  }, [regions, isTwoLevel, selectedRegion]);
+
+  // ── Build filters ──
+  const buildFilters = useCallback(
+    (pageOverride?: number): UnifiedFilters => {
+      const f: UnifiedFilters = {};
+      if (search) f.q = search;
+      if (priceMin) f.priceMin = Number(priceMin);
+      if (priceMax) f.priceMax = Number(priceMax);
+      if (dateStart) f.dateStart = dateStart;
+      if (dateEnd) f.dateEnd = dateEnd;
+      f.page = pageOverride ?? page;
+      f.limit = limit;
+      f.sortBy = sortBy;
+      f.sortDir = sortDir;
+
+      // Spread provider-specific filter values
+      for (const [key, val] of Object.entries(providerFilters)) {
+        if (val !== undefined && val !== null && val !== "") {
+          f[key] = val;
+        }
+      }
+
+      // Region context
+      if (selectedProvider && !isTwoLevel && selectedRegion) {
+        // Single-level: region id maps to the provider's main region filter key
+        // For Alexandria it's "zeme", detect from filterFields or use region id
+        const regionField = selectedProvider.filterFields.find(
+          (ff) => ff.key === "zeme" || ff.key === "regionId",
+        );
+        if (regionField) {
+          f[regionField.key] = selectedRegion.id;
+        } else {
+          f.zeme = selectedRegion.id;
+        }
+      } else if (isTwoLevel) {
+        // Two-level: departure→destination
+        if (selectedRegion) {
+          const depField = selectedProvider?.filterFields.find((ff) => !ff.dependsOn && (ff.key === "townFrom" || ff.key.includes("town") || ff.key.includes("departure")));
+          if (depField) f[depField.key] = selectedRegion.id;
+          else f.townFrom = selectedRegion.id;
+        }
+        if (selectedSubRegion) {
+          const destField = selectedProvider?.filterFields.find((ff) => ff.dependsOn != null);
+          if (destField) f[destField.key] = selectedSubRegion.id;
+          else f.stateId = selectedSubRegion.id;
+        }
+      }
+
+      return f;
+    },
+    [
+      search, priceMin, priceMax, dateStart, dateEnd, page, limit,
+      sortBy, sortDir, providerFilters, selectedProvider, selectedRegion,
+      selectedSubRegion, isTwoLevel,
+    ],
+  );
+
+  // ── Load tours helper ──
+  const doLoadTours = useCallback(
+    (pageOverride?: number) => {
+      if (!selectedProviderId) return;
+      const filters = buildFilters(pageOverride);
+      loadTours(selectedProviderId, filters);
+    },
+    [selectedProviderId, buildFilters, loadTours],
+  );
+
+  // ── Load tours with streaming ──
+  const doLoadToursStream = useCallback(() => {
+    if (!selectedProviderId) return;
+    const filters = buildFilters(1);
+    loadToursStream(selectedProviderId, filters);
+  }, [selectedProviderId, buildFilters, loadToursStream]);
+
+  // ── Provider change handler ──
+  const handleProviderChange = useCallback(
+    async (providerId: string) => {
+      setSelectedProviderId(providerId);
+      setSearchParams({ provider: providerId }, { replace: true });
+
+      // Clear state
+      setProviderFilters({});
+      setSelected(new Set());
+      setDetailTour(null);
+      setImportResult(null);
+      resetHook();
+
+      // Fetch regions & cache
+      setRegionsLoading(true);
+      try {
+        const [regionData, cache] = await Promise.all([
+          fetchProviderRegions(providerId),
+          fetchProviderCacheStatus(providerId),
+        ]);
+        setRegions(regionData);
+        setCacheStatus(cache);
+
+        const provider = providers.find((p) => p.id === providerId);
+        const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
+
+        if (twoLevel) {
+          // For two-level, don't auto-select a departure — show all
+          setSelectedRegion(null);
+          setSelectedSubRegion(null);
+        } else if (regionData.length > 0) {
+          setSelectedRegion(regionData[0]);
+          setSelectedSubRegion(null);
+        } else {
+          setSelectedRegion(null);
+          setSelectedSubRegion(null);
+        }
+      } catch {
+        setRegions([]);
+        setCacheStatus(null);
+        setSelectedRegion(null);
+        setSelectedSubRegion(null);
+      } finally {
+        setRegionsLoading(false);
+      }
+    },
+    [providers, resetHook, setSearchParams],
+  );
+
+  // ── Initial mount: fetch providers ──
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const providerList = await fetchProviders();
+        if (cancelled) return;
+        setProviders(providerList);
+
+        const urlProvider = searchParams.get("provider");
+        const initialId =
+          providerList.find((p) => p.id === urlProvider)?.id ?? providerList[0]?.id;
+        if (initialId) {
+          // Don't call handleProviderChange here — do it inline to avoid stale closure
+          setSelectedProviderId(initialId);
+          if (urlProvider !== initialId) {
+            setSearchParams({ provider: initialId }, { replace: true });
+          }
+
+          // Fetch regions & cache
+          setRegionsLoading(true);
+          try {
+            const [regionData, cache] = await Promise.all([
+              fetchProviderRegions(initialId),
+              fetchProviderCacheStatus(initialId),
+            ]);
+            if (cancelled) return;
+            setRegions(regionData);
+            setCacheStatus(cache);
+
+            const provider = providerList.find((p) => p.id === initialId);
+            const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
+
+            if (twoLevel) {
+              setSelectedRegion(null);
+              setSelectedSubRegion(null);
+            } else if (regionData.length > 0) {
+              setSelectedRegion(regionData[0]);
+            }
+          } catch {
+            // ignore
+          } finally {
+            setRegionsLoading(false);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load tours when provider/region/subRegion changes ──
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (!selectedProviderId) return;
+    // Skip on first render — let mount effect load first
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      // Still trigger initial load
+    }
+
+    const provider = providers.find((p) => p.id === selectedProviderId);
+    if (provider?.supportsStreaming) {
+      doLoadToursStream();
+    } else {
+      doLoadTours(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProviderId, selectedRegion, selectedSubRegion]);
+
+  // ── Cache status polling ──
+  useEffect(() => {
+    if (!selectedProviderId) return;
+    const interval = setInterval(async () => {
+      try {
+        const status = await fetchProviderCacheStatus(selectedProviderId);
+        setCacheStatus(status);
+      } catch {
+        // ignore
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [selectedProviderId]);
+
+  // ── Handlers ──
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (priceMin && priceMax && Number(priceMin) > Number(priceMax)) {
+      errors.price = "Minimální cena nesmí být větší než maximální.";
+    }
+    if (dateStart && dateEnd && dateStart > dateEnd) {
+      errors.date = "Datum od nesmí být po datu do.";
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+    doLoadTours(1);
+  }
+
+  function handleReset() {
+    setSearch("");
+    setPriceMin("");
+    setPriceMax("");
+    setDateStart("");
+    setDateEnd("");
+    setProviderFilters({});
+    setSelected(new Set());
+    setImportResult(null);
+    setValidationErrors({});
+    // Build filters manually with cleared values so the API call does not
+    // use stale state (React batches the setX calls above into the next render).
+    if (!selectedProviderId) return;
+    const filters = buildFilters(1);
+    delete filters.q;
+    delete filters.priceMin;
+    delete filters.priceMax;
+    delete filters.dateStart;
+    delete filters.dateEnd;
+    // Remove every provider-specific key that was just cleared
+    for (const ff of selectedProvider?.filterFields ?? []) {
+      delete filters[ff.key];
+    }
+    loadTours(selectedProviderId, filters);
+  }
+
+  async function handleRefresh() {
+    if (!selectedProviderId) return;
+    await refreshProviderCache(selectedProviderId);
+    try {
+      const cache = await fetchProviderCacheStatus(selectedProviderId);
+      setCacheStatus(cache);
+    } catch {
+      // ignore
+    }
+    const provider = providers.find((p) => p.id === selectedProviderId);
+    if (provider?.supportsStreaming) {
+      doLoadToursStream();
+    } else {
+      doLoadTours(1);
+    }
+  }
+
+  function handleRegionChange(region: ProviderRegion | null) {
+    setSelectedRegion(region);
+    if (isTwoLevel) setSelectedSubRegion(null);
+    setSelected(new Set());
+  }
+
+  function handleSubRegionChange(region: ProviderRegion | null) {
+    setSelectedSubRegion(region);
+    setSelected(new Set());
+  }
+
+  function handlePageChange(newPage: number) {
+    if (newPage < 1 || newPage > totalPages) return;
+    setSelected(new Set());
+    doLoadTours(newPage);
+  }
+
+  function handleLimitChange(newLimit: number) {
+    setLimit(newLimit);
+    // State update is async; override limit in the filter object directly so the
+    // first API call after a page-size change uses the new value (same pattern
+    // as toggleSort which overrides sortBy/sortDir the same way).
+    if (!selectedProviderId) return;
+    const filters = buildFilters(1);
+    filters.limit = newLimit;
+    loadTours(selectedProviderId, filters);
+  }
+
+  function toggleSort(field: "price" | "date") {
+    const newDir = sortBy === field ? (sortDir === "asc" ? "desc" : "asc") : "asc";
+    setSortBy(field);
+    setSortDir(newDir);
+    // We need to load with new sort — but state hasn't updated yet,
+    // so build filters manually
+    if (!selectedProviderId) return;
+    const filters = buildFilters(1);
+    filters.sortBy = field;
+    filters.sortDir = newDir;
+    loadTours(selectedProviderId, filters);
+  }
+
+  function handleProviderFilterChange(key: string, value: unknown) {
+    setProviderFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined) delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  }
+
+  function handleSearchDebounced(value: string) {
+    setSearch(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      doLoadTours(1);
+    }, 300);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === tours.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(tours.map((t) => t.externalId)));
+    }
+  }
+
+  async function handleImport(ids?: string[]) {
+    if (!selectedProviderId) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const regionCtx: Record<string, unknown> = {};
+      if (!isTwoLevel && selectedRegion) {
+        const regionField = selectedProvider?.filterFields.find(
+          (ff) => ff.key === "zeme" || ff.key === "regionId",
+        );
+        regionCtx[regionField?.key ?? "zeme"] = selectedRegion.id;
+      } else if (isTwoLevel) {
+        if (selectedRegion) {
+          const depField = selectedProvider?.filterFields.find(
+            (ff) => !ff.dependsOn && (ff.key === "townFrom" || ff.key.includes("town")),
+          );
+          regionCtx[depField?.key ?? "townFrom"] = selectedRegion.id;
+        }
+        if (selectedSubRegion) {
+          const destField = selectedProvider?.filterFields.find((ff) => ff.dependsOn != null);
+          regionCtx[destField?.key ?? "stateId"] = selectedSubRegion.id;
+        }
+      }
+      const result = await importProviderTours(
+        selectedProviderId,
+        ids ?? [...selected],
+        regionCtx,
+      );
+      setImportResult(result);
+      if (result.ok) setSelected(new Set());
+    } catch (err) {
+      setImportResult({
+        ok: false,
+        created: 0,
+        updated: 0,
+        total: 0,
+        message: err instanceof Error ? err.message : "Chyba při importu.",
+      });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  // ── Stats ──
+  const stats = useMemo(() => {
+    if (tours.length === 0) return null;
+    const prices = tours.map((t) => t.price);
+    return {
+      minPrice: Math.min(...prices),
+      maxPrice: Math.max(...prices),
+      avgPrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+    };
+  }, [tours]);
+
+  // ── Conditional columns ──
+  const visibleColumns = useMemo(() => {
+    const cols = { nights: false, pax: false, stars: false, board: false };
+    for (const t of tours) {
+      if (t.nights !== undefined) cols.nights = true;
+      if (t.adults !== undefined) cols.pax = true;
+      if (t.stars && t.stars !== "") cols.stars = true;
+      if (t.board && t.board !== "") cols.board = true;
+    }
+    return cols;
+  }, [tours]);
+
+  // ── Active filter chips ──
+  type FilterChip = { key: string; label: string; clear: () => void };
+  const activeChips: FilterChip[] = (
+    [
+      search && {
+        key: "q",
+        label: `Hledám: „${search}"`,
+        clear: () => { setSearch(""); doLoadTours(1); },
+      },
+      priceMin && {
+        key: "priceMin",
+        label: `Cena od: ${formatPrice(Number(priceMin))}`,
+        clear: () => { setPriceMin(""); doLoadTours(1); },
+      },
+      priceMax && {
+        key: "priceMax",
+        label: `Cena do: ${formatPrice(Number(priceMax))}`,
+        clear: () => { setPriceMax(""); doLoadTours(1); },
+      },
+      dateStart && {
+        key: "dateStart",
+        label: `Od: ${fmtDate(dateStart)}`,
+        clear: () => { setDateStart(""); doLoadTours(1); },
+      },
+      dateEnd && {
+        key: "dateEnd",
+        label: `Do: ${fmtDate(dateEnd)}`,
+        clear: () => { setDateEnd(""); doLoadTours(1); },
+      },
+    ] as (FilterChip | false)[]
+  ).filter(Boolean) as FilterChip[];
+
+  const sortIcon = (field: "price" | "date") =>
+    sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : "";
+
+  // ── Pagination helper ──
+  function pageNumbers(): (number | "…")[] {
+    const pages: (number | "…")[] = [];
+    const range = 2;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= page - range && i <= page + range)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "…") {
+        pages.push("…");
+      }
+    }
+    return pages;
+  }
+
+  // ── Import result message ──
+  const importMessage = importResult
+    ? importResult.ok
+      ? `Import dokončen: ${importResult.created} nových, ${importResult.updated} aktualizovaných (celkem ${importResult.total}).`
+      : importResult.message ?? "Import se nezdařil."
+    : null;
+
+  return (
+    <AdminLayout title="Vyhledávání zájezdů">
+      {/* ── Provider selector ───────────────────────── */}
+      <section className="admin-card">
+        <div className="alex-country-bar">
+          <label><strong>Zdroj:</strong></label>
+          <div className="alex-country-tabs">
+            {providers.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`alex-country-tab${selectedProviderId === p.id ? " is-active" : ""}`}
+                onClick={() => {
+                  if (p.id !== selectedProviderId) handleProviderChange(p.id);
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Region selector ───────────────────────── */}
+      {regions.length > 0 && !regionsLoading && (
+        <section className="admin-card">
+          {!isTwoLevel ? (
+            /* Single-level: flat country tabs */
+            <div className="alex-country-bar">
+              <label><strong>Země:</strong></label>
+              <div className="alex-country-tabs">
+                {regions.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className={`alex-country-tab${selectedRegion?.id === r.id ? " is-active" : ""}`}
+                    onClick={() => handleRegionChange(r)}
+                  >
+                    {r.name}
+                    {r.count != null && (
+                      <span className="alex-country-count">{r.count.toLocaleString("cs")}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Two-level: departure → destination */
+            <>
+              <div className="alex-country-bar">
+                <label><strong>Odletové město:</strong></label>
+                <div className="alex-country-tabs">
+                  <button
+                    type="button"
+                    className={`alex-country-tab${selectedRegion === null ? " is-active" : ""}`}
+                    onClick={() => handleRegionChange(null)}
+                  >
+                    Vše
+                  </button>
+                  {departureCities.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`alex-country-tab${selectedRegion?.id === c.id ? " is-active" : ""}`}
+                      onClick={() => handleRegionChange({ id: c.id, name: c.name })}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="alex-country-bar" style={{ marginTop: "0.75rem" }}>
+                <label><strong>Destinace:</strong></label>
+                <div className="alex-country-tabs">
+                  <button
+                    type="button"
+                    className={`alex-country-tab${selectedSubRegion === null ? " is-active" : ""}`}
+                    onClick={() => handleSubRegionChange(null)}
+                  >
+                    Vše
+                  </button>
+                  {destinationCountries.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`alex-country-tab${selectedSubRegion?.id === c.id ? " is-active" : ""}`}
+                      onClick={() => handleSubRegionChange({ id: c.id, name: c.name })}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {regionsLoading && (
+        <section className="admin-card">
+          <span className="alex-country-loading">Načítám regiony…</span>
+        </section>
+      )}
+
+      {/* ── Cache status ────────────────────────────── */}
+      {cacheStatus && (
+        <section className="admin-card">
+          <div className="alex-stats" style={{ alignItems: "center" }}>
+            <div className="alex-stat-tile">
+              <span>Poslední refresh</span>
+              <strong>{cacheAgoText(cacheStatus.lastRefresh)}</strong>
+            </div>
+            <div className="alex-stat-tile">
+              <span>V cache</span>
+              <strong>{cacheStatus.itemCount.toLocaleString("cs")}</strong>
+            </div>
+            <div className="alex-stat-tile">
+              <span>Stav</span>
+              <strong style={{ color: cacheStatus.warm ? "#16a34a" : "#d97706" }}>
+                {cacheStatus.warm ? "Aktivní" : "Studená"}
+              </strong>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Summary tiles ───────────────────────────── */}
+      <section className="admin-card">
+        <div className="alex-stats">
+          <div className="alex-stat-tile">
+            <span>Celkem ve feedu</span>
+            <strong>{totalCount.toLocaleString("cs")}</strong>
+          </div>
+          <div className="alex-stat-tile">
+            <span>Po filtraci</span>
+            <strong>{filteredCount.toLocaleString("cs")}</strong>
+          </div>
+          <div className="alex-stat-tile">
+            <span>Unikátních destinací</span>
+            <strong>{uniqueDestinations.toLocaleString("cs")}</strong>
+          </div>
+          {stats && (
+            <>
+              <div className="alex-stat-tile">
+                <span>Cena od</span>
+                <strong>{formatPrice(stats.minPrice)}</strong>
+              </div>
+              <div className="alex-stat-tile">
+                <span>Cena do</span>
+                <strong>{formatPrice(stats.maxPrice)}</strong>
+              </div>
+              <div className="alex-stat-tile">
+                <span>Průměr</span>
+                <strong>{formatPrice(stats.avgPrice)}</strong>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ── Filters ────────────────────────────────── */}
+      <section className="admin-card">
+        <h2>Filtrovat nabídky</h2>
+        <form className="alex-filters" onSubmit={handleSearch}>
+          <div className="alex-filter-row">
+            <div className="alex-filter-field">
+              <label htmlFor="searchQ">Hledat</label>
+              <input
+                id="searchQ"
+                type="text"
+                placeholder="Destinace, hotel…"
+                value={search}
+                onChange={(e) => handleSearchDebounced(e.target.value)}
+              />
+            </div>
+            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
+              <label htmlFor="searchPriceMin">Cena od</label>
+              <input
+                id="searchPriceMin"
+                type="number"
+                min={0}
+                step={100}
+                placeholder="Kč"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+              />
+            </div>
+            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
+              <label htmlFor="searchPriceMax">Cena do</label>
+              <input
+                id="searchPriceMax"
+                type="number"
+                min={0}
+                step={100}
+                placeholder="Kč"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+              />
+            </div>
+            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
+              <label htmlFor="searchDateStart">Od</label>
+              <input
+                id="searchDateStart"
+                type="date"
+                value={dateStart}
+                onChange={(e) => setDateStart(e.target.value)}
+              />
+            </div>
+            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
+              <label htmlFor="searchDateEnd">Do</label>
+              <input
+                id="searchDateEnd"
+                type="date"
+                value={dateEnd}
+                onChange={(e) => setDateEnd(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Provider-specific filters */}
+          {selectedProvider && selectedProvider.filterFields.length > 0 && (
+            <ProviderFilterRenderer
+              fields={selectedProvider.filterFields}
+              values={providerFilters}
+              onChange={handleProviderFilterChange}
+            />
+          )}
+
+          {(validationErrors.price || validationErrors.date) && (
+            <div className="alex-filter-errors">
+              {validationErrors.price && (
+                <span className="alex-filter-error">⚠ {validationErrors.price}</span>
+              )}
+              {validationErrors.date && (
+                <span className="alex-filter-error">⚠ {validationErrors.date}</span>
+              )}
+            </div>
+          )}
+
+          <div className="alex-filter-actions">
+            <button type="submit" disabled={loading}>
+              {loading ? "Načítám…" : "Hledat"}
+            </button>
+            <button type="button" className="ghost" onClick={handleReset}>
+              Reset
+            </button>
+            <button type="button" className="ghost" onClick={handleRefresh} disabled={loading}>
+              ↻ Obnovit feed
+            </button>
+          </div>
+        </form>
+
+        {activeChips.length > 0 && (
+          <div className="alex-filter-chips">
+            <span className="alex-chips-label">Aktivní filtry:</span>
+            {activeChips.map((chip) => (
+              <button key={chip.key} type="button" className="alex-chip" onClick={chip.clear}>
+                {chip.label} <span>×</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Import controls ────────────────────────── */}
+      <section className="admin-card">
+        <div className="alex-import-bar">
+          <div className="alex-import-info">
+            <span>
+              {selected.size > 0
+                ? `Vybráno ${selected.size} z ${tours.length}`
+                : `Stránka ${page} z ${totalPages} (${filteredCount.toLocaleString("cs")} výsledků)`}
+            </span>
+            {importMessage && <p className="note">{importMessage}</p>}
+          </div>
+          <div className="alex-import-actions">
+            {selected.size > 0 && (
+              <button
+                type="button"
+                onClick={() => handleImport([...selected])}
+                disabled={importing}
+              >
+                {importing ? "Importuji…" : `Importovat vybrané (${selected.size})`}
+              </button>
+            )}
+            <button
+              type="button"
+              className={selected.size > 0 ? "ghost" : ""}
+              onClick={() => handleImport(tours.map((t) => t.externalId))}
+              disabled={importing || tours.length === 0}
+            >
+              {importing ? "Importuji…" : "Importovat vše"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Error ──────────────────────────────────── */}
+      {error && (
+        <section className="admin-card">
+          <p className="note" style={{ color: "#d32f2f" }}>
+            {error}
+          </p>
+        </section>
+      )}
+
+      {/* ── Results table ──────────────────────────── */}
+      <section className="admin-card">
+        <h2>Výsledky</h2>
+
+        {/* Streaming progress */}
+        {streaming && (
+          <div className="table-skeleton">
+            <div className="orex-stream-progress">
+              <div className="orex-stream-bar">
+                <div
+                  className="orex-stream-bar-fill"
+                  style={{ width: streamLoaded > 0 ? "100%" : "30%" }}
+                />
+              </div>
+              <span>
+                Načítám nabídky…{" "}
+                {streamLoaded > 0 ? `${streamLoaded.toLocaleString("cs")} načteno` : ""}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {loading && !streaming && (
+          <div className="table-skeleton">
+            <div className="skeleton-row" />
+            <div className="skeleton-row" />
+            <div className="skeleton-row" />
+            <div className="skeleton-row" />
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !streaming && tours.length === 0 && (
+          <div className="empty-state">
+            <strong>Žádné nabídky</strong>
+            <p>
+              {!cacheStatus?.warm
+                ? "Data se načítají… Zkuste obnovit feed tlačítkem ↻."
+                : "Zkuste změnit filtry nebo obnovte feed tlačítkem ↻."}
+            </p>
+          </div>
+        )}
+
+        {/* Tour table */}
+        {!loading && tours.length > 0 && (
+          <div className="alex-table-wrap">
+            <div className="alex-table-header">
+              <span className="alex-col-check">
+                <input
+                  type="checkbox"
+                  checked={selected.size === tours.length && tours.length > 0}
+                  onChange={toggleSelectAll}
+                />
+              </span>
+              <span className="alex-col-img">Foto</span>
+              <span className="alex-col-dest">Destinace / Hotel</span>
+              <button
+                type="button"
+                className="alex-col-price alex-sort-btn"
+                onClick={() => toggleSort("price")}
+              >
+                Cena{sortIcon("price")}
+              </button>
+              <button
+                type="button"
+                className="alex-col-dates alex-sort-btn"
+                onClick={() => toggleSort("date")}
+              >
+                Termín{sortIcon("date")}
+              </button>
+              {visibleColumns.nights && <span className="alex-col-transport">Nocí</span>}
+              {visibleColumns.pax && <span className="alex-col-people">Osoby</span>}
+              {visibleColumns.board && <span className="alex-col-transport">Strava</span>}
+              {visibleColumns.stars && <span className="alex-col-transport">Hvězdy</span>}
+              <span className="alex-col-transport">Doprava</span>
+              <span className="alex-col-link" />
+            </div>
+
+            {tours.map((tour) => (
+              <div
+                key={tour.externalId || `${tour.destination}-${tour.startDate}`}
+                className={`alex-table-row${selected.has(tour.externalId) ? " is-selected" : ""}`}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("input, a")) return;
+                  setDetailTour(tour);
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                <span className="alex-col-check">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(tour.externalId)}
+                    onChange={() => toggleSelect(tour.externalId)}
+                  />
+                </span>
+                <span className="alex-col-img">
+                  {tour.image ? (
+                    <img
+                      src={tour.image}
+                      alt={tour.destination}
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="alex-no-img"
+                      style={{ background: placeholderColor(tour.destination) }}
+                    >
+                      {tour.destination.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </span>
+                <span className="alex-col-dest">
+                  <strong>{tour.destination}</strong>
+                  <small>{tour.title}</small>
+                  <span className="alex-row-meta">
+                    <span
+                      className="alex-badge"
+                      style={{
+                        background: tour.source === "alexandria" ? "#dbeafe" : "#dcfce7",
+                        color: tour.source === "alexandria" ? "#1d4ed8" : "#15803d",
+                        fontSize: "0.65rem",
+                      }}
+                    >
+                      {tour.source}
+                    </span>
+                    {tour.offersCount && tour.offersCount > 1 && (
+                      <span className="alex-badge alex-badge--offers">
+                        {tour.offersCount} nabídek
+                      </span>
+                    )}
+                    {starsDisplay(tour.stars) && (
+                      <span className="alex-badge alex-badge--stars">
+                        {starsDisplay(tour.stars)}
+                      </span>
+                    )}
+                    {tour.board && (
+                      <span className="alex-badge alex-badge--board">
+                        {boardLabel[tour.board] ?? tour.board}
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <span className="alex-col-price">
+                  <strong>{formatPrice(tour.price)}</strong>
+                  {tour.originalPrice > tour.price && (
+                    <small className="alex-price-orig">
+                      {formatPrice(tour.originalPrice)}
+                    </small>
+                  )}
+                </span>
+                <span className="alex-col-dates">
+                  {fmtDate(tour.startDate)} – {fmtDate(tour.endDate)}
+                </span>
+                {visibleColumns.nights && (
+                  <span className="alex-col-transport">{tour.nights ?? "–"}</span>
+                )}
+                {visibleColumns.pax && (
+                  <span className="alex-col-people">
+                    {tour.adults !== undefined ? `${tour.adults}+${tour.children ?? 0}` : "–"}
+                  </span>
+                )}
+                {visibleColumns.board && (
+                  <span className="alex-col-transport">
+                    {(boardLabel[tour.board] ?? tour.board) || "–"}
+                  </span>
+                )}
+                {visibleColumns.stars && (
+                  <span className="alex-col-transport">
+                    {starsDisplay(tour.stars) || "–"}
+                  </span>
+                )}
+                <span className="alex-col-transport">
+                  {transportLabel[tour.transport] ?? tour.transport}
+                </span>
+                <span className="alex-col-link">
+                  {tour.url && (
+                    <a
+                      href={tour.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="alex-link-btn"
+                      title="Otevřít nabídku"
+                    >
+                      ↗
+                    </a>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="alex-pagination">
+            <button
+              type="button"
+              className="alex-page-btn"
+              disabled={page <= 1}
+              onClick={() => handlePageChange(page - 1)}
+            >
+              ← Předchozí
+            </button>
+
+            <div className="alex-page-numbers">
+              {pageNumbers().map((p, i) =>
+                p === "…" ? (
+                  <span key={`ellipsis-${i}`} className="alex-page-ellipsis">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`alex-page-num${p === page ? " is-active" : ""}`}
+                    onClick={() => handlePageChange(p)}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="alex-page-btn"
+              disabled={page >= totalPages}
+              onClick={() => handlePageChange(page + 1)}
+            >
+              Další →
+            </button>
+
+            <select
+              className="alex-page-limit"
+              value={limit}
+              onChange={(e) => handleLimitChange(Number(e.target.value))}
+            >
+              <option value={25}>25 / stránka</option>
+              <option value={50}>50 / stránka</option>
+              <option value={100}>100 / stránka</option>
+            </select>
+          </div>
+        )}
+      </section>
+
+      {/* ── Detail drawer ──────────────────────────── */}
+      <TourDetailDrawer
+        tour={detailTour}
+        onClose={() => setDetailTour(null)}
+        onImport={(externalId) => handleImport([externalId])}
+        importing={importing}
+      />
+    </AdminLayout>
+  );
+}

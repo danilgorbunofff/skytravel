@@ -8,8 +8,8 @@ const BASE_URL = config.orextravel.url;
 const TOKEN = config.orextravel.token;
 const DEFAULT_TOWN_FROM = config.orextravel.townFrom;
 
-const DELAY_MS = 100;
-const CONCURRENCY = 3;
+const DELAY_MS = 50;
+const CONCURRENCY = 6;
 
 // ──────────────────────────────────────────────
 // XML parser
