@@ -50,8 +50,9 @@ git fetch origin main
 git reset --hard origin/main
 
 echo "▸ Installing dependencies …"
-# npm ci gives a clean install; fall back to rm+install if lock file mismatch
-npm ci 2>/dev/null || (rm -rf node_modules && npm install)
+# Force-clean node_modules to avoid stale/corrupt file-system state, then install
+rm -rf node_modules
+npm install
 
 # Guard: if lucide-react icons barrel is still missing after install, force a fresh fetch
 if [[ ! -f client/node_modules/lucide-react/dist/esm/icons/index.js && \
