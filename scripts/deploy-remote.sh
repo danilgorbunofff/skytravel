@@ -49,22 +49,20 @@ cd "${REMOTE_PATH}"
 git fetch origin main
 git reset --hard origin/main
 
+# Kill PM2 and any node processes first to release file locks in node_modules
+echo "▸ Stopping running services …"
+pm2 kill 2>/dev/null || true
+sleep 2
+
 echo "▸ Installing dependencies …"
-# Force-clean node_modules to avoid stale/corrupt file-system state, then install
-rm -rf node_modules
+# Clean node_modules only after services are stopped (no open file handles)
+rm -rf node_modules client/node_modules server/node_modules
+
+echo "  Installing root + workspace packages …"
 npm install
 
-# Guard: if lucide-react icons barrel is still missing after install, force a fresh fetch
-if [[ ! -f client/node_modules/lucide-react/dist/esm/icons/index.js && \
-      ! -f node_modules/lucide-react/dist/esm/icons/index.js ]]; then
-  echo "  ⚠ lucide-react icons barrel missing — clearing cache entry"
-  npm cache clean --force 2>/dev/null || true
-  rm -rf node_modules/lucide-react client/node_modules/lucide-react 2>/dev/null || true
-  npm install
-fi
-
 echo "▸ Building server …"
-(cd server && npm install && npm run build)
+(cd server && npm run build)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
@@ -73,8 +71,6 @@ echo "▸ Building client …"
 (cd client && npm install && npm run build)
 
 echo "▸ Restarting PM2 apps …"
-pm2 kill 2>/dev/null || true
-sleep 1
 pm2 start ecosystem.config.cjs
 pm2 save
 
