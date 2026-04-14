@@ -49,21 +49,20 @@ cd "${REMOTE_PATH}"
 git fetch origin main
 git reset --hard origin/main
 
-# Kill PM2 and any node processes first to release file locks in node_modules
+# Kill PM2 and all node processes first to release file locks in node_modules
 echo "▸ Stopping running services …"
 pm2 kill 2>/dev/null || true
-sleep 2
+pkill -9 node 2>/dev/null || true
+sleep 3
 
 echo "▸ Installing dependencies …"
-# Clean node_modules only after services are stopped (no open file handles)
-rm -rf node_modules client/node_modules server/node_modules
-
-echo "  Installing root + workspace packages …"
-# First pass: extract all packages without running postinstall scripts
-# (avoids @prisma/engines postinstall failing when @prisma/debug isn't extracted yet)
-npm install --ignore-scripts
-# Second pass: run native rebuilds / postinstall scripts now that all files exist
-npm rebuild
+# Delete node_modules per-package to avoid ENOTEMPTY on deep dirs (e.g. caniuse-lite)
+if [[ -d node_modules ]]; then
+  find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
+  rm -rf node_modules 2>/dev/null || true
+fi
+npm cache clean --force 2>/dev/null || true
+npm install
 
 echo "▸ Building server …"
 (cd server && npm run build)
