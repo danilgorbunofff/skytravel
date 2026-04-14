@@ -50,7 +50,16 @@ git fetch origin main
 git reset --hard origin/main
 
 echo "▸ Installing dependencies …"
-npm ci --prefer-offline 2>/dev/null || npm install
+# Use --prefer-offline only as fallback; if node_modules/lucide-react is
+# missing its icons/ barrel (corrupt cache), force a fresh install.
+if [[ -f node_modules/lucide-react/dist/esm/icons/index.js ]]; then
+  npm ci --prefer-offline 2>/dev/null || npm install
+else
+  echo "  ⚠ lucide-react icons barrel missing — forcing clean install"
+  npm cache clean --force 2>/dev/null || true
+  rm -rf node_modules/lucide-react
+  npm install
+fi
 
 echo "▸ Building server …"
 npm --workspace server run build
