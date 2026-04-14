@@ -63,7 +63,7 @@ if [[ ! -f client/node_modules/lucide-react/dist/esm/icons/index.js && \
 fi
 
 echo "▸ Building server …"
-npm --workspace server run build
+(cd server && npm install && npm run build)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
