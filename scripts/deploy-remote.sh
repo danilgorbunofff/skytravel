@@ -62,7 +62,8 @@ if [[ -d node_modules ]]; then
   rm -rf node_modules 2>/dev/null || true
 fi
 npm cache clean --force 2>/dev/null || true
-npm install
+# Two-pass: first install may fail if stale scoped dirs remain; second always succeeds
+npm install 2>/dev/null || npm install
 
 echo "▸ Building server …"
 (cd server && npm run build)
