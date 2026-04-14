@@ -70,7 +70,7 @@ npx prisma migrate deploy
 cd ..
 
 echo "▸ Building client …"
-npm --workspace client run build
+(cd client && npm install && npm run build)
 
 echo "▸ Restarting PM2 apps …"
 pm2 kill 2>/dev/null || true
