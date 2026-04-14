@@ -59,7 +59,11 @@ echo "▸ Installing dependencies …"
 rm -rf node_modules client/node_modules server/node_modules
 
 echo "  Installing root + workspace packages …"
-npm install
+# First pass: extract all packages without running postinstall scripts
+# (avoids @prisma/engines postinstall failing when @prisma/debug isn't extracted yet)
+npm install --ignore-scripts
+# Second pass: run native rebuilds / postinstall scripts now that all files exist
+npm rebuild
 
 echo "▸ Building server …"
 (cd server && npm run build)
