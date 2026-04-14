@@ -1666,7 +1666,7 @@ body {
 .alex-table-header,
 .alex-table-row {
   display: grid;
-  grid-template-columns: 40px 64px 1fr 100px 170px 120px 36px;
+  grid-template-columns: 40px 56px 1.4fr 90px 160px 50px 55px 110px minmax(90px, 1fr);
   align-items: center;
   gap: 0.6rem;
   padding: 0.6rem 0.8rem;
@@ -1708,8 +1708,8 @@ body {
 }
 
 .alex-col-img img {
-  width: 56px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid #e4eaf5;
@@ -1719,12 +1719,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 8px;
-  background: #eef2f9;
-  color: #8899b4;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  user-select: none;
 }
 
 .alex-col-dest {
@@ -1888,6 +1889,72 @@ body {
   color: #1565c0;
 }
 
+.alex-stars {
+  color: #f59e0b;
+  font-size: 0.8rem;
+  letter-spacing: -0.02em;
+}
+
+.alex-transport-inline {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.08rem 0.4rem;
+  border-radius: 4px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  margin-top: 0.15rem;
+}
+
+.alex-col-people {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.alex-col-room {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* SSE streaming progress */
+.orex-stream-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+}
+
+.orex-stream-progress span {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.orex-stream-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 6px;
+  border-radius: 3px;
+  background: #e4eaf5;
+  overflow: hidden;
+}
+
+.orex-stream-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--blue-700);
+  transition: width 300ms ease;
+  animation: orex-stream-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes orex-stream-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* Group-by toggle */
 .alex-group-toggle {
   display: flex;
@@ -1939,11 +2006,13 @@ body {
 @media (max-width: 900px) {
   .alex-table-header,
   .alex-table-row {
-    grid-template-columns: 36px 50px 1fr 80px 28px;
+    grid-template-columns: 36px 48px 1fr 80px;
   }
 
   .alex-col-dates,
-  .alex-col-transport {
+  .alex-col-transport,
+  .alex-col-people,
+  .alex-col-room {
     display: none;
   }
 

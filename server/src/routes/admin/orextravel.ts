@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Response } from "express";
 import prisma from "../../prisma.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import {
@@ -55,6 +56,45 @@ function serializeItem(item: OrextravelTourInput) {
     roomType: item.roomType,
   };
 }
+
+function sendSSE(res: Response, event: string, data: unknown) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+// ── SSE stream — progressive tour loading ────────────────────────────
+router.get(
+  "/tours/stream",
+  asyncHandler(async (req, res) => {
+    const townFrom =
+      req.query.townFrom !== undefined ? Number(req.query.townFrom) : undefined;
+    const stateId =
+      req.query.stateId !== undefined ? Number(req.query.stateId) : undefined;
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+
+    sendSSE(res, "start", { total: 0 });
+
+    let loaded = 0;
+
+    await fetchOrextravelTours(townFrom, stateId, ({ batch }) => {
+      loaded += batch.length;
+      sendSSE(res, "batch", {
+        items: batch.map(serializeItem),
+        progress: { loaded },
+      });
+    });
+
+    // Also populate feedCacheMap so subsequent paginated calls are instant
+    const items = await getCachedFeed(townFrom, stateId);
+    sendSSE(res, "done", { total: items.length });
+    res.end();
+  }),
+);
 
 // ── Available routes (departure → destination) ───────────────────────
 router.get(

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import {
   fetchOrextravelTours,
   fetchOrextravelRoutes,
   importOrextravel,
   refreshOrextravelCache,
+  streamOrextravelTours,
   type OrextravelFilters,
   type OrextravelTour,
   type OrextravelRoute,
@@ -25,6 +26,19 @@ const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
 };
+
+const renderStars = (s: string | undefined): string => {
+  if (!s) return "";
+  const n = parseInt(s, 10);
+  return Number.isNaN(n) ? s : "★".repeat(Math.min(n, 5));
+};
+
+const PLACEHOLDER_COLORS = [
+  "#e74c3c", "#3498db", "#2ecc71", "#e67e22", "#9b59b6",
+  "#1abc9c", "#f39c12", "#d35400", "#2980b9", "#c0392b",
+];
+const placeholderColor = (dest: string) =>
+  PLACEHOLDER_COLORS[dest.charCodeAt(0) % PLACEHOLDER_COLORS.length];
 
 export default function AdminOrextravelPage() {
   // ── Data ──
@@ -64,6 +78,11 @@ export default function AdminOrextravelPage() {
 
   // ── Detail drawer ──
   const [detailTour, setDetailTour] = useState<OrextravelTour | null>(null);
+
+  // ── SSE streaming ──
+  const [streaming, setStreaming] = useState(false);
+  const [streamLoaded, setStreamLoaded] = useState(0);
+  const closeStreamRef = useRef<(() => void) | null>(null);
 
   // ── Stats from server ──
   const [uniqueDestinations, setUniqueDestinations] = useState(0);
@@ -122,6 +141,51 @@ export default function AdminOrextravelPage() {
     }
   }, []);
 
+  // SSE streaming load for initial/cold fetches
+  const loadToursStream = useCallback((townFrom?: number, stateId?: number) => {
+    if (closeStreamRef.current) closeStreamRef.current();
+    setStreaming(true);
+    setStreamLoaded(0);
+    setLoading(true);
+    setError(null);
+    setTours([]);
+    setTotalCount(0);
+    setFilteredCount(0);
+
+    const close = streamOrextravelTours(
+      { townFrom, stateId },
+      (items, loaded) => {
+        setStreamLoaded(loaded);
+        // Accumulate tours during stream for live preview
+        setTours((prev) => [...prev, ...items]);
+      },
+      (total) => {
+        // Stream done — switch to paginated mode
+        setStreaming(false);
+        setStreamLoaded(0);
+        closeStreamRef.current = null;
+        setTotalCount(total);
+        // Fetch first page with proper filtering/sorting/pagination
+        loadTours({
+          townFrom,
+          stateId,
+          page: 1,
+          limit,
+          sortBy,
+          sortDir,
+        });
+      },
+      (err) => {
+        setStreaming(false);
+        setStreamLoaded(0);
+        setLoading(false);
+        closeStreamRef.current = null;
+        setError(err.message);
+      },
+    );
+    closeStreamRef.current = close;
+  }, [loadTours, limit, sortBy, sortDir]);
+
   // Load routes on mount
   useEffect(() => {
     setRoutesLoading(true);
@@ -131,9 +195,10 @@ export default function AdminOrextravelPage() {
       .finally(() => setRoutesLoading(false));
   }, []);
 
-  // Initial load
+  // Initial load via streaming
   useEffect(() => {
-    loadTours(buildFilters(1));
+    loadToursStream(undefined, undefined);
+    return () => { if (closeStreamRef.current) closeStreamRef.current(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ──
@@ -178,7 +243,7 @@ export default function AdminOrextravelPage() {
   async function handleRefresh() {
     await refreshOrextravelCache();
     setPage(1);
-    loadTours({ ...buildFilters(1), refresh: true });
+    loadToursStream(selectedTownFrom, selectedStateId);
   }
 
   function handleTownFromChange(townId: number | undefined) {
@@ -186,19 +251,14 @@ export default function AdminOrextravelPage() {
     setSelectedStateId(undefined);
     setPage(1);
     setSelected(new Set());
-    const f = buildFilters(1);
-    f.townFrom = townId;
-    delete f.stateId;
-    loadTours(f);
+    loadToursStream(townId, undefined);
   }
 
   function handleStateChange(stateId: number | undefined) {
     setSelectedStateId(stateId);
     setPage(1);
     setSelected(new Set());
-    const f = buildFilters(1);
-    f.stateId = stateId;
-    loadTours(f);
+    loadToursStream(selectedTownFrom, stateId);
   }
 
   function handlePageChange(newPage: number) {
@@ -584,12 +644,23 @@ export default function AdminOrextravelPage() {
       <section className="admin-card">
         <h2>Výsledky</h2>
 
-        {loading && (
+        {(loading || streaming) && (
           <div className="table-skeleton">
-            <div className="skeleton-row" />
-            <div className="skeleton-row" />
-            <div className="skeleton-row" />
-            <div className="skeleton-row" />
+            {streaming ? (
+              <div className="orex-stream-progress">
+                <div className="orex-stream-bar">
+                  <div className="orex-stream-bar-fill" style={{ width: streamLoaded > 0 ? "100%" : "30%" }} />
+                </div>
+                <span>Načítám nabídky… {streamLoaded > 0 ? `${streamLoaded.toLocaleString("cs")} načteno` : ""}</span>
+              </div>
+            ) : (
+              <>
+                <div className="skeleton-row" />
+                <div className="skeleton-row" />
+                <div className="skeleton-row" />
+                <div className="skeleton-row" />
+              </>
+            )}
           </div>
         )}
 
@@ -610,6 +681,7 @@ export default function AdminOrextravelPage() {
                   onChange={toggleSelectAll}
                 />
               </span>
+              <span className="alex-col-img" />
               <span className="alex-col-dest">Destinace / Hotel</span>
               <button
                 type="button"
@@ -626,9 +698,9 @@ export default function AdminOrextravelPage() {
                 Termín{sortIcon("date")}
               </button>
               <span className="alex-col-transport">Nocí</span>
+              <span className="alex-col-people">Osoby</span>
               <span className="alex-col-transport">Strava</span>
-              <span className="alex-col-transport">Pokoj</span>
-              <span className="alex-col-link" />
+              <span className="alex-col-room">Pokoj</span>
             </div>
 
             {tours.map((tour) => (
@@ -649,15 +721,30 @@ export default function AdminOrextravelPage() {
                     onChange={() => toggleSelect(tour.externalId)}
                   />
                 </span>
+                <span className="alex-col-img">
+                  {tour.image ? (
+                    <img src={tour.image} alt={tour.title} loading="lazy" />
+                  ) : (
+                    <div
+                      className="alex-no-img"
+                      style={{ background: placeholderColor(tour.destination) }}
+                    >
+                      {tour.destination.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </span>
                 <span className="alex-col-dest">
                   <strong>{tour.destination}</strong>
                   <small>{tour.title}</small>
                   <span className="alex-row-meta">
                     {tour.stars && (
-                      <span className="alex-badge alex-badge--stars">
-                        {tour.stars}
+                      <span className="alex-stars">
+                        {renderStars(tour.stars)}
                       </span>
                     )}
+                    <span className="alex-transport-inline">
+                      {transportLabel[tour.transport] ?? tour.transport}
+                    </span>
                   </span>
                 </span>
                 <span className="alex-col-price">
@@ -669,16 +756,14 @@ export default function AdminOrextravelPage() {
                 <span className="alex-col-transport">
                   {tour.nights ?? "–"}
                 </span>
+                <span className="alex-col-people">
+                  {tour.adults ?? 0}+{tour.children ?? 0}
+                </span>
                 <span className="alex-col-transport">
                   {tour.board || "–"}
                 </span>
-                <span className="alex-col-transport">
+                <span className="alex-col-room" title={tour.roomType || ""}>
                   {tour.roomType || "–"}
-                </span>
-                <span className="alex-col-link">
-                  <span className="alex-badge alex-badge--board">
-                    {transportLabel[tour.transport] ?? tour.transport}
-                  </span>
                 </span>
               </div>
             ))}

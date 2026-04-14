@@ -8,7 +8,8 @@ const BASE_URL = config.orextravel.url;
 const TOKEN = config.orextravel.token;
 const DEFAULT_TOWN_FROM = config.orextravel.townFrom;
 
-const DELAY_MS = 200;
+const DELAY_MS = 100;
+const CONCURRENCY = 3;
 
 // ──────────────────────────────────────────────
 // XML parser
@@ -88,6 +89,22 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function runConcurrent<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number,
+): Promise<T[]> {
+  const results: T[] = [];
+  let index = 0;
+  async function worker() {
+    while (index < tasks.length) {
+      const i = index++;
+      results[i] = await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()));
+  return results;
+}
+
 // ──────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────
@@ -113,7 +130,7 @@ export type OrextravelTourInput = {
   hotelId: number;
 };
 
-type RefEntry = { inc: number; name: string; lname: string; status?: string };
+type RefEntry = { inc: number; name: string; lname: string; status?: string; pic?: string };
 
 // ──────────────────────────────────────────────
 // In-memory reference cache
@@ -189,6 +206,7 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
         name: String(item["@_name"] ?? ""),
         lname: String(item["@_lname"] ?? ""),
         status: String(item["@_status"] ?? ""),
+        pic: String(item["@_pic"] ?? item["@_www"] ?? item["@_image"] ?? ""),
       });
       const stamp = item["@_stamp"];
       if (stamp && stamp > lastStamp) lastStamp = stamp;
@@ -465,7 +483,9 @@ function mapClaimToTour(
   townName: string,
   _catalogName: string,
 ): OrextravelTourInput {
-  const hotelName = resolveLabel(refCache.hotels, claim.hotel, `Hotel ${claim.hotel}`);
+  const hotelEntry = refCache.hotels.get(claim.hotel);
+  const hotelName = hotelEntry ? (hotelEntry.name || hotelEntry.lname || `Hotel ${claim.hotel}`) : `Hotel ${claim.hotel}`;
+  const hotelImage = hotelEntry?.pic || "";
   const mealName = resolveLabel(refCache.meals, claim.meal, "");
   const roomName = resolveLabel(refCache.rooms, claim.room, "");
   const starsEntry = refCache.stars.get(claim.htplace);
@@ -487,7 +507,7 @@ function mapClaimToTour(
     startDate: checkinDate,
     endDate: checkoutDate,
     transport: claim.packetType === 1 ? "plane" : claim.packetType === 2 ? "car" : "plane",
-    image: "",
+    image: hotelImage,
     description: null,
     photos: [],
     url: "",
@@ -504,9 +524,16 @@ function mapClaimToTour(
 const MAX_SPO_PER_ROUTE = 20;
 const MAX_DATE_COMBOS_PER_SPO = 5;
 
+export type ProgressCallback = (info: {
+  loaded: number;
+  total: number;
+  batch: OrextravelTourInput[];
+}) => void;
+
 export async function fetchOrextravelTours(
   townFrom?: number,
   stateId?: number,
+  onProgress?: ProgressCallback,
 ): Promise<OrextravelTourInput[]> {
   await syncReferenceCache();
 
@@ -539,7 +566,9 @@ export async function fetchOrextravelTours(
 
       const spoSlice = spoList.slice(0, MAX_SPO_PER_ROUTE);
 
-      for (const spo of spoSlice) {
+      // Process SPOs concurrently
+      const spoTasks = spoSlice.map((spo) => async () => {
+        const spoTours: OrextravelTourInput[] = [];
         try {
           const dateNights = await fetchDateNights(
             route.town,
@@ -548,10 +577,10 @@ export async function fetchOrextravelTours(
           );
           await delay(DELAY_MS);
 
-          // Take only first N date/nights combos to avoid too many requests
           const comboSlice = dateNights.slice(0, MAX_DATE_COMBOS_PER_SPO);
 
-          for (const combo of comboSlice) {
+          // Process date combos concurrently within each SPO
+          const comboTasks = comboSlice.map((combo) => async () => {
             try {
               const prices = await fetchPrices(
                 route.town,
@@ -562,10 +591,8 @@ export async function fetchOrextravelTours(
               );
 
               for (const claim of prices) {
-                // Skip invisible or zero-price
                 if (claim.price <= 0) continue;
-
-                routeTours.push(
+                spoTours.push(
                   mapClaimToTour(
                     claim,
                     route.stateName,
@@ -580,12 +607,20 @@ export async function fetchOrextravelTours(
               );
             }
             await delay(DELAY_MS);
-          }
+          });
+
+          await runConcurrent(comboTasks, CONCURRENCY);
         } catch (err) {
           console.warn(
             `[Orextravel] Error fetching date/nights for SPO ${spo.inc}: ${err}`,
           );
         }
+        return spoTours;
+      });
+
+      const spoResults = await runConcurrent(spoTasks, CONCURRENCY);
+      for (const batch of spoResults) {
+        routeTours.push(...batch);
       }
     } catch (err) {
       console.warn(
@@ -603,6 +638,10 @@ export async function fetchOrextravelTours(
 
     tourCacheMap.set(cacheKey, { data: deduped, ts: Date.now() });
     allTours.push(...deduped);
+
+    if (onProgress) {
+      onProgress({ loaded: allTours.length, total: 0, batch: deduped });
+    }
   }
 
   return allTours;

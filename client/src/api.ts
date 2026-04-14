@@ -453,3 +453,40 @@ export async function refreshOrextravelCache() {
   if (!res.ok) throw new Error("Failed to refresh Orextravel cache");
   return res.json();
 }
+
+export function streamOrextravelTours(
+  filters: { townFrom?: number; stateId?: number },
+  onBatch: (items: OrextravelTour[], loaded: number) => void,
+  onDone: (total: number) => void,
+  onError: (err: Error) => void,
+): () => void {
+  const params = new URLSearchParams();
+  if (filters.townFrom !== undefined) params.set("townFrom", String(filters.townFrom));
+  if (filters.stateId !== undefined) params.set("stateId", String(filters.stateId));
+  const qs = params.toString();
+  const url = `${API_URL}/api/admin/orextravel/tours/stream${qs ? `?${qs}` : ""}`;
+
+  const source = new EventSource(url, { withCredentials: true });
+
+  source.addEventListener("batch", (e: MessageEvent) => {
+    try {
+      const data = JSON.parse(e.data);
+      onBatch(data.items ?? [], data.progress?.loaded ?? 0);
+    } catch { /* ignore parse errors */ }
+  });
+
+  source.addEventListener("done", (e: MessageEvent) => {
+    try {
+      const data = JSON.parse(e.data);
+      onDone(data.total ?? 0);
+    } catch { /* ignore */ }
+    source.close();
+  });
+
+  source.onerror = () => {
+    onError(new Error("SSE connection lost"));
+    source.close();
+  };
+
+  return () => source.close();
+}
