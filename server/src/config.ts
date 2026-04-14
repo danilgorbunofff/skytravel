@@ -35,4 +35,10 @@ export const config = {
     apiKey: process.env.ALEXANDRIA_API_KEY || "",
     country: Number(process.env.ALEXANDRIA_COUNTRY || 107),
   },
+
+  orextravel: {
+    url: process.env.OREXTRAVEL_API_URL || "https://search.orextravel.cz/export/default.php",
+    token: process.env.OREXTRAVEL_TOKEN || "",
+    townFrom: Number(process.env.OREXTRAVEL_TOWN_FROM || 0),
+  },
 } as const;

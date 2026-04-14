@@ -323,3 +323,133 @@ export async function previewAlexandria(zeme?: number): Promise<Record<string, u
   if (!res.ok) throw new Error("Failed to fetch Alexandria preview");
   return res.json();
 }
+
+// ──────────────────────────────────────────────────────────────
+// Orextravel XML Gate integration (admin)
+// ──────────────────────────────────────────────────────────────
+
+export type OrextravelRoute = {
+  town: number;
+  townName: string;
+  state: number;
+  stateName: string;
+  packetType: number;
+};
+
+export type OrextravelTour = {
+  externalId: string;
+  destination: string;
+  title: string;
+  price: number;
+  originalPrice: number;
+  startDate: string;
+  endDate: string;
+  transport: string;
+  image: string;
+  description: string | null;
+  photos: string[];
+  url?: string;
+  stars?: string;
+  board?: string;
+  nights?: number;
+  adults?: number;
+  children?: number;
+  roomType?: string;
+};
+
+export type OrextravelFilters = {
+  townFrom?: number;
+  stateId?: number;
+  q?: string;
+  priceMin?: number;
+  priceMax?: number;
+  dateStart?: string;
+  dateEnd?: string;
+  refresh?: boolean;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortDir?: string;
+};
+
+export async function fetchOrextravelRoutes(): Promise<{ items: OrextravelRoute[] }> {
+  const res = await fetch(`${API_URL}/api/admin/orextravel/routes`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to fetch Orextravel routes");
+  }
+  return res.json();
+}
+
+export async function fetchOrextravelTours(
+  filters?: OrextravelFilters,
+): Promise<{
+  total: number;
+  filtered: number;
+  uniqueDestinations: number;
+  uniqueHotels: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  items: OrextravelTour[];
+}> {
+  const params = new URLSearchParams();
+  if (filters?.townFrom !== undefined) params.set("townFrom", String(filters.townFrom));
+  if (filters?.stateId !== undefined) params.set("stateId", String(filters.stateId));
+  if (filters?.q) params.set("q", filters.q);
+  if (filters?.priceMin !== undefined) params.set("priceMin", String(filters.priceMin));
+  if (filters?.priceMax !== undefined) params.set("priceMax", String(filters.priceMax));
+  if (filters?.dateStart) params.set("dateStart", filters.dateStart);
+  if (filters?.dateEnd) params.set("dateEnd", filters.dateEnd);
+  if (filters?.refresh) params.set("refresh", "true");
+  if (filters?.page !== undefined) params.set("page", String(filters.page));
+  if (filters?.limit !== undefined) params.set("limit", String(filters.limit));
+  if (filters?.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters?.sortDir) params.set("sortDir", filters.sortDir);
+  const qs = params.toString();
+  const res = await fetch(`${API_URL}/api/admin/orextravel/tours${qs ? `?${qs}` : ""}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to fetch Orextravel tours");
+  }
+  return res.json();
+}
+
+export async function importOrextravel(options?: {
+  townFrom?: number;
+  stateId?: number;
+  dryRun?: boolean;
+  ids?: string[];
+}) {
+  const res = await fetch(`${API_URL}/api/admin/orextravel/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(options ?? {}),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Orextravel import failed");
+  }
+  return res.json() as Promise<{
+    ok: boolean;
+    created?: number;
+    updated?: number;
+    total?: number;
+    dryRun?: boolean;
+    message?: string;
+  }>;
+}
+
+export async function refreshOrextravelCache() {
+  const res = await fetch(`${API_URL}/api/admin/orextravel/refresh`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to refresh Orextravel cache");
+  return res.json();
+}

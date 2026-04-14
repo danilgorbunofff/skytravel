@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { LayoutDashboard, BarChart3, Mail, Globe, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, BarChart3, Mail, Globe, Plane, Settings, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Separator } from "./ui/separator";
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/admin/statistics", label: "Statistiky", icon: BarChart3 },
   { to: "/admin/emails", label: "E-maily", icon: Mail },
   { to: "/admin/alexandria", label: "Alexandria", icon: Globe },
+  { to: "/admin/orextravel", label: "Orextravel", icon: Plane },
   { to: "/admin/settings", label: "Nastavení", icon: Settings },
 ];
 

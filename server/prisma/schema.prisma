@@ -18,13 +18,18 @@ model Tour {
   endDate     DateTime
   transport   String
   image       String
-  description String? @db.Text
+  description String?  @db.Text
   photos      Json?
   i18n        Json?
   sortOrder   Int      @default(0)
+  source      String   @default("manual")
+  externalId  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   leads       Lead[]
+
+  @@index([source])
+  @@index([source, externalId])
 }
 
 model AdminUser {

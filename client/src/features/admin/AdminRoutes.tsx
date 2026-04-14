@@ -7,6 +7,7 @@ const AdminStatisticsPage = lazy(() => import("../../pages/AdminStatisticsPage")
 const AdminSettingsPage = lazy(() => import("../../pages/AdminSettingsPage"));
 const AdminEmailPage = lazy(() => import("../../pages/AdminEmailPage"));
 const AdminAlexandriaPage = lazy(() => import("../../pages/AdminAlexandriaPage"));
+const AdminOrextravelPage = lazy(() => import("../../pages/AdminOrextravelPage"));
 
 function AdminFallback() {
   return (
@@ -26,6 +27,7 @@ export default function AdminRoutes() {
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="emails" element={<AdminEmailPage />} />
           <Route path="alexandria" element={<AdminAlexandriaPage />} />
+          <Route path="orextravel" element={<AdminOrextravelPage />} />
         </Routes>
       </Suspense>
     </RequireAdmin>

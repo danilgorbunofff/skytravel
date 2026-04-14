@@ -6,6 +6,7 @@ import uploadRoutes from "./uploads.js";
 import leadRoutes from "./leads.js";
 import campaignRoutes from "./campaigns.js";
 import alexandriaRoutes from "./alexandria.js";
+import orextravelRoutes from "./orextravel.js";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/uploads", uploadRoutes);
 router.use("/leads", leadRoutes);
 router.use("/campaigns", campaignRoutes);
 router.use("/alexandria", alexandriaRoutes);
+router.use("/orextravel", orextravelRoutes);
 
 export default router;

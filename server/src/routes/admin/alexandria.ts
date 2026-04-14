@@ -145,12 +145,17 @@ router.post("/import", asyncHandler(async (req, res) => {
     const existing = item.externalId
       ? await prisma.tour.findFirst({
           where: {
+            source: "alexandria",
+            externalId: item.externalId,
+          },
+        })
+      : await prisma.tour.findFirst({
+          where: {
             destination: item.destination,
             title: item.title,
             startDate: item.startDate,
           },
-        })
-      : null;
+        });
 
     const data = {
       destination: item.destination,
@@ -162,6 +167,8 @@ router.post("/import", asyncHandler(async (req, res) => {
       image: item.image,
       description: item.description,
       photos: item.photos.length > 0 ? item.photos : undefined,
+      source: "alexandria" as const,
+      externalId: item.externalId || undefined,
     };
 
     if (existing) {

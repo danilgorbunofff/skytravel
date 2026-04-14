@@ -63,13 +63,20 @@ async function main() {
   let updated = 0;
 
   for (const item of tours) {
-    const existing = await prisma.tour.findFirst({
-      where: {
-        destination: item.destination,
-        title: item.title,
-        startDate: item.startDate,
-      },
-    });
+    const existing = item.externalId
+      ? await prisma.tour.findFirst({
+          where: {
+            source: "alexandria",
+            externalId: item.externalId,
+          },
+        })
+      : await prisma.tour.findFirst({
+          where: {
+            destination: item.destination,
+            title: item.title,
+            startDate: item.startDate,
+          },
+        });
 
     const data = {
       destination: item.destination,
@@ -81,6 +88,8 @@ async function main() {
       image: item.image,
       description: item.description,
       photos: item.photos.length > 0 ? item.photos : undefined,
+      source: "alexandria" as const,
+      externalId: item.externalId || undefined,
     };
 
     if (existing) {
