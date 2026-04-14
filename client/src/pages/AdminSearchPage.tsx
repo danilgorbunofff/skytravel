@@ -66,16 +66,6 @@ function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
 }
 
-function cacheAgoText(lastRefresh: number | null): string {
-  if (lastRefresh == null) return "Zatím neproběhla";
-  const mins = Math.round((Date.now() - lastRefresh) / 60_000);
-  if (mins < 1) return "Právě teď";
-  if (mins === 1) return "Před 1 minutou";
-  if (mins < 60) return `Před ${mins} minutami`;
-  const hrs = Math.round(mins / 60);
-  return `Před ${hrs} hod.`;
-}
-
 export default function AdminSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -554,17 +544,6 @@ export default function AdminSearchPage() {
     }
   }
 
-  // ── Stats ──
-  const stats = useMemo(() => {
-    if (tours.length === 0) return null;
-    const prices = tours.map((t) => t.price);
-    return {
-      minPrice: Math.min(...prices),
-      maxPrice: Math.max(...prices),
-      avgPrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
-    };
-  }, [tours]);
-
   // ── Conditional columns ──
   const visibleColumns = useMemo(() => {
     const cols = { nights: false, pax: false, stars: false, board: false };
@@ -736,62 +715,6 @@ export default function AdminSearchPage() {
           <span className="alex-country-loading">Načítám regiony…</span>
         </section>
       )}
-
-      {/* ── Cache status ────────────────────────────── */}
-      {cacheStatus && (
-        <section className="admin-card">
-          <div className="alex-stats" style={{ alignItems: "center" }}>
-            <div className="alex-stat-tile">
-              <span>Poslední refresh</span>
-              <strong>{cacheAgoText(cacheStatus.lastRefresh)}</strong>
-            </div>
-            <div className="alex-stat-tile">
-              <span>V cache</span>
-              <strong>{cacheStatus.itemCount.toLocaleString("cs")}</strong>
-            </div>
-            <div className="alex-stat-tile">
-              <span>Stav</span>
-              <strong style={{ color: cacheStatus.warm ? "#16a34a" : "#d97706" }}>
-                {cacheStatus.warm ? "Aktivní" : "Studená"}
-              </strong>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Summary tiles ───────────────────────────── */}
-      <section className="admin-card">
-        <div className="alex-stats">
-          <div className="alex-stat-tile">
-            <span>Celkem ve feedu</span>
-            <strong>{totalCount.toLocaleString("cs")}</strong>
-          </div>
-          <div className="alex-stat-tile">
-            <span>Po filtraci</span>
-            <strong>{filteredCount.toLocaleString("cs")}</strong>
-          </div>
-          <div className="alex-stat-tile">
-            <span>Unikátních destinací</span>
-            <strong>{uniqueDestinations.toLocaleString("cs")}</strong>
-          </div>
-          {stats && (
-            <>
-              <div className="alex-stat-tile">
-                <span>Cena od</span>
-                <strong>{formatPrice(stats.minPrice)}</strong>
-              </div>
-              <div className="alex-stat-tile">
-                <span>Cena do</span>
-                <strong>{formatPrice(stats.maxPrice)}</strong>
-              </div>
-              <div className="alex-stat-tile">
-                <span>Průměr</span>
-                <strong>{formatPrice(stats.avgPrice)}</strong>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
 
       {/* ── Filters ────────────────────────────────── */}
       <section className="admin-card">
