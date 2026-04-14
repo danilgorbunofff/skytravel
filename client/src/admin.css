@@ -1519,15 +1519,10 @@ body {
 /* Filters */
 .alex-filters {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
-.alex-filter-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.9rem;
-}
-
+/* ── Shared field (e.g. full-width search) ── */
 .alex-filter-field {
   display: grid;
   gap: 0.35rem;
@@ -1560,15 +1555,88 @@ body {
   box-shadow: 0 0 0 3px rgba(140, 180, 255, 0.35);
 }
 
+/* ── Legacy filter row used by ProviderFilterRenderer ── */
+.alex-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.9rem;
+}
+
+/* ── Grouped range pairs (price, date) ── */
+.alex-filter-groups {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alex-filter-group {
+  display: grid;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.alex-filter-group-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.alex-filter-group-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alex-filter-group-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d6deef;
+  padding: 0 0.7rem;
+  font: inherit;
+  font-size: 0.92rem;
+  background: #fff;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.alex-filter-group-row input:focus {
+  outline: none;
+  border-color: #8cb4ff;
+  box-shadow: 0 0 0 3px rgba(140, 180, 255, 0.35);
+}
+
+.alex-filter-range-sep {
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.alex-filter-group.has-error .alex-filter-group-row input {
+  border-color: #e53935;
+  box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.18);
+}
+
+.alex-filter-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0.1rem 0;
+}
+
 .alex-filter-actions {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .alex-filter-actions button {
-  min-height: 40px;
-  padding: 0 1.2rem;
+  min-height: 42px;
+  padding: 0 1.4rem;
   border-radius: 10px;
   border: none;
   font: inherit;
@@ -1577,13 +1645,13 @@ body {
   cursor: pointer;
   background: var(--blue-700);
   color: #fff;
-  box-shadow: 0 6px 14px rgba(39, 93, 174, 0.2);
+  box-shadow: 0 6px 14px rgba(39, 93, 174, 0.22);
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 .alex-filter-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(39, 93, 174, 0.28);
+  box-shadow: 0 8px 18px rgba(39, 93, 174, 0.3);
 }
 
 .alex-filter-actions button.ghost {
@@ -1591,10 +1659,27 @@ body {
   color: var(--blue-700);
   box-shadow: none;
   border: 1px solid #d6deef;
+  min-height: 42px;
+}
+
+.alex-filter-actions button.ghost:hover:not(:disabled) {
+  background: #f0f4fb;
+  border-color: #b8cbe9;
+}
+
+/* "Obnovit feed" floated to the right to signal it's a separate action */
+.alex-filter-actions button.ghost.refresh {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.alex-filter-actions button.ghost.refresh:hover:not(:disabled) {
+  color: var(--blue-700);
 }
 
 .alex-filter-actions button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -2018,6 +2103,26 @@ body {
 
   .alex-filter-row {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .alex-filter-groups {
+    flex-direction: column;
+  }
+
+  .alex-filter-group {
+    min-width: 0;
+  }
+
+  .alex-filter-actions {
+    flex-wrap: wrap;
+  }
+
+  .alex-filter-actions button.ghost.refresh {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -720,79 +720,86 @@ export default function AdminSearchPage() {
       <section className="admin-card">
         <h2>Filtrovat nabídky</h2>
         <form className="alex-filters" onSubmit={handleSearch}>
-          <div className="alex-filter-row">
-            <div className="alex-filter-field">
-              <label htmlFor="searchQ">Hledat</label>
-              <input
-                id="searchQ"
-                type="text"
-                placeholder="Destinace, hotel…"
-                value={search}
-                onChange={(e) => handleSearchDebounced(e.target.value)}
-              />
-            </div>
-            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
-              <label htmlFor="searchPriceMin">Cena od</label>
-              <input
-                id="searchPriceMin"
-                type="number"
-                min={0}
-                step={100}
-                placeholder="Kč"
-                value={priceMin}
-                onChange={(e) => setPriceMin(e.target.value)}
-              />
-            </div>
-            <div className={`alex-filter-field${validationErrors.price ? " has-error" : ""}`}>
-              <label htmlFor="searchPriceMax">Cena do</label>
-              <input
-                id="searchPriceMax"
-                type="number"
-                min={0}
-                step={100}
-                placeholder="Kč"
-                value={priceMax}
-                onChange={(e) => setPriceMax(e.target.value)}
-              />
-            </div>
-            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
-              <label htmlFor="searchDateStart">Od</label>
-              <input
-                id="searchDateStart"
-                type="date"
-                value={dateStart}
-                onChange={(e) => setDateStart(e.target.value)}
-              />
-            </div>
-            <div className={`alex-filter-field${validationErrors.date ? " has-error" : ""}`}>
-              <label htmlFor="searchDateEnd">Do</label>
-              <input
-                id="searchDateEnd"
-                type="date"
-                value={dateEnd}
-                onChange={(e) => setDateEnd(e.target.value)}
-              />
-            </div>
+
+          {/* ─ Full-width search ─ */}
+          <div className="alex-filter-field">
+            <label htmlFor="searchQ">Hledat</label>
+            <input
+              id="searchQ"
+              type="text"
+              placeholder="Destinace, hotel…"
+              value={search}
+              onChange={(e) => handleSearchDebounced(e.target.value)}
+            />
           </div>
 
-          {/* Provider-specific filters */}
-          {selectedProvider && selectedProvider.filterFields.length > 0 && (
-            <ProviderFilterRenderer
-              fields={selectedProvider.filterFields}
-              values={providerFilters}
-              onChange={handleProviderFilterChange}
-            />
-          )}
-
-          {(validationErrors.price || validationErrors.date) && (
-            <div className="alex-filter-errors">
+          {/* ─ Range groups: price + date ─ */}
+          <div className="alex-filter-groups">
+            <div className={`alex-filter-group${validationErrors.price ? " has-error" : ""}`}>
+              <span className="alex-filter-group-label">Cena (Kč)</span>
+              <div className="alex-filter-group-row">
+                <input
+                  id="searchPriceMin"
+                  type="number"
+                  min={0}
+                  step={100}
+                  placeholder="Min"
+                  aria-label="Cena od"
+                  value={priceMin}
+                  onChange={(e) => setPriceMin(e.target.value)}
+                />
+                <span className="alex-filter-range-sep">–</span>
+                <input
+                  id="searchPriceMax"
+                  type="number"
+                  min={0}
+                  step={100}
+                  placeholder="Max"
+                  aria-label="Cena do"
+                  value={priceMax}
+                  onChange={(e) => setPriceMax(e.target.value)}
+                />
+              </div>
               {validationErrors.price && (
                 <span className="alex-filter-error">⚠ {validationErrors.price}</span>
               )}
+            </div>
+
+            <div className={`alex-filter-group${validationErrors.date ? " has-error" : ""}`}>
+              <span className="alex-filter-group-label">Termín odletu</span>
+              <div className="alex-filter-group-row">
+                <input
+                  id="searchDateStart"
+                  type="date"
+                  aria-label="Datum od"
+                  value={dateStart}
+                  onChange={(e) => setDateStart(e.target.value)}
+                />
+                <span className="alex-filter-range-sep">–</span>
+                <input
+                  id="searchDateEnd"
+                  type="date"
+                  aria-label="Datum do"
+                  value={dateEnd}
+                  onChange={(e) => setDateEnd(e.target.value)}
+                />
+              </div>
               {validationErrors.date && (
                 <span className="alex-filter-error">⚠ {validationErrors.date}</span>
               )}
             </div>
+          </div>
+
+          {/* ─ Provider-specific filters ─ */}
+          {selectedProvider && selectedProvider.filterFields.length > 0 && (
+            <>
+              <hr className="alex-filter-divider" />
+              <ProviderFilterRenderer
+                fields={selectedProvider.filterFields}
+                values={providerFilters}
+                onChange={handleProviderFilterChange}
+              />
+            </>
           )}
 
           <div className="alex-filter-actions">
@@ -802,7 +809,7 @@ export default function AdminSearchPage() {
             <button type="button" className="ghost" onClick={handleReset}>
               Reset
             </button>
-            <button type="button" className="ghost" onClick={handleRefresh} disabled={loading}>
+            <button type="button" className="ghost refresh" onClick={handleRefresh} disabled={loading}>
               ↻ Obnovit feed
             </button>
           </div>
