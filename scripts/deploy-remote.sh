@@ -61,14 +61,13 @@ for i in {1..15}; do
 done
 
 echo "▸ Installing dependencies …"
-# Wipe cached npm tarballs entirely to avoid corrupt cache entries (ENOENT/ENOTEMPTY)
-rm -rf /home/ubuntu/.npm/_cacache 2>/dev/null || true
-# Delete node_modules per-package to avoid ENOTEMPTY on deep dirs (e.g. caniuse-lite)
+# Delete node_modules per-package to avoid ENOTEMPTY on deep dirs
 if [[ -d node_modules ]]; then
   find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
   rm -rf node_modules 2>/dev/null || true
 fi
-npm install
+# Two-pass: postinstall scripts (Prisma engines) can fail on first attempt after cache invalidation
+npm install || npm install
 
 echo "▸ Building server …"
 (cd server && npm run build)
@@ -82,7 +81,7 @@ echo "▸ Building client …"
     find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
     rm -rf node_modules 2>/dev/null || true
   fi
-  npm install
+  npm install || npm install
   npm run build)
 
 echo "▸ Restarting PM2 apps …"
