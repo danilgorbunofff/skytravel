@@ -55,7 +55,7 @@ pm2 kill 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
 pkill -9 esbuild 2>/dev/null || true
 # Wait until no node/esbuild processes remain (up to 15s)
-for i in $(seq 1 15); do
+for i in {1..15}; do
   pgrep -x node >/dev/null 2>&1 || pgrep -x esbuild >/dev/null 2>&1 || break
   sleep 1
 done
