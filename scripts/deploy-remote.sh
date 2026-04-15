@@ -70,7 +70,7 @@ fi
 npm install || npm install
 
 echo "▸ Building server …"
-(cd server && npm run build)
+(cd server && PATH="../node_modules/.bin:\$PATH" npm run build)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
