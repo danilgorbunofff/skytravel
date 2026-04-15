@@ -53,7 +53,12 @@ git reset --hard origin/main
 echo "▸ Stopping running services …"
 pm2 kill 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
-sleep 3
+pkill -9 esbuild 2>/dev/null || true
+# Wait until no node/esbuild processes remain (up to 15s)
+for i in $(seq 1 15); do
+  pgrep -x node >/dev/null 2>&1 || pgrep -x esbuild >/dev/null 2>&1 || break
+  sleep 1
+done
 
 echo "▸ Installing dependencies …"
 # Wipe cached npm tarballs entirely to avoid corrupt cache entries (ENOENT/ENOTEMPTY)
