@@ -115,10 +115,21 @@ ensureAdminUser()
 
       // ── Cache warming (fire-and-forget) ───────────────────────────
       const warmOnStartup = process.env.PROVIDERS_WARM_ON_STARTUP !== "false";
-      if (warmOnStartup) {
-        void (async () => {
-          const { getAllProviders, getProvider } = await import("./providers/index.js");
-          const all = getAllProviders();
+      void (async () => {
+        const { getAllProviders, getProvider } = await import("./providers/index.js");
+        const all = getAllProviders();
+
+        // Always load DB cache status so getCacheStatus() works
+        for (const meta of all) {
+          try {
+            const provider = getProvider(meta.id) as any;
+            if (typeof provider.loadCacheStatus === "function") {
+              await provider.loadCacheStatus();
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (warmOnStartup) {
           for (const meta of all) {
             const start = Date.now();
             try {
@@ -132,18 +143,19 @@ ensureAdminUser()
               console.error(`[Cache] ${meta.id} warm failed:`, err);
             }
           }
-          // Set up background refresh intervals
-          for (const meta of all) {
-            const provider = getProvider(meta.id);
-            const mins = Math.round(provider.refreshIntervalMs / 60_000);
-            setInterval(() => {
-              provider.warmCache().catch((err) =>
-                console.error(`[Cache] ${meta.id} background refresh failed:`, err),
-              );
-            }, provider.refreshIntervalMs);
-            console.log(`[Cache] ${meta.id} will refresh every ${mins} min`);
-          }
-        })();
-      }
+        }
+
+        // Set up background refresh intervals
+        for (const meta of all) {
+          const provider = getProvider(meta.id);
+          const mins = Math.round(provider.refreshIntervalMs / 60_000);
+          setInterval(() => {
+            provider.warmCache().catch((err) =>
+              console.error(`[Cache] ${meta.id} background refresh failed:`, err),
+            );
+          }, provider.refreshIntervalMs);
+          console.log(`[Cache] ${meta.id} will refresh every ${mins} min`);
+        }
+      })();
     });
   });

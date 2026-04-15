@@ -1751,7 +1751,7 @@ body {
 .alex-table-header,
 .alex-table-row {
   display: grid;
-  grid-template-columns: 40px 56px 1.4fr 90px 160px 50px 55px 110px minmax(90px, 1fr);
+  grid-template-columns: var(--alex-grid-cols, 40px 56px 1.4fr 90px 160px 110px 44px);
   align-items: center;
   gap: 0.6rem;
   padding: 0.6rem 0.8rem;

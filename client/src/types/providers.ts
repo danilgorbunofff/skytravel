@@ -82,6 +82,7 @@ export type CacheStatus = {
   ttl: number;
   itemCount: number;
   warm: boolean;
+  syncing?: boolean;
 };
 
 /** Paginated tours result. */

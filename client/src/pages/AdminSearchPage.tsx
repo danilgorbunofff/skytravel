@@ -101,8 +101,6 @@ export default function AdminSearchPage() {
   const page = useSearchStore((s) => s.page);
   const totalPages = useSearchStore((s) => s.totalPages);
   const uniqueDestinations = useSearchStore((s) => s.uniqueDestinations);
-  const streaming = useSearchStore((s) => s.streaming);
-  const streamLoaded = useSearchStore((s) => s.streamLoaded);
 
   // ── Store actions (stable refs — zustand actions never change) ──
   const {
@@ -122,8 +120,6 @@ export default function AdminSearchPage() {
     setSelectedRegion: storeSetSelectedRegion,
     setSelectedSubRegion: storeSetSelectedSubRegion,
     loadTours,
-    loadToursStream,
-    cancelStream,
     resetTours,
   } = useSearchStore.getState();
 
@@ -233,13 +229,6 @@ export default function AdminSearchPage() {
     [selectedProviderId, buildFilters, loadTours],
   );
 
-  // ── Load tours with streaming ──
-  const doLoadToursStream = useCallback(() => {
-    if (!selectedProviderId) return;
-    const filters = buildFilters(1);
-    loadToursStream(selectedProviderId, filters);
-  }, [selectedProviderId, buildFilters, loadToursStream]);
-
   // ── Provider change handler ──
   const handleProviderChange = useCallback(
     async (providerId: string) => {
@@ -286,23 +275,9 @@ export default function AdminSearchPage() {
     // Skip if nothing changed (e.g. remount with same state)
     if (!isProviderChange && !isRegionChange && !isSubRegionChange) return;
 
-    const provider = providers.find((p) => p.id === selectedProviderId);
-
-    // Use streaming only on provider switch when cache is cold
-    if (isProviderChange && provider?.supportsStreaming && !cacheStatus?.warm) {
-      doLoadToursStream();
-    } else {
-      doLoadTours(1);
-    }
+    doLoadTours(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProviderId, selectedRegion, selectedSubRegion]);
-
-  // ── Cancel active stream on unmount ──
-  useEffect(() => {
-    return () => {
-      cancelStream();
-    };
-  }, [cancelStream]);
 
   // ── Cache status polling ──
   useEffect(() => {
@@ -371,12 +346,7 @@ export default function AdminSearchPage() {
     } catch {
       // ignore
     }
-    const provider = providers.find((p) => p.id === selectedProviderId);
-    if (provider?.supportsStreaming) {
-      doLoadToursStream();
-    } else {
-      doLoadTours(1);
-    }
+    doLoadTours(1);
   }
 
   function handleRegionChange(region: ProviderRegion | null) {
@@ -499,6 +469,18 @@ export default function AdminSearchPage() {
     }
     return cols;
   }, [tours]);
+
+  // ── Dynamic grid columns (adjusts to which optional columns are visible) ──
+  const gridCols = useMemo(() => {
+    const c = ["40px", "56px", "1.4fr", "90px", "160px"];
+    if (visibleColumns.nights) c.push("50px");
+    if (visibleColumns.pax) c.push("55px");
+    if (visibleColumns.board) c.push("110px");
+    if (visibleColumns.stars) c.push("50px");
+    c.push("110px"); // transport (always)
+    c.push("44px");  // link (always)
+    return c.join(" ");
+  }, [visibleColumns]);
 
   // ── Active filter chips ──
   type FilterChip = { key: string; label: string; clear: () => void };
@@ -807,26 +789,8 @@ export default function AdminSearchPage() {
       <section className="admin-card">
         <h2>Výsledky</h2>
 
-        {/* Streaming progress */}
-        {streaming && (
-          <div className="table-skeleton">
-            <div className="orex-stream-progress">
-              <div className="orex-stream-bar">
-                <div
-                  className="orex-stream-bar-fill"
-                  style={{ width: streamLoaded > 0 ? "100%" : "30%" }}
-                />
-              </div>
-              <span>
-                Načítám nabídky…{" "}
-                {streamLoaded > 0 ? `${streamLoaded.toLocaleString("cs")} načteno` : ""}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Loading skeleton */}
-        {loading && !streaming && (
+        {loading && (
           <div className="table-skeleton">
             <div className="skeleton-row" />
             <div className="skeleton-row" />
@@ -836,7 +800,7 @@ export default function AdminSearchPage() {
         )}
 
         {/* Empty state */}
-        {!loading && !streaming && tours.length === 0 && (
+        {!loading && tours.length === 0 && (
           <div className="empty-state">
             <strong>Žádné nabídky</strong>
             <p>
@@ -849,7 +813,7 @@ export default function AdminSearchPage() {
 
         {/* Tour table */}
         {!loading && tours.length > 0 && (
-          <div className="alex-table-wrap">
+          <div className="alex-table-wrap" style={{ "--alex-grid-cols": gridCols } as React.CSSProperties}>
             <div className="alex-table-header">
               <span className="alex-col-check">
                 <input
@@ -1001,7 +965,7 @@ export default function AdminSearchPage() {
         )}
 
         {/* Pagination / rows-per-page */}
-        {!loading && !streaming && tours.length > 0 && (
+        {!loading && tours.length > 0 && (
           <div className="alex-pagination">
             {totalPages > 1 && (
               <>

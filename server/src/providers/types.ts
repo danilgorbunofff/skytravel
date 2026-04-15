@@ -90,6 +90,7 @@ export type CacheStatus = {
   ttl: number;
   itemCount: number;
   warm: boolean;
+  syncing?: boolean;
 };
 
 /** Callback for SSE streaming. */
@@ -119,4 +120,5 @@ export interface TourProvider {
   warmCache(): Promise<void>;
   refreshCache(): Promise<void>;
   getCacheStatus(): CacheStatus;
+  syncToDb(): Promise<void>;
 }

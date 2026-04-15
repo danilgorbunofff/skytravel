@@ -4,7 +4,6 @@ import {
   fetchProviderRegions,
   fetchProviderCacheStatus,
   fetchProviderTours,
-  streamProviderTours,
 } from "../api/providers";
 import type {
   CacheStatus,
@@ -41,10 +40,6 @@ export interface SearchState {
   totalPages: number;
   uniqueDestinations: number;
 
-  // Streaming
-  streaming: boolean;
-  streamLoaded: number;
-
   // Shared filters
   search: string;
   priceMin: string;
@@ -76,8 +71,6 @@ export interface SearchState {
   clearFilters: () => void;
   setCacheStatus: (status: CacheStatus | null) => void;
   loadTours: (providerId: string, filters: UnifiedFilters) => Promise<void>;
-  loadToursStream: (providerId: string, filters: UnifiedFilters) => void;
-  cancelStream: () => void;
   resetTours: () => void;
 }
 
@@ -109,10 +102,6 @@ function findOrextravelDefaults(
 
 // ── Store ────────────────────────────────────────────────────
 
-/** Ref for the active stream close function — lives outside the store
- *  so it's never serialized / compared. */
-let _streamClose: (() => void) | null = null;
-
 /** AbortController for the latest loadTours fetch — lets us cancel stale requests. */
 let _loadAbort: AbortController | null = null;
 
@@ -134,8 +123,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   page: 1,
   totalPages: 0,
   uniqueDestinations: 0,
-  streaming: false,
-  streamLoaded: 0,
   search: "",
   priceMin: "",
   priceMax: "",
@@ -166,7 +153,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   changeProvider: async (providerId) => {
-    get().cancelStream();
     set({
       selectedProviderId: providerId,
       providerFilters: {},
@@ -178,8 +164,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       page: 1,
       totalPages: 0,
       uniqueDestinations: 0,
-      streaming: false,
-      streamLoaded: 0,
     });
     await get().loadRegions(providerId);
   },
@@ -282,46 +266,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     }
   },
 
-  loadToursStream: (providerId, filters) => {
-    // Cancel previous stream
-    get().cancelStream();
-
-    set({
-      streaming: true,
-      streamLoaded: 0,
-      tours: [],
-      error: null,
-    });
-
-    const close = streamProviderTours(providerId, filters, {
-      onBatch(items, loaded) {
-        set((s) => ({
-          tours: [...s.tours, ...items],
-          streamLoaded: loaded,
-        }));
-      },
-      onDone() {
-        set({ streaming: false });
-        _streamClose = null;
-        // Fetch the properly sorted/paginated first page
-        get().loadTours(providerId, filters);
-      },
-      onError(err) {
-        set({ streaming: false, error: err.message });
-        _streamClose = null;
-      },
-    });
-
-    _streamClose = close;
-  },
-
-  cancelStream: () => {
-    _streamClose?.();
-    _streamClose = null;
-  },
-
   resetTours: () => {
-    get().cancelStream();
     _loadAbort?.abort();
     set({
       tours: [],
@@ -332,8 +277,6 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       page: 1,
       totalPages: 0,
       uniqueDestinations: 0,
-      streaming: false,
-      streamLoaded: 0,
     });
   },
 }));

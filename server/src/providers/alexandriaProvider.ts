@@ -154,120 +154,162 @@ export class AlexandriaProvider implements TourProvider {
     const stars = typeof pf.stars === "string" ? pf.stars : "";
     const groupBy = typeof pf.groupBy === "string" ? pf.groupBy : "";
 
-    if (filters.refresh) {
-      this.feedCacheMap.delete(zeme);
-    }
-
-    const items = await this.getCachedFeed(zeme);
-
-    const q = filters.q?.toLowerCase() ?? "";
-    const priceMin = filters.priceMin;
-    const priceMax = filters.priceMax;
-    const dateStart = filters.dateStart ? new Date(filters.dateStart) : undefined;
-    const dateEnd = filters.dateEnd ? new Date(filters.dateEnd) : undefined;
+    const regionKey = String(zeme);
     const sortBy = filters.sortBy ?? "price";
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(200, Math.max(1, filters.limit ?? 50));
 
-    let filtered = items;
+    // Build Prisma where clause
+    const where: any = { source: this.id, regionKey };
 
-    if (q) {
-      filtered = filtered.filter(
-        (t) =>
-          t.destination.toLowerCase().includes(q) ||
-          t.title.toLowerCase().includes(q) ||
-          (t.description?.toLowerCase().includes(q) ?? false) ||
-          t.board.toLowerCase().includes(q),
-      );
+    if (filters.q) {
+      const q = filters.q;
+      where.OR = [
+        { destination: { contains: q } },
+        { title: { contains: q } },
+        { description: { contains: q } },
+        { board: { contains: q } },
+      ];
     }
 
-    if (transport) {
-      filtered = filtered.filter((t) => t.transport === transport);
+    if (transport) where.transport = transport;
+    if (board) where.board = board;
+    if (stars) where.stars = stars;
+
+    if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
+      where.price = { ...where.price, gte: filters.priceMin };
+    }
+    if (filters.priceMax !== undefined && Number.isFinite(filters.priceMax)) {
+      where.price = { ...where.price, lte: filters.priceMax };
     }
 
-    if (priceMin !== undefined && Number.isFinite(priceMin)) {
-      filtered = filtered.filter((t) => t.price >= priceMin);
+    if (filters.dateStart) {
+      const ds = new Date(filters.dateStart);
+      if (!Number.isNaN(ds.getTime())) {
+        where.startDate = { ...where.startDate, gte: ds };
+      }
+    }
+    if (filters.dateEnd) {
+      const de = new Date(filters.dateEnd);
+      if (!Number.isNaN(de.getTime())) {
+        where.endDate = { ...where.endDate, lte: de };
+      }
     }
 
-    if (priceMax !== undefined && Number.isFinite(priceMax)) {
-      filtered = filtered.filter((t) => t.price <= priceMax);
+    // Destination grouping — uses in-memory aggregation of DB results
+    if (groupBy === "destination") {
+      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit);
     }
 
-    if (dateStart && !Number.isNaN(dateStart.getTime())) {
-      filtered = filtered.filter((t) => t.startDate >= dateStart);
+    const orderBy: any =
+      sortBy === "date"
+        ? { startDate: sortDir }
+        : { price: sortDir };
+
+    const [items, filtered, total, destResult] = await Promise.all([
+      prisma.providerTour.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.providerTour.count({ where }),
+      prisma.providerTour.count({ where: { source: this.id, regionKey } }),
+      prisma.providerTour.findMany({
+        where,
+        select: { destination: true },
+        distinct: ["destination"],
+      }),
+    ]);
+
+    const totalPages = Math.ceil(filtered / limit);
+
+    return {
+      total,
+      filtered,
+      uniqueDestinations: destResult.length,
+      page,
+      limit,
+      totalPages,
+      items: items.map((row) => this.rowToUnified(row)),
+    };
+  }
+
+  private async fetchGroupedByDestination(
+    where: any,
+    sortBy: string,
+    sortDir: string,
+    page: number,
+    limit: number,
+  ): Promise<ToursResult> {
+    // Get grouped counts + cheapest per destination
+    const allFiltered = await prisma.providerTour.findMany({
+      where,
+      orderBy: { price: "asc" },
+    });
+
+    const counts = new Map<string, number>();
+    const cheapest = new Map<string, typeof allFiltered[0]>();
+    for (const t of allFiltered) {
+      counts.set(t.destination, (counts.get(t.destination) ?? 0) + 1);
+      if (!cheapest.has(t.destination)) cheapest.set(t.destination, t);
     }
 
-    if (dateEnd && !Number.isNaN(dateEnd.getTime())) {
-      filtered = filtered.filter((t) => t.endDate <= dateEnd);
-    }
+    let grouped = [...cheapest.values()].map((row) => ({
+      tour: this.rowToUnified(row),
+      offersCount: counts.get(row.destination) ?? 1,
+    }));
 
-    if (board) {
-      filtered = filtered.filter((t) => t.board === board);
-    }
-
-    if (stars) {
-      filtered = filtered.filter((t) => t.stars === stars);
-    }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
+    // Sort the grouped results
+    grouped.sort((a, b) => {
       let d = 0;
       if (sortBy === "date") {
-        d = a.startDate.getTime() - b.startDate.getTime();
+        d = new Date(a.tour.startDate).getTime() - new Date(b.tour.startDate).getTime();
       } else {
-        d = a.price - b.price;
+        d = a.tour.price - b.tour.price;
       }
       return sortDir === "asc" ? d : -d;
     });
 
-    const uniqueDestinations = new Set(sorted.map((t) => t.destination)).size;
-
-    // Destination grouping
-    let output: { item: AlexandriaTourInput; offersCount?: number }[];
-
-    if (groupBy === "destination") {
-      const counts = new Map<string, number>();
-      const cheapest = new Map<string, AlexandriaTourInput>();
-      for (const t of sorted) {
-        counts.set(t.destination, (counts.get(t.destination) ?? 0) + 1);
-        const existing = cheapest.get(t.destination);
-        if (!existing || t.price < existing.price) {
-          cheapest.set(t.destination, t);
-        }
-      }
-      const grouped: { item: AlexandriaTourInput; offersCount: number }[] = [];
-      const seen = new Set<string>();
-      for (const t of sorted) {
-        if (seen.has(t.destination)) continue;
-        seen.add(t.destination);
-        grouped.push({
-          item: cheapest.get(t.destination)!,
-          offersCount: counts.get(t.destination) ?? 1,
-        });
-      }
-      output = grouped;
-    } else {
-      output = sorted.map((item) => ({ item }));
-    }
-
-    // Paginate
-    const filteredCount =
-      groupBy === "destination" ? output.length : sorted.length;
-    const totalPages = Math.ceil(output.length / limit);
+    const total = allFiltered.length;
+    const filteredCount = grouped.length;
+    const totalPages = Math.ceil(filteredCount / limit);
     const start = (page - 1) * limit;
-    const pageItems = output.slice(start, start + limit);
+    const pageItems = grouped.slice(start, start + limit);
 
     return {
-      total: items.length,
+      total,
       filtered: filteredCount,
-      uniqueDestinations,
+      uniqueDestinations: grouped.length,
       page,
       limit,
       totalPages,
-      items: pageItems.map((entry) =>
-        this.serializeItem(entry.item, entry.offersCount),
-      ),
+      items: pageItems.map((entry) => ({
+        ...entry.tour,
+        offersCount: entry.offersCount,
+      })),
+    };
+  }
+
+  private rowToUnified(row: any): UnifiedTour {
+    return {
+      externalId: row.externalId,
+      destination: row.destination,
+      title: row.title,
+      price: row.price,
+      originalPrice: row.originalPrice,
+      startDate: row.startDate instanceof Date ? row.startDate.toISOString() : row.startDate,
+      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : row.endDate,
+      transport: row.transport,
+      image: row.image,
+      description: row.description,
+      photos: Array.isArray(row.photos) ? row.photos : [],
+      url: row.url,
+      stars: row.stars,
+      board: row.board,
+      source: this.id,
+      offersCount: row.offersCount ?? undefined,
     };
   }
 
@@ -283,42 +325,36 @@ export class AlexandriaProvider implements TourProvider {
     ids: string[],
     regionCtx: Record<string, unknown>,
   ): Promise<ImportResult> {
-    const zeme =
-      regionCtx.zeme !== undefined
-        ? Number(regionCtx.zeme)
-        : config.alexandria.country;
-    const items = await this.getCachedFeed(zeme);
-
-    const toImport = items.filter((item) => ids.includes(item.externalId));
+    // Read from ProviderTour table instead of in-memory cache
+    const providerRows = await prisma.providerTour.findMany({
+      where: {
+        source: this.id,
+        externalId: { in: ids },
+      },
+    });
 
     let created = 0;
     let updated = 0;
 
-    for (const item of toImport) {
-      const existing = item.externalId
+    for (const row of providerRows) {
+      const existing = row.externalId
         ? await prisma.tour.findFirst({
-            where: { source: "alexandria", externalId: item.externalId },
+            where: { source: "alexandria", externalId: row.externalId },
           })
-        : await prisma.tour.findFirst({
-            where: {
-              destination: item.destination,
-              title: item.title,
-              startDate: item.startDate,
-            },
-          });
+        : null;
 
       const data = {
-        destination: item.destination,
-        title: item.title,
-        price: item.price,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        transport: item.transport,
-        image: item.image,
-        description: item.description,
-        photos: item.photos.length > 0 ? item.photos : undefined,
+        destination: row.destination,
+        title: row.title,
+        price: row.price,
+        startDate: row.startDate,
+        endDate: row.endDate,
+        transport: row.transport,
+        image: row.image,
+        description: row.description,
+        photos: Array.isArray(row.photos) && row.photos.length > 0 ? row.photos : undefined,
         source: "alexandria" as const,
-        externalId: item.externalId || undefined,
+        externalId: row.externalId,
       };
 
       if (existing) {
@@ -332,44 +368,150 @@ export class AlexandriaProvider implements TourProvider {
       }
     }
 
-    return { ok: true, created, updated, total: toImport.length };
+    return { ok: true, created, updated, total: providerRows.length };
   }
 
   async warmCache(): Promise<void> {
-    const results = await Promise.allSettled(
-      KNOWN_COUNTRIES.map((c) => this.getCachedFeed(c.id)),
-    );
-
-    let total = 0;
-    for (const r of results) {
-      if (r.status === "fulfilled") total += r.value.length;
-    }
-    console.log(`[Alexandria] Cache warmed: ${total} tours across ${KNOWN_COUNTRIES.length} countries`);
+    await this.syncToDb();
   }
 
   async refreshCache(): Promise<void> {
     this.feedCacheMap.clear();
     this.regionsCache = null;
-    await this.warmCache();
+    await this.syncToDb();
   }
 
   getCacheStatus(): CacheStatus {
+    // Read from DB sync status
+    return this._cacheStatusSnapshot;
+  }
+
+  private _cacheStatusSnapshot: CacheStatus = {
+    lastRefresh: null,
+    ttl: this.CACHE_TTL,
+    itemCount: 0,
+    warm: false,
+    syncing: false,
+  };
+
+  async loadCacheStatus(): Promise<void> {
+    const syncs = await prisma.providerSync.findMany({
+      where: { providerId: this.id },
+    });
     let itemCount = 0;
     let oldest: number | null = null;
-    let newest: number | null = null;
-
-    for (const entry of this.feedCacheMap.values()) {
-      itemCount += entry.data.length;
-      if (oldest === null || entry.ts < oldest) oldest = entry.ts;
-      if (newest === null || entry.ts > newest) newest = entry.ts;
+    let syncing = false;
+    for (const s of syncs) {
+      itemCount += s.itemCount;
+      if (s.lastSyncAt) {
+        const ts = s.lastSyncAt.getTime();
+        if (oldest === null || ts < oldest) oldest = ts;
+      }
+      if (s.status === "syncing") syncing = true;
     }
-
-    return {
+    this._cacheStatusSnapshot = {
       lastRefresh: oldest,
       ttl: this.CACHE_TTL,
       itemCount,
-      warm:
-        itemCount > 0 && newest !== null && Date.now() - newest < this.CACHE_TTL,
+      warm: itemCount > 0,
+      syncing,
     };
+  }
+
+  async syncToDb(): Promise<void> {
+    for (const country of KNOWN_COUNTRIES) {
+      const regionKey = String(country.id);
+      await prisma.providerSync.upsert({
+        where: { providerId_regionKey: { providerId: this.id, regionKey } },
+        create: { providerId: this.id, regionKey, status: "syncing" },
+        update: { status: "syncing", errorMessage: null },
+      });
+
+      try {
+        const parsed = await fetchAlexandriaParsed(country.id);
+        const items = extractToursFromParsed(parsed);
+
+        // Upsert in batches
+        const BATCH = 100;
+        const seenIds = new Set<string>();
+        for (let i = 0; i < items.length; i += BATCH) {
+          const batch = items.slice(i, i + BATCH);
+          for (const item of batch) {
+            seenIds.add(item.externalId);
+            await prisma.providerTour.upsert({
+              where: {
+                source_externalId: { source: this.id, externalId: item.externalId },
+              },
+              create: {
+                externalId: item.externalId,
+                source: this.id,
+                regionKey,
+                destination: item.destination,
+                title: item.title,
+                price: item.price,
+                originalPrice: item.originalPrice,
+                startDate: item.startDate,
+                endDate: item.endDate,
+                transport: item.transport,
+                image: item.image,
+                description: item.description,
+                photos: item.photos.length > 0 ? item.photos : undefined,
+                url: item.url,
+                stars: item.stars,
+                board: item.board,
+                syncedAt: new Date(),
+              },
+              update: {
+                regionKey,
+                destination: item.destination,
+                title: item.title,
+                price: item.price,
+                originalPrice: item.originalPrice,
+                startDate: item.startDate,
+                endDate: item.endDate,
+                transport: item.transport,
+                image: item.image,
+                description: item.description,
+                photos: item.photos.length > 0 ? item.photos : undefined,
+                url: item.url,
+                stars: item.stars,
+                board: item.board,
+                syncedAt: new Date(),
+              },
+            });
+          }
+        }
+
+        // Delete stale rows for this region
+        if (seenIds.size > 0) {
+          await prisma.providerTour.deleteMany({
+            where: {
+              source: this.id,
+              regionKey,
+              externalId: { notIn: [...seenIds] },
+            },
+          });
+        }
+
+        const count = await prisma.providerTour.count({
+          where: { source: this.id, regionKey },
+        });
+
+        await prisma.providerSync.update({
+          where: { providerId_regionKey: { providerId: this.id, regionKey } },
+          data: { status: "idle", lastSyncAt: new Date(), itemCount: count },
+        });
+
+        console.log(`[Alexandria] Synced ${count} tours for country ${country.name} (${country.id})`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await prisma.providerSync.update({
+          where: { providerId_regionKey: { providerId: this.id, regionKey } },
+          data: { status: "error", errorMessage: msg },
+        });
+        console.error(`[Alexandria] Sync failed for country ${country.name}:`, err);
+      }
+    }
+    await this.loadCacheStatus();
   }
 }

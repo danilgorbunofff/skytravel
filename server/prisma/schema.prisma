@@ -65,3 +65,51 @@ model EmailCampaign {
   sentAt         DateTime?
   createdAt      DateTime @default(now())
 }
+
+model ProviderTour {
+  id            Int      @id @default(autoincrement())
+  externalId    String
+  source        String
+  regionKey     String
+  destination   String
+  title         String
+  price         Int
+  originalPrice Int      @default(0)
+  startDate     DateTime
+  endDate       DateTime
+  transport     String
+  image         String   @db.Text
+  description   String?  @db.Text
+  photos        Json?
+  url           String   @db.Text
+  stars         String   @default("")
+  board         String   @default("")
+  nights        Int?
+  adults        Int?
+  children      Int?
+  roomType      String?
+  currency      String?
+  offersCount   Int?
+  syncedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([source, externalId])
+  @@index([source, regionKey])
+  @@index([price])
+  @@index([startDate])
+  @@index([source, regionKey, price])
+}
+
+model ProviderSync {
+  id           Int      @id @default(autoincrement())
+  providerId   String
+  regionKey    String
+  status       String   @default("idle")
+  lastSyncAt   DateTime?
+  itemCount    Int      @default(0)
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([providerId, regionKey])
+}

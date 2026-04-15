@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import {
   fetchProviderTours,
-  streamProviderTours,
 } from "../api/providers";
 import type { UnifiedFilters, UnifiedTour } from "../types/providers";
 
@@ -15,17 +14,6 @@ export function useProviderTours() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [uniqueDestinations, setUniqueDestinations] = useState(0);
-  const [streaming, setStreaming] = useState(false);
-  const [streamLoaded, setStreamLoaded] = useState(0);
-
-  const closeRef = useRef<(() => void) | null>(null);
-
-  // Cancel any active stream on unmount
-  useEffect(() => {
-    return () => {
-      closeRef.current?.();
-    };
-  }, []);
 
   const loadTours = useCallback(
     async (providerId: string, filters: UnifiedFilters) => {
@@ -48,41 +36,7 @@ export function useProviderTours() {
     [],
   );
 
-  const loadToursStream = useCallback(
-    (providerId: string, filters: UnifiedFilters) => {
-      // Cancel previous stream if any
-      closeRef.current?.();
-
-      setStreaming(true);
-      setStreamLoaded(0);
-      setTours([]);
-      setError(null);
-
-      const close = streamProviderTours(providerId, filters, {
-        onBatch(items, loaded) {
-          setTours((prev) => [...prev, ...items]);
-          setStreamLoaded(loaded);
-        },
-        onDone(_total) {
-          setStreaming(false);
-          // Fetch the properly sorted/paginated first page
-          loadTours(providerId, filters);
-        },
-        onError(err) {
-          setStreaming(false);
-          setError(err.message);
-        },
-      });
-
-      closeRef.current = close;
-      return close;
-    },
-    [loadTours],
-  );
-
   const reset = useCallback(() => {
-    closeRef.current?.();
-    closeRef.current = null;
     setTours([]);
     setLoading(false);
     setError(null);
@@ -91,8 +45,6 @@ export function useProviderTours() {
     setPage(1);
     setTotalPages(0);
     setUniqueDestinations(0);
-    setStreaming(false);
-    setStreamLoaded(0);
   }, []);
 
   return {
@@ -104,10 +56,7 @@ export function useProviderTours() {
     page,
     totalPages,
     uniqueDestinations,
-    streaming,
-    streamLoaded,
     loadTours,
-    loadToursStream,
     reset,
   };
 }
