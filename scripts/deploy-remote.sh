@@ -72,7 +72,14 @@ echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
-(cd client && npm install && npm run build)
+(cd client
+  if [[ -d node_modules ]]; then
+    find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
+    rm -rf node_modules 2>/dev/null || true
+  fi
+  npm cache clean --force 2>/dev/null || true
+  npm install 2>/dev/null || npm install
+  npm run build)
 
 echo "▸ Restarting PM2 apps …"
 pm2 start ecosystem.config.cjs
