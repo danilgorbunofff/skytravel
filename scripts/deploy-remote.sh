@@ -60,7 +60,7 @@ echo "▸ Installing dependencies …"
 rm -rf node_modules 2>/dev/null || true
 rm -rf server/node_modules 2>/dev/null || true
 rm -rf client/node_modules 2>/dev/null || true
-npm cache clean --force 2>/dev/null || true
+rm -rf ~/.npm/_cacache 2>/dev/null || true
 npm ci || npm install
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
