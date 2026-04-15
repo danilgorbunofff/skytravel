@@ -66,6 +66,36 @@ function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
 }
 
+/**
+ * For Orextravel (two-level), return the best default departure + destination.
+ * Tries to match Prague as departure and Turkey as destination.
+ */
+function findOrextravelDefaults(
+  regionData: ProviderRegion[],
+): { region: ProviderRegion | null; subRegion: ProviderRegion | null } {
+  // Build departure map
+  const depMap = new Map<number, string>();
+  for (const r of regionData) {
+    const depId = r.meta?.departureId as number | undefined;
+    const depName = r.meta?.departureName as string | undefined;
+    if (depId != null && depName) depMap.set(depId, depName);
+  }
+
+  const pragueEntry = [...depMap.entries()].find(([, name]) => /prah|prag/i.test(name));
+  if (!pragueEntry) return { region: null, subRegion: null };
+
+  const region: ProviderRegion = { id: pragueEntry[0], name: pragueEntry[1] };
+
+  // Find Turkey among destinations for the selected departure
+  const dests = regionData.filter((r) => (r.meta?.departureId as number) === pragueEntry[0]);
+  const destMap = new Map<number, string>();
+  for (const r of dests) destMap.set(r.id, r.name);
+  const turkeyEntry = [...destMap.entries()].find(([, name]) => /turecko|turkey|türk/i.test(name));
+
+  const subRegion = turkeyEntry ? { id: turkeyEntry[0], name: turkeyEntry[1] } : null;
+  return { region, subRegion };
+}
+
 export default function AdminSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -258,9 +288,9 @@ export default function AdminSearchPage() {
         const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
 
         if (twoLevel) {
-          // For two-level, don't auto-select a departure — show all
-          setSelectedRegion(null);
-          setSelectedSubRegion(null);
+          const defs = findOrextravelDefaults(regionData);
+          setSelectedRegion(defs.region);
+          setSelectedSubRegion(defs.subRegion);
         } else if (regionData.length > 0) {
           setSelectedRegion(regionData[0]);
           setSelectedSubRegion(null);
@@ -314,8 +344,9 @@ export default function AdminSearchPage() {
             const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
 
             if (twoLevel) {
-              setSelectedRegion(null);
-              setSelectedSubRegion(null);
+              const defs = findOrextravelDefaults(regionData);
+              setSelectedRegion(defs.region);
+              setSelectedSubRegion(defs.subRegion);
             } else if (regionData.length > 0) {
               setSelectedRegion(regionData[0]);
             }
@@ -333,17 +364,18 @@ export default function AdminSearchPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load tours when provider/region/subRegion changes ──
-  const initialLoadDone = useRef(false);
+  // Stream only on a provider switch (cold start). Region / sub-region changes
+  // use the faster paginated endpoint because the per-region server cache is
+  // already warm after the initial feed stream.
+  const prevProviderRef = useRef<string>("");
   useEffect(() => {
     if (!selectedProviderId) return;
-    // Skip on first render — let mount effect load first
-    if (!initialLoadDone.current) {
-      initialLoadDone.current = true;
-      // Still trigger initial load
-    }
+
+    const isProviderChange = prevProviderRef.current !== selectedProviderId;
+    prevProviderRef.current = selectedProviderId;
 
     const provider = providers.find((p) => p.id === selectedProviderId);
-    if (provider?.supportsStreaming) {
+    if (isProviderChange && provider?.supportsStreaming) {
       doLoadToursStream();
     } else {
       doLoadTours(1);
@@ -659,53 +691,43 @@ export default function AdminSearchPage() {
               </div>
             </div>
           ) : (
-            /* Two-level: departure → destination */
-            <>
-              <div className="alex-country-bar">
-                <label><strong>Odletové město:</strong></label>
-                <div className="alex-country-tabs">
-                  <button
-                    type="button"
-                    className={`alex-country-tab${selectedRegion === null ? " is-active" : ""}`}
-                    onClick={() => handleRegionChange(null)}
-                  >
-                    Vše
-                  </button>
+            /* Two-level: departure → destination dropdowns */
+            <div className="orex-route-selects">
+              <div className="orex-route-select-group">
+                <label htmlFor="orexDeparture"><strong>Odletové město:</strong></label>
+                <select
+                  id="orexDeparture"
+                  value={selectedRegion?.id ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value ? Number(e.target.value) : null;
+                    const city = id != null ? departureCities.find((c) => c.id === id) ?? null : null;
+                    handleRegionChange(city ? { id: city.id, name: city.name } : null);
+                  }}
+                >
+                  <option value="">Vše</option>
                   {departureCities.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`alex-country-tab${selectedRegion?.id === c.id ? " is-active" : ""}`}
-                      onClick={() => handleRegionChange({ id: c.id, name: c.name })}
-                    >
-                      {c.name}
-                    </button>
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </div>
+                </select>
               </div>
-              <div className="alex-country-bar" style={{ marginTop: "0.75rem" }}>
-                <label><strong>Destinace:</strong></label>
-                <div className="alex-country-tabs">
-                  <button
-                    type="button"
-                    className={`alex-country-tab${selectedSubRegion === null ? " is-active" : ""}`}
-                    onClick={() => handleSubRegionChange(null)}
-                  >
-                    Vše
-                  </button>
+              <div className="orex-route-select-group">
+                <label htmlFor="orexDestination"><strong>Destinace:</strong></label>
+                <select
+                  id="orexDestination"
+                  value={selectedSubRegion?.id ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value ? Number(e.target.value) : null;
+                    const dest = id != null ? destinationCountries.find((c) => c.id === id) ?? null : null;
+                    handleSubRegionChange(dest ? { id: dest.id, name: dest.name } : null);
+                  }}
+                >
+                  <option value="">Vše</option>
                   {destinationCountries.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={`alex-country-tab${selectedSubRegion?.id === c.id ? " is-active" : ""}`}
-                      onClick={() => handleSubRegionChange({ id: c.id, name: c.name })}
-                    >
-                      {c.name}
-                    </button>
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </div>
+                </select>
               </div>
-            </>
+            </div>
           )}
         </section>
       )}
@@ -1066,45 +1088,49 @@ export default function AdminSearchPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {!loading && totalPages > 1 && (
+        {/* Pagination / rows-per-page */}
+        {!loading && !streaming && tours.length > 0 && (
           <div className="alex-pagination">
-            <button
-              type="button"
-              className="alex-page-btn"
-              disabled={page <= 1}
-              onClick={() => handlePageChange(page - 1)}
-            >
-              ← Předchozí
-            </button>
+            {totalPages > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="alex-page-btn"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                >
+                  ← Předchozí
+                </button>
 
-            <div className="alex-page-numbers">
-              {pageNumbers().map((p, i) =>
-                p === "…" ? (
-                  <span key={`ellipsis-${i}`} className="alex-page-ellipsis">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`alex-page-num${p === page ? " is-active" : ""}`}
-                    onClick={() => handlePageChange(p)}
-                  >
-                    {p}
-                  </button>
-                ),
-              )}
-            </div>
+                <div className="alex-page-numbers">
+                  {pageNumbers().map((p, i) =>
+                    p === "…" ? (
+                      <span key={`ellipsis-${i}`} className="alex-page-ellipsis">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`alex-page-num${p === page ? " is-active" : ""}`}
+                        onClick={() => handlePageChange(p)}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
+                </div>
 
-            <button
-              type="button"
-              className="alex-page-btn"
-              disabled={page >= totalPages}
-              onClick={() => handlePageChange(page + 1)}
-            >
-              Další →
-            </button>
+                <button
+                  type="button"
+                  className="alex-page-btn"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                >
+                  Další →
+                </button>
+              </>
+            )}
 
             <select
               className="alex-page-limit"
