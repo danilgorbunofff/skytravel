@@ -25,6 +25,7 @@ export type UnifiedTour = {
   adults?: number;
   children?: number;
   roomType?: string;
+  currency?: string;
 };
 
 /**

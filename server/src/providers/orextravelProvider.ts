@@ -72,6 +72,7 @@ export class OrextravelProvider implements TourProvider {
       adults: item.adults,
       children: item.children,
       roomType: item.roomType,
+      currency: item.currency,
     };
   }
 

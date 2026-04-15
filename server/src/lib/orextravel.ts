@@ -128,9 +128,11 @@ export type OrextravelTourInput = {
   children: number;
   roomType: string;
   hotelId: number;
+  currency: string;
 };
 
 type RefEntry = { inc: number; name: string; lname: string; status?: string; pic?: string };
+type HotelAttrEntry = { hotel: number; name: string; lname: string; value: string; tags: string };
 
 // ──────────────────────────────────────────────
 // In-memory reference cache
@@ -142,6 +144,10 @@ const refCache = {
   stars: new Map<number, RefEntry>(),
   rooms: new Map<number, RefEntry>(),
   meals: new Map<number, RefEntry>(),
+  htplaces: new Map<number, RefEntry>(),
+  currencies: new Map<number, RefEntry>(),
+  tours: new Map<number, RefEntry>(),
+  hotelDescriptions: new Map<number, string>(),
   ts: 0,
 };
 const REF_TTL = 4 * 60 * 60 * 1000; // 4 hours
@@ -227,6 +233,77 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
   return results;
 }
 
+// ──────────────────────────────────────────────
+// Hotel attributes — paginated, custom field extraction
+// ──────────────────────────────────────────────
+async function syncHotelAttributes(): Promise<void> {
+  const stampXml = await fetchSamoRaw({
+    samo_action: "reference",
+    type: "currentstamp",
+  });
+  const stampParsed = parseSamoXml(stampXml);
+  const stampData = (stampParsed as any)?.Response?.Data?.currentstamp;
+  let delStamp =
+    (Array.isArray(stampData)
+      ? stampData[0]?.["@_stamp"]
+      : stampData?.["@_stamp"]) || "0x0000000000000000";
+
+  await delay(DELAY_MS);
+
+  const grouped = new Map<number, string[]>();
+  let lastStamp = "0x0000000000000000";
+  let iterations = 0;
+
+  while (iterations < 100) {
+    iterations++;
+    const xml = await fetchSamoRaw({
+      samo_action: "reference",
+      type: "hotelattributes",
+      laststamp: lastStamp,
+      delstamp: delStamp,
+    });
+
+    const parsed = parseSamoXml(xml);
+    const data = (parsed as any)?.Response?.Data;
+    if (!data) break;
+
+    const items: any[] = Array.isArray(data.hotelattributes)
+      ? data.hotelattributes
+      : data.hotelattributes
+        ? [data.hotelattributes]
+        : [];
+
+    const active = items.filter((i: any) => i["@_status"] !== "D");
+    const deleted = items.filter((i: any) => i["@_status"] === "D");
+
+    for (const item of active) {
+      const hotelId = Number(item["@_hotel"] ?? 0);
+      const attrName = String(item["@_name"] ?? item["@_lname"] ?? "");
+      const attrValue = String(item["@_value"] ?? "");
+      if (hotelId && attrValue) {
+        if (!grouped.has(hotelId)) grouped.set(hotelId, []);
+        grouped.get(hotelId)!.push(`${attrName}: ${attrValue}`);
+      }
+      const stamp = item["@_stamp"];
+      if (stamp && stamp > lastStamp) lastStamp = stamp;
+    }
+
+    for (const item of deleted) {
+      const stamp = item["@_stamp"];
+      if (stamp && stamp > delStamp) delStamp = stamp;
+    }
+
+    if (active.length < 500) break;
+    await delay(DELAY_MS);
+  }
+
+  refCache.hotelDescriptions.clear();
+  for (const [hotelId, parts] of grouped) {
+    refCache.hotelDescriptions.set(hotelId, parts.join("; "));
+  }
+  console.log(`[Orextravel]   hotelattributes: ${grouped.size} hotels with descriptions`);
+}
+
 export async function syncReferenceCache(): Promise<void> {
   if (refCache.ts > 0 && Date.now() - refCache.ts < REF_TTL) return;
 
@@ -239,6 +316,9 @@ export async function syncReferenceCache(): Promise<void> {
     { key: "stars", type: "star" },
     { key: "rooms", type: "room" },
     { key: "meals", type: "meal" },
+    { key: "htplaces", type: "htplace" },
+    { key: "currencies", type: "currency" },
+    { key: "tours", type: "tour" },
   ];
 
   for (const { key, type } of types) {
@@ -254,6 +334,13 @@ export async function syncReferenceCache(): Promise<void> {
       console.warn(`[Orextravel]   ${type}: failed — ${err}`);
     }
     await delay(DELAY_MS);
+  }
+
+  // Sync hotel attributes (descriptions) — different structure than other refs
+  try {
+    await syncHotelAttributes();
+  } catch (err) {
+    console.warn(`[Orextravel]   hotelattributes: failed — ${err}`);
   }
 
   refCache.ts = Date.now();
@@ -417,6 +504,7 @@ type CatClaim = {
   checkin: string;
   dateOut: string;
   nights: number;
+  internetInvisible: number;
 };
 
 async function fetchPrices(
@@ -465,7 +553,8 @@ async function fetchPrices(
     checkin,
     dateOut: String(item["@_DateOut"] ?? item["@_dateout"] ?? ""),
     nights,
-  }));
+    internetInvisible: Number(item["@_InternetInvisible"] ?? item["@_internetinvisible"] ?? 0),
+  })).filter((c) => c.internetInvisible === 0);
 }
 
 // ──────────────────────────────────────────────
@@ -482,21 +571,28 @@ function mapClaimToTour(
   stateName: string,
   townName: string,
   _catalogName: string,
+  routeTown: number,
+  routeState: number,
 ): OrextravelTourInput {
   const hotelEntry = refCache.hotels.get(claim.hotel);
   const hotelName = hotelEntry ? (hotelEntry.name || hotelEntry.lname || `Hotel ${claim.hotel}`) : `Hotel ${claim.hotel}`;
   const hotelImage = hotelEntry?.pic || "";
   const mealName = resolveLabel(refCache.meals, claim.meal, "");
   const roomName = resolveLabel(refCache.rooms, claim.room, "");
-  const starsEntry = refCache.stars.get(claim.htplace);
-  const starsLabel = starsEntry ? starsEntry.name : "";
+  const htplaceName = resolveLabel(refCache.htplaces, claim.htplace, "");
+  const starsLabel = resolveLabel(refCache.stars, claim.hotel, "");
+  const currencyName = resolveLabel(refCache.currencies, claim.currency, "");
+  const hotelDesc = refCache.hotelDescriptions.get(claim.hotel) || null;
 
   const checkinDate = new Date(claim.checkin);
   const checkoutDate = claim.dateOut
     ? new Date(claim.dateOut)
     : new Date(checkinDate.getTime() + claim.nights * 86400000);
 
-  const externalId = `orex-${claim.inc}`;
+  const externalId = `orex-${routeTown}-${routeState}-${claim.inc}`;
+
+  // packet_type: 0 = full package (flight+hotel), 1 = transport only, 2 = hotel only
+  const transport = claim.packetType === 2 ? "bus" : "plane";
 
   return {
     externalId,
@@ -506,23 +602,24 @@ function mapClaimToTour(
     originalPrice: Math.round(claim.price / Math.max(claim.peopleCount, 1)),
     startDate: checkinDate,
     endDate: checkoutDate,
-    transport: claim.packetType === 1 ? "plane" : claim.packetType === 2 ? "car" : "plane",
+    transport,
     image: hotelImage,
-    description: null,
-    photos: [],
+    description: hotelDesc,
+    photos: hotelImage ? [hotelImage] : [],
     url: "",
     stars: starsLabel,
     board: mealName,
     nights: claim.nights,
     adults: claim.adult,
     children: claim.child,
-    roomType: roomName,
+    roomType: htplaceName || roomName,
     hotelId: claim.hotel,
+    currency: currencyName,
   };
 }
 
-const MAX_SPO_PER_ROUTE = 20;
-const MAX_DATE_COMBOS_PER_SPO = 5;
+const MAX_SPO_PER_ROUTE = Number(process.env.OREX_MAX_SPO_PER_ROUTE || 20);
+const MAX_DATE_COMBOS_PER_SPO = Number(process.env.OREX_MAX_DATE_COMBOS_PER_SPO || 5);
 
 export type ProgressCallback = (info: {
   loaded: number;
@@ -598,6 +695,8 @@ export async function fetchOrextravelTours(
                     route.stateName,
                     route.townName,
                     spo.name,
+                    route.town,
+                    route.state,
                   ),
                 );
               }
@@ -660,6 +759,10 @@ export function clearOrextravelCache(): void {
   refCache.stars.clear();
   refCache.rooms.clear();
   refCache.meals.clear();
+  refCache.htplaces.clear();
+  refCache.currencies.clear();
+  refCache.tours.clear();
+  refCache.hotelDescriptions.clear();
 }
 
 export function clearTourCache(): void {

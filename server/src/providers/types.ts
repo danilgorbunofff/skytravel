@@ -28,6 +28,7 @@ export type UnifiedTour = {
   adults?: number;
   children?: number;
   roomType?: string;
+  currency?: string;
 };
 
 /** Shared filter parameters passed to every provider. */
