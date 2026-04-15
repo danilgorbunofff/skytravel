@@ -49,25 +49,18 @@ cd "${REMOTE_PATH}"
 git fetch origin main
 git reset --hard origin/main
 
-# Kill PM2 and all node processes first to release file locks in node_modules
+# Kill PM2 and all node/esbuild processes to release file locks
 echo "▸ Stopping running services …"
 pm2 kill 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
 pkill -9 esbuild 2>/dev/null || true
-# Wait until no node/esbuild processes remain (up to 15s)
-for i in {1..15}; do
-  pgrep -x node >/dev/null 2>&1 || pgrep -x esbuild >/dev/null 2>&1 || break
-  sleep 1
-done
+sleep 5
 
 echo "▸ Installing dependencies …"
-# Delete node_modules per-package to avoid ENOTEMPTY on deep dirs
-if [[ -d node_modules ]]; then
-  find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
-  rm -rf node_modules 2>/dev/null || true
-fi
-# Two-pass: postinstall scripts (Prisma engines) can fail on first attempt after cache invalidation
-npm install || npm install
+# Simple rm -rf is more reliable than granular per-package deletion
+rm -rf node_modules 2>/dev/null || true
+# Retry with fresh node_modules if postinstall scripts fail on first pass
+npm install || (rm -rf node_modules 2>/dev/null || true; npm install)
 
 echo "▸ Building server …"
 (cd server && PATH="../node_modules/.bin:\$PATH" npm run build)
@@ -77,11 +70,8 @@ echo "▸ Running database migrations …"
 
 echo "▸ Building client …"
 (cd client
-  if [[ -d node_modules ]]; then
-    find node_modules -mindepth 1 -maxdepth 1 -print0 | xargs -0 rm -rf 2>/dev/null || true
-    rm -rf node_modules 2>/dev/null || true
-  fi
-  npm install || npm install
+  rm -rf node_modules 2>/dev/null || true
+  npm install || (rm -rf node_modules 2>/dev/null || true; npm install)
   npm run build)
 
 echo "▸ Restarting PM2 apps …"
