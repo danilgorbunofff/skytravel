@@ -4,13 +4,11 @@ import AdminLayout from "../components/AdminLayout";
 import ProviderFilterRenderer from "../components/admin/ProviderFilterRenderer";
 import TourDetailDrawer from "../components/admin/TourDetailDrawer";
 import {
-  fetchProviders,
-  fetchProviderRegions,
   fetchProviderCacheStatus,
   refreshProviderCache,
   importProviderTours,
 } from "../api/providers";
-import { useProviderTours } from "../hooks/useProviderTours";
+import { useSearchStore } from "../stores/searchStore";
 import type {
   CacheStatus,
   ImportResult,
@@ -66,94 +64,87 @@ function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
 }
 
-/**
- * For Orextravel (two-level), return the best default departure + destination.
- * Tries to match Prague as departure and Turkey as destination.
- */
-function findOrextravelDefaults(
-  regionData: ProviderRegion[],
-): { region: ProviderRegion | null; subRegion: ProviderRegion | null } {
-  // Build departure map
-  const depMap = new Map<number, string>();
-  for (const r of regionData) {
-    const depId = r.meta?.departureId as number | undefined;
-    const depName = r.meta?.departureName as string | undefined;
-    if (depId != null && depName) depMap.set(depId, depName);
-  }
-
-  const pragueEntry = [...depMap.entries()].find(([, name]) => /prah|prag/i.test(name));
-  if (!pragueEntry) return { region: null, subRegion: null };
-
-  const region: ProviderRegion = { id: pragueEntry[0], name: pragueEntry[1] };
-
-  // Find Turkey among destinations for the selected departure
-  const dests = regionData.filter((r) => (r.meta?.departureId as number) === pragueEntry[0]);
-  const destMap = new Map<number, string>();
-  for (const r of dests) destMap.set(r.id, r.name);
-  const turkeyEntry = [...destMap.entries()].find(([, name]) => /turecko|turkey|türk/i.test(name));
-
-  const subRegion = turkeyEntry ? { id: turkeyEntry[0], name: turkeyEntry[1] } : null;
-  return { region, subRegion };
-}
-
 export default function AdminSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ── Provider list ──
-  const [providers, setProviders] = useState<ProviderMeta[]>([]);
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  // ── Store state ──
+  const providers = useSearchStore((s) => s.providers);
+  const selectedProviderId = useSearchStore((s) => s.selectedProviderId);
   const selectedProvider = useMemo(
     () => providers.find((p) => p.id === selectedProviderId) ?? null,
     [providers, selectedProviderId],
   );
 
-  // ── Regions ──
-  const [regions, setRegions] = useState<ProviderRegion[]>([]);
-  const [regionsLoading, setRegionsLoading] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState<ProviderRegion | null>(null);
-  const [selectedSubRegion, setSelectedSubRegion] = useState<ProviderRegion | null>(null);
+  const regions = useSearchStore((s) => s.regions);
+  const regionsLoading = useSearchStore((s) => s.regionsLoading);
+  const selectedRegion = useSearchStore((s) => s.selectedRegion);
+  const selectedSubRegion = useSearchStore((s) => s.selectedSubRegion);
 
-  // ── Cache ──
-  const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
+  const cacheStatus = useSearchStore((s) => s.cacheStatus);
 
-  // ── Provider-specific filters ──
-  const [providerFilters, setProviderFilters] = useState<Record<string, unknown>>({});
+  const providerFilters = useSearchStore((s) => s.providerFilters);
 
-  // ── Shared filters ──
-  const [search, setSearch] = useState("");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [dateStart, setDateStart] = useState("");
-  const [dateEnd, setDateEnd] = useState("");
-  const [sortBy, setSortBy] = useState<"price" | "date">("price");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [limit, setLimit] = useState(50);
+  const search = useSearchStore((s) => s.search);
+  const priceMin = useSearchStore((s) => s.priceMin);
+  const priceMax = useSearchStore((s) => s.priceMax);
+  const dateStart = useSearchStore((s) => s.dateStart);
+  const dateEnd = useSearchStore((s) => s.dateEnd);
+  const sortBy = useSearchStore((s) => s.sortBy);
+  const sortDir = useSearchStore((s) => s.sortDir);
+  const limit = useSearchStore((s) => s.limit);
+
+  const tours = useSearchStore((s) => s.tours);
+  const loading = useSearchStore((s) => s.loading);
+  const error = useSearchStore((s) => s.error);
+  const totalCount = useSearchStore((s) => s.totalCount);
+  const filteredCount = useSearchStore((s) => s.filteredCount);
+  const page = useSearchStore((s) => s.page);
+  const totalPages = useSearchStore((s) => s.totalPages);
+  const uniqueDestinations = useSearchStore((s) => s.uniqueDestinations);
+  const streaming = useSearchStore((s) => s.streaming);
+  const streamLoaded = useSearchStore((s) => s.streamLoaded);
+
+  // ── Store actions ──
+  const storeActions = useSearchStore((s) => ({
+    initProviders: s.initProviders,
+    changeProvider: s.changeProvider,
+    setSelectedRegion: s.setSelectedRegion,
+    setSelectedSubRegion: s.setSelectedSubRegion,
+    setSearch: s.setSearch,
+    setPriceMin: s.setPriceMin,
+    setPriceMax: s.setPriceMax,
+    setDateStart: s.setDateStart,
+    setDateEnd: s.setDateEnd,
+    setSortBy: s.setSortBy,
+    setSortDir: s.setSortDir,
+    setLimit: s.setLimit,
+    setProviderFilter: s.setProviderFilter,
+    clearFilters: s.clearFilters,
+    setCacheStatus: s.setCacheStatus,
+    loadTours: s.loadTours,
+    loadToursStream: s.loadToursStream,
+    cancelStream: s.cancelStream,
+    resetTours: s.resetTours,
+  }));
+
+  const {
+    initProviders, changeProvider: storeChangeProvider,
+    setSearch: storeSetSearch, setPriceMin: storeSetPriceMin,
+    setPriceMax: storeSetPriceMax, setDateStart: storeSetDateStart,
+    setDateEnd: storeSetDateEnd, setSortBy: storeSetSortBy,
+    setSortDir: storeSetSortDir, setLimit: storeSetLimit,
+    setProviderFilter: storeSetProviderFilter,
+    clearFilters: storeClearFilters, setCacheStatus: storeSetCacheStatus,
+    loadTours, loadToursStream,
+    cancelStream, resetTours,
+  } = storeActions;
+
+  // ── Local-only state (doesn't need persistence across navigation) ──
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-
-  // ── Selection & import ──
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-
-  // ── Detail drawer ──
   const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
-
-  // ── Hook ──
-  const {
-    tours,
-    loading,
-    error,
-    totalCount,
-    filteredCount,
-    page,
-    totalPages,
-    uniqueDestinations,
-    streaming,
-    streamLoaded,
-    loadTours,
-    loadToursStream,
-    reset: resetHook,
-  } = useProviderTours();
 
   // ── Debounce ref ──
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -264,118 +255,53 @@ export default function AdminSearchPage() {
   // ── Provider change handler ──
   const handleProviderChange = useCallback(
     async (providerId: string) => {
-      setSelectedProviderId(providerId);
       setSearchParams({ provider: providerId }, { replace: true });
-
-      // Clear state
-      setProviderFilters({});
       setSelected(new Set());
       setDetailTour(null);
       setImportResult(null);
-      resetHook();
-
-      // Fetch regions & cache
-      setRegionsLoading(true);
-      try {
-        const [regionData, cache] = await Promise.all([
-          fetchProviderRegions(providerId),
-          fetchProviderCacheStatus(providerId),
-        ]);
-        setRegions(regionData);
-        setCacheStatus(cache);
-
-        const provider = providers.find((p) => p.id === providerId);
-        const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
-
-        if (twoLevel) {
-          const defs = findOrextravelDefaults(regionData);
-          setSelectedRegion(defs.region);
-          setSelectedSubRegion(defs.subRegion);
-        } else if (regionData.length > 0) {
-          setSelectedRegion(regionData[0]);
-          setSelectedSubRegion(null);
-        } else {
-          setSelectedRegion(null);
-          setSelectedSubRegion(null);
-        }
-      } catch {
-        setRegions([]);
-        setCacheStatus(null);
-        setSelectedRegion(null);
-        setSelectedSubRegion(null);
-      } finally {
-        setRegionsLoading(false);
-      }
+      await storeChangeProvider(providerId);
     },
-    [providers, resetHook, setSearchParams],
+    [storeChangeProvider, setSearchParams],
   );
 
-  // ── Initial mount: fetch providers ──
+  // ── Initial mount: init providers from store (only fetches once) ──
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const providerList = await fetchProviders();
-        if (cancelled) return;
-        setProviders(providerList);
-
-        const urlProvider = searchParams.get("provider");
-        const initialId =
-          providerList.find((p) => p.id === urlProvider)?.id ?? providerList[0]?.id;
-        if (initialId) {
-          // Don't call handleProviderChange here — do it inline to avoid stale closure
-          setSelectedProviderId(initialId);
-          if (urlProvider !== initialId) {
-            setSearchParams({ provider: initialId }, { replace: true });
-          }
-
-          // Fetch regions & cache
-          setRegionsLoading(true);
-          try {
-            const [regionData, cache] = await Promise.all([
-              fetchProviderRegions(initialId),
-              fetchProviderCacheStatus(initialId),
-            ]);
-            if (cancelled) return;
-            setRegions(regionData);
-            setCacheStatus(cache);
-
-            const provider = providerList.find((p) => p.id === initialId);
-            const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
-
-            if (twoLevel) {
-              const defs = findOrextravelDefaults(regionData);
-              setSelectedRegion(defs.region);
-              setSelectedSubRegion(defs.subRegion);
-            } else if (regionData.length > 0) {
-              setSelectedRegion(regionData[0]);
-            }
-          } catch {
-            // ignore
-          } finally {
-            setRegionsLoading(false);
-          }
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => { cancelled = true; };
+    const urlProvider = searchParams.get("provider");
+    initProviders(urlProvider);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep URL param in sync with selected provider
+  useEffect(() => {
+    if (selectedProviderId && searchParams.get("provider") !== selectedProviderId) {
+      setSearchParams({ provider: selectedProviderId }, { replace: true });
+    }
+  }, [selectedProviderId, searchParams, setSearchParams]);
+
   // ── Load tours when provider/region/subRegion changes ──
-  // Stream only on a provider switch (cold start). Region / sub-region changes
-  // use the faster paginated endpoint because the per-region server cache is
-  // already warm after the initial feed stream.
+  // Only when the store has data but tours are empty (e.g. after initial load or provider change).
+  // If we already have tours for this config, skip refetching (persist across navigation).
   const prevProviderRef = useRef<string>("");
+  const prevRegionRef = useRef<number | null>(null);
+  const prevSubRegionRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!selectedProviderId) return;
 
     const isProviderChange = prevProviderRef.current !== selectedProviderId;
+    const isRegionChange = prevRegionRef.current !== (selectedRegion?.id ?? null);
+    const isSubRegionChange = prevSubRegionRef.current !== (selectedSubRegion?.id ?? null);
+
     prevProviderRef.current = selectedProviderId;
+    prevRegionRef.current = selectedRegion?.id ?? null;
+    prevSubRegionRef.current = selectedSubRegion?.id ?? null;
+
+    // Skip if nothing changed (e.g. remount with same state)
+    if (!isProviderChange && !isRegionChange && !isSubRegionChange) return;
 
     const provider = providers.find((p) => p.id === selectedProviderId);
-    if (isProviderChange && provider?.supportsStreaming) {
+
+    // Use streaming only on provider switch when cache is cold
+    if (isProviderChange && provider?.supportsStreaming && !cacheStatus?.warm) {
       doLoadToursStream();
     } else {
       doLoadTours(1);
@@ -383,19 +309,26 @@ export default function AdminSearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProviderId, selectedRegion, selectedSubRegion]);
 
+  // ── Cancel active stream on unmount ──
+  useEffect(() => {
+    return () => {
+      cancelStream();
+    };
+  }, [cancelStream]);
+
   // ── Cache status polling ──
   useEffect(() => {
     if (!selectedProviderId) return;
     const interval = setInterval(async () => {
       try {
         const status = await fetchProviderCacheStatus(selectedProviderId);
-        setCacheStatus(status);
+        storeSetCacheStatus(status);
       } catch {
         // ignore
       }
     }, 30_000);
     return () => clearInterval(interval);
-  }, [selectedProviderId]);
+  }, [selectedProviderId, storeSetCacheStatus]);
 
   // ── Handlers ──
   function handleSearch(e: React.FormEvent) {
@@ -416,12 +349,12 @@ export default function AdminSearchPage() {
   }
 
   function handleReset() {
-    setSearch("");
-    setPriceMin("");
-    setPriceMax("");
-    setDateStart("");
-    setDateEnd("");
-    setProviderFilters({});
+    storeSetSearch("");
+    storeSetPriceMin("");
+    storeSetPriceMax("");
+    storeSetDateStart("");
+    storeSetDateEnd("");
+    storeClearFilters();
     setSelected(new Set());
     setImportResult(null);
     setValidationErrors({});
@@ -446,7 +379,7 @@ export default function AdminSearchPage() {
     await refreshProviderCache(selectedProviderId);
     try {
       const cache = await fetchProviderCacheStatus(selectedProviderId);
-      setCacheStatus(cache);
+      storeSetCacheStatus(cache);
     } catch {
       // ignore
     }
@@ -459,13 +392,12 @@ export default function AdminSearchPage() {
   }
 
   function handleRegionChange(region: ProviderRegion | null) {
-    setSelectedRegion(region);
-    if (isTwoLevel) setSelectedSubRegion(null);
+    useSearchStore.getState().setSelectedRegion(region);
     setSelected(new Set());
   }
 
   function handleSubRegionChange(region: ProviderRegion | null) {
-    setSelectedSubRegion(region);
+    useSearchStore.getState().setSelectedSubRegion(region);
     setSelected(new Set());
   }
 
@@ -476,10 +408,7 @@ export default function AdminSearchPage() {
   }
 
   function handleLimitChange(newLimit: number) {
-    setLimit(newLimit);
-    // State update is async; override limit in the filter object directly so the
-    // first API call after a page-size change uses the new value (same pattern
-    // as toggleSort which overrides sortBy/sortDir the same way).
+    storeSetLimit(newLimit);
     if (!selectedProviderId) return;
     const filters = buildFilters(1);
     filters.limit = newLimit;
@@ -488,8 +417,8 @@ export default function AdminSearchPage() {
 
   function toggleSort(field: "price" | "date") {
     const newDir = sortBy === field ? (sortDir === "asc" ? "desc" : "asc") : "asc";
-    setSortBy(field);
-    setSortDir(newDir);
+    storeSetSortBy(field);
+    storeSetSortDir(newDir);
     // We need to load with new sort — but state hasn't updated yet,
     // so build filters manually
     if (!selectedProviderId) return;
@@ -500,16 +429,11 @@ export default function AdminSearchPage() {
   }
 
   function handleProviderFilterChange(key: string, value: unknown) {
-    setProviderFilters((prev) => {
-      const next = { ...prev };
-      if (value === undefined) delete next[key];
-      else next[key] = value;
-      return next;
-    });
+    storeSetProviderFilter(key, value);
   }
 
   function handleSearchDebounced(value: string) {
-    setSearch(value);
+    storeSetSearch(value);
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
       doLoadTours(1);
@@ -595,27 +519,27 @@ export default function AdminSearchPage() {
       search && {
         key: "q",
         label: `Hledám: „${search}"`,
-        clear: () => { setSearch(""); doLoadTours(1); },
+        clear: () => { storeSetSearch(""); doLoadTours(1); },
       },
       priceMin && {
         key: "priceMin",
         label: `Cena od: ${formatPrice(Number(priceMin))}`,
-        clear: () => { setPriceMin(""); doLoadTours(1); },
+        clear: () => { storeSetPriceMin(""); doLoadTours(1); },
       },
       priceMax && {
         key: "priceMax",
         label: `Cena do: ${formatPrice(Number(priceMax))}`,
-        clear: () => { setPriceMax(""); doLoadTours(1); },
+        clear: () => { storeSetPriceMax(""); doLoadTours(1); },
       },
       dateStart && {
         key: "dateStart",
         label: `Od: ${fmtDate(dateStart)}`,
-        clear: () => { setDateStart(""); doLoadTours(1); },
+        clear: () => { storeSetDateStart(""); doLoadTours(1); },
       },
       dateEnd && {
         key: "dateEnd",
         label: `Do: ${fmtDate(dateEnd)}`,
-        clear: () => { setDateEnd(""); doLoadTours(1); },
+        clear: () => { storeSetDateEnd(""); doLoadTours(1); },
       },
     ] as (FilterChip | false)[]
   ).filter(Boolean) as FilterChip[];
@@ -768,7 +692,7 @@ export default function AdminSearchPage() {
                   placeholder="Min"
                   aria-label="Cena od"
                   value={priceMin}
-                  onChange={(e) => setPriceMin(e.target.value)}
+                  onChange={(e) => storeSetPriceMin(e.target.value)}
                 />
                 <span className="alex-filter-range-sep">–</span>
                 <input
@@ -779,7 +703,7 @@ export default function AdminSearchPage() {
                   placeholder="Max"
                   aria-label="Cena do"
                   value={priceMax}
-                  onChange={(e) => setPriceMax(e.target.value)}
+                  onChange={(e) => storeSetPriceMax(e.target.value)}
                 />
               </div>
               {validationErrors.price && (
@@ -795,7 +719,7 @@ export default function AdminSearchPage() {
                   type="date"
                   aria-label="Datum od"
                   value={dateStart}
-                  onChange={(e) => setDateStart(e.target.value)}
+                  onChange={(e) => storeSetDateStart(e.target.value)}
                 />
                 <span className="alex-filter-range-sep">–</span>
                 <input
@@ -803,7 +727,7 @@ export default function AdminSearchPage() {
                   type="date"
                   aria-label="Datum do"
                   value={dateEnd}
-                  onChange={(e) => setDateEnd(e.target.value)}
+                  onChange={(e) => storeSetDateEnd(e.target.value)}
                 />
               </div>
               {validationErrors.date && (

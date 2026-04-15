@@ -59,17 +59,37 @@ function parseSamoXml(xml: string): Record<string, unknown> {
 
 /**
  * Parse a price string from SAMO XML.
- * SAMO uses Czech/European number format: '.' is the thousands separator,
- * ',' is the decimal separator.  e.g. "31.000" means 31,000 — NOT 31.0.
- * JavaScript's parseFloat would misread "31.000" as 31, producing prices
- * that are ~1000× too low.  This function strips the thousands dots first.
+ *
+ * SAMO returns prices in two possible formats:
+ *   1. Standard decimal:  "3115.6000"  → 3115.60  (dot = decimal separator)
+ *   2. Czech thousands:   "31.000"     → 31000    (dot = thousands separator)
+ *   3. Mixed Czech:       "1.250,50"   → 1250.50  (dot = thousands, comma = decimal)
+ *
+ * Detection logic:
+ *   - If a comma is present → Czech format (strip dots, comma→dot).
+ *   - If dots form a pure thousands pattern (\d{1,3}(\.\d{3})+) → Czech thousands.
+ *   - Otherwise → standard decimal (parseFloat directly).
  */
 function parseSamoPrice(raw: string | number | undefined | null): number {
   if (raw == null) return 0;
   if (typeof raw === "number") return raw;
-  // Strip thousands-separator dots, then normalise decimal comma → dot
-  const cleaned = String(raw).replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
+  const s = String(raw).trim();
+
+  if (s.includes(",")) {
+    // Czech/European: dots are thousands separators, comma is decimal
+    const cleaned = s.replace(/\./g, "").replace(",", ".");
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // No comma — decide if dot is thousands separator or decimal
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+    // Pure thousands pattern: "31.000", "1.000.000"
+    return parseFloat(s.replace(/\./g, "")) || 0;
+  }
+
+  // Standard decimal: "3115.6000", "1006.89", "93000"
+  const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -550,17 +570,6 @@ async function fetchPrices(
     : data.cat_claim
       ? [data.cat_claim]
       : [];
-
-  // DIAGNOSTIC: log first 3 raw items to verify pricing fields
-  for (const item of items.slice(0, 3)) {
-    console.log("[Orextravel DIAG] raw claim:", {
-      Price: item["@_Price"] ?? item["@_price"],
-      PeopleCount: item["@_PeopleCount"] ?? item["@_peoplecount"],
-      adult: item["@_adult"],
-      child: item["@_child"],
-      parsed: parseSamoPrice(item["@_Price"] ?? item["@_price"]),
-    });
-  }
 
   return items.map((item: any) => ({
     inc: Number(item["@_Inc"] ?? item["@_inc"] ?? 0),
