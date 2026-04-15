@@ -66,13 +66,13 @@ npm ci || npm install
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
 echo "▸ Building server …"
-(cd server && PATH="${REMOTE_PATH}/node_modules/.bin:$PATH" npm run build)
+npm --workspace server run build
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
-(cd client && npm run build)
+npm --workspace client run build
 
 echo "▸ Restarting PM2 apps …"
 pm2 start ecosystem.config.cjs
