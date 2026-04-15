@@ -67,7 +67,7 @@ npm install --force || (rm -rf node_modules 2>/dev/null || true; npm install --f
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
 echo "▸ Building server …"
-(cd server && npm run build)
+(cd server && PATH="${REMOTE_PATH}/node_modules/.bin:$PATH" npm run build)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
