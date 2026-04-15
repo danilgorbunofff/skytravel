@@ -104,40 +104,28 @@ export default function AdminSearchPage() {
   const streaming = useSearchStore((s) => s.streaming);
   const streamLoaded = useSearchStore((s) => s.streamLoaded);
 
-  // ── Store actions ──
-  const storeActions = useSearchStore((s) => ({
-    initProviders: s.initProviders,
-    changeProvider: s.changeProvider,
-    setSelectedRegion: s.setSelectedRegion,
-    setSelectedSubRegion: s.setSelectedSubRegion,
-    setSearch: s.setSearch,
-    setPriceMin: s.setPriceMin,
-    setPriceMax: s.setPriceMax,
-    setDateStart: s.setDateStart,
-    setDateEnd: s.setDateEnd,
-    setSortBy: s.setSortBy,
-    setSortDir: s.setSortDir,
-    setLimit: s.setLimit,
-    setProviderFilter: s.setProviderFilter,
-    clearFilters: s.clearFilters,
-    setCacheStatus: s.setCacheStatus,
-    loadTours: s.loadTours,
-    loadToursStream: s.loadToursStream,
-    cancelStream: s.cancelStream,
-    resetTours: s.resetTours,
-  }));
-
+  // ── Store actions (stable refs — zustand actions never change) ──
   const {
-    initProviders, changeProvider: storeChangeProvider,
-    setSearch: storeSetSearch, setPriceMin: storeSetPriceMin,
-    setPriceMax: storeSetPriceMax, setDateStart: storeSetDateStart,
-    setDateEnd: storeSetDateEnd, setSortBy: storeSetSortBy,
-    setSortDir: storeSetSortDir, setLimit: storeSetLimit,
+    initProviders,
+    changeProvider: storeChangeProvider,
+    setSearch: storeSetSearch,
+    setPriceMin: storeSetPriceMin,
+    setPriceMax: storeSetPriceMax,
+    setDateStart: storeSetDateStart,
+    setDateEnd: storeSetDateEnd,
+    setSortBy: storeSetSortBy,
+    setSortDir: storeSetSortDir,
+    setLimit: storeSetLimit,
     setProviderFilter: storeSetProviderFilter,
-    clearFilters: storeClearFilters, setCacheStatus: storeSetCacheStatus,
-    loadTours, loadToursStream,
-    cancelStream, resetTours,
-  } = storeActions;
+    clearFilters: storeClearFilters,
+    setCacheStatus: storeSetCacheStatus,
+    setSelectedRegion: storeSetSelectedRegion,
+    setSelectedSubRegion: storeSetSelectedSubRegion,
+    loadTours,
+    loadToursStream,
+    cancelStream,
+    resetTours,
+  } = useSearchStore.getState();
 
   // ── Local-only state (doesn't need persistence across navigation) ──
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -392,12 +380,12 @@ export default function AdminSearchPage() {
   }
 
   function handleRegionChange(region: ProviderRegion | null) {
-    useSearchStore.getState().setSelectedRegion(region);
+    storeSetSelectedRegion(region);
     setSelected(new Set());
   }
 
   function handleSubRegionChange(region: ProviderRegion | null) {
-    useSearchStore.getState().setSelectedSubRegion(region);
+    storeSetSelectedSubRegion(region);
     setSelected(new Set());
   }
 
