@@ -57,12 +57,11 @@ pkill -9 esbuild 2>/dev/null || true
 sleep 5
 
 echo "▸ Installing dependencies …"
-# Simple rm -rf is more reliable than granular per-package deletion
 rm -rf node_modules 2>/dev/null || true
 rm -rf server/node_modules 2>/dev/null || true
 rm -rf client/node_modules 2>/dev/null || true
-# Retry with fresh node_modules if postinstall scripts fail on first pass
-npm install --force || (rm -rf node_modules 2>/dev/null || true; npm install --force)
+npm cache clean --force 2>/dev/null || true
+npm ci || npm install
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
