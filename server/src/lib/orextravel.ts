@@ -57,6 +57,22 @@ function parseSamoXml(xml: string): Record<string, unknown> {
   return xmlParser.parse(xml) as Record<string, unknown>;
 }
 
+/**
+ * Parse a price string from SAMO XML.
+ * SAMO uses Czech/European number format: '.' is the thousands separator,
+ * ',' is the decimal separator.  e.g. "31.000" means 31,000 — NOT 31.0.
+ * JavaScript's parseFloat would misread "31.000" as 31, producing prices
+ * that are ~1000× too low.  This function strips the thousands dots first.
+ */
+function parseSamoPrice(raw: string | number | undefined | null): number {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return raw;
+  // Strip thousands-separator dots, then normalise decimal comma → dot
+  const cleaned = String(raw).replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ──────────────────────────────────────────────
 // Raw HTTP fetch
 // ──────────────────────────────────────────────
@@ -535,11 +551,22 @@ async function fetchPrices(
       ? [data.cat_claim]
       : [];
 
+  // DIAGNOSTIC: log first 3 raw items to verify pricing fields
+  for (const item of items.slice(0, 3)) {
+    console.log("[Orextravel DIAG] raw claim:", {
+      Price: item["@_Price"] ?? item["@_price"],
+      PeopleCount: item["@_PeopleCount"] ?? item["@_peoplecount"],
+      adult: item["@_adult"],
+      child: item["@_child"],
+      parsed: parseSamoPrice(item["@_Price"] ?? item["@_price"]),
+    });
+  }
+
   return items.map((item: any) => ({
     inc: Number(item["@_Inc"] ?? item["@_inc"] ?? 0),
     tour: Number(item["@_Tour"] ?? item["@_tour"] ?? 0),
     spog: Number(item["@_Spog"] ?? item["@_spog"] ?? 0),
-    price: parseFloat(item["@_Price"] ?? item["@_price"] ?? "0"),
+    price: parseSamoPrice(item["@_Price"] ?? item["@_price"]),
     currency: Number(item["@_Currency"] ?? item["@_currency"] ?? 0),
     peopleCount: Number(item["@_PeopleCount"] ?? item["@_peoplecount"] ?? 0),
     hotel: Number(item["@_Hotel"] ?? item["@_hotel"] ?? 0),
