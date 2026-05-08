@@ -198,6 +198,26 @@ export default function SearchPage() {
     };
   }, [selectedProviderId]);
 
+  useEffect(() => {
+    if (!searchParams.get("transport") || transportSupported) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("transport");
+    next.set("page", "1");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, transportSupported, setSearchParams]);
+
+  useEffect(() => {
+    if (!isTwoLevel) return;
+    const stateId = searchParams.get("stateId");
+    if (!stateId) return;
+    const isValidState = destinationCountries.some((country) => String(country.id) === stateId);
+    if (isValidState) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("stateId");
+    next.set("page", "1");
+    setSearchParams(next, { replace: true });
+  }, [isTwoLevel, destinationCountries, searchParams, setSearchParams]);
+
   const buildFilters = useCallback((): UnifiedFilters => {
     const filters: UnifiedFilters = {
       page,
@@ -331,7 +351,10 @@ export default function SearchPage() {
             <input
               type="text"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setValidationError(null);
+                setQuery(event.target.value);
+              }}
               placeholder={t("searchPlaceholder")}
             />
             <button type="submit" aria-label="Vyhledat">GO</button>
@@ -416,7 +439,10 @@ export default function SearchPage() {
                   <MapPin size={18} aria-hidden="true" />
                   <input
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                      setValidationError(null);
+                      setQuery(event.target.value);
+                    }}
                     placeholder="Místo nebo hotel"
                   />
                 </div>
@@ -427,6 +453,7 @@ export default function SearchPage() {
                   <CalendarDays size={18} aria-hidden="true" />
                   <input
                     type="date"
+                    max={dateEnd || undefined}
                     value={dateStart}
                     onChange={(event) => {
                       setDateStart(event.target.value);
@@ -441,6 +468,7 @@ export default function SearchPage() {
                   <CalendarDays size={18} aria-hidden="true" />
                   <input
                     type="date"
+                    min={dateStart || undefined}
                     value={dateEnd}
                     onChange={(event) => {
                       setDateEnd(event.target.value);
@@ -456,7 +484,10 @@ export default function SearchPage() {
                   <select
                     value={transport}
                     disabled={!transportSupported}
-                    onChange={(event) => setTransport(event.target.value)}
+                    onChange={(event) => {
+                      setValidationError(null);
+                      setTransport(event.target.value);
+                    }}
                   >
                     <option value="">Nerozhoduje</option>
                     {TRANSPORT_OPTIONS.map((option) => (
