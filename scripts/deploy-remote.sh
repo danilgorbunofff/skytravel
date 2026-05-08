@@ -57,9 +57,20 @@ pkill -9 esbuild 2>/dev/null || true
 sleep 5
 
 echo "▸ Installing dependencies …"
-rm -rf node_modules 2>/dev/null || true
-rm -rf server/node_modules 2>/dev/null || true
-rm -rf client/node_modules 2>/dev/null || true
+# Atomically move old node_modules out of the way (mv is instant on Linux),
+# delete in background so npm install always starts with a clean slate.
+if [ -d node_modules ]; then
+  mv node_modules node_modules_old_$$
+  rm -rf node_modules_old_$$ &
+fi
+if [ -d server/node_modules ]; then
+  mv server/node_modules server/node_modules_old_$$
+  rm -rf server/node_modules_old_$$ &
+fi
+if [ -d client/node_modules ]; then
+  mv client/node_modules client/node_modules_old_$$
+  rm -rf client/node_modules_old_$$ &
+fi
 npm cache clean --force 2>/dev/null || true
 npm install
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
