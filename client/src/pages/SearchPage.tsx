@@ -35,6 +35,28 @@ const boardLabel: Record<string, string> = {
   SC: "Bez stravy",
 };
 
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function inferSingleLevelRegion(provider: ProviderMeta | null, query: string): string | null {
+  if (!provider || !query) return null;
+  const regionField = provider.filterFields.find((field) => field.key === "zeme");
+  if (!regionField?.options?.length) return null;
+
+  const normalizedQuery = normalizeSearchText(query);
+  const match = regionField.options.find((option) => {
+    const label = normalizeSearchText(String(option.label));
+    return normalizedQuery.includes(label) || label.includes(normalizedQuery);
+  });
+
+  return match ? String(match.value) : null;
+}
+
 function hasTwoLevelRegions(provider: ProviderMeta | null): boolean {
   return Boolean(provider?.filterFields.some((field) => field.dependsOn != null));
 }
@@ -89,6 +111,16 @@ export default function SearchPage() {
   const limit = getParamNumber(searchParams, "limit", 24);
   const sortBy = searchParams.get("sortBy") === "date" ? "date" : "price";
   const sortDir = searchParams.get("sortDir") === "desc" ? "desc" : "asc";
+  const activeQuery = searchParams.get("q")?.trim() ?? "";
+  const activeDateStart = searchParams.get("dateStart") ?? "";
+  const activeDateEnd = searchParams.get("dateEnd") ?? "";
+  const activeTransport = searchParams.get("transport") ?? "";
+  const activeZeme = searchParams.get("zeme") ?? "";
+  const activeTownFrom = searchParams.get("townFrom") ?? "";
+  const activeStateId = searchParams.get("stateId") ?? "";
+  const hasActiveSearch = Boolean(
+    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeZeme || activeTownFrom || activeStateId,
+  );
 
   const departureCities = useMemo(() => {
     if (!isTwoLevel) return [];
@@ -180,19 +212,26 @@ export default function SearchPage() {
     const zeme = searchParams.get("zeme");
     const townFrom = searchParams.get("townFrom");
     const stateId = searchParams.get("stateId");
+    const inferredZeme = !isTwoLevel && !zeme && q ? inferSingleLevelRegion(selectedProvider, q) : null;
 
     if (q) filters.q = q;
     if (start) filters.dateStart = start;
     if (end) filters.dateEnd = end;
     if (transportSupported && activeTransport) filters.transport = activeTransport;
-    if (!isTwoLevel && zeme) filters.zeme = zeme;
+    if (!isTwoLevel && (zeme || inferredZeme)) filters.zeme = zeme || inferredZeme;
     if (isTwoLevel && townFrom) filters.townFrom = townFrom;
     if (isTwoLevel && stateId) filters.stateId = stateId;
     return filters;
-  }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel]);
+  }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel, selectedProvider]);
 
   useEffect(() => {
     if (!selectedProviderId || !selectedProvider) return;
+    if (!hasActiveSearch) {
+      setResult(null);
+      setError(null);
+      setResultsLoading(false);
+      return;
+    }
     let cancelled = false;
     setResultsLoading(true);
     setError(null);
@@ -212,7 +251,7 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProviderId, selectedProvider, buildFilters]);
+  }, [selectedProviderId, selectedProvider, buildFilters, hasActiveSearch]);
 
   function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
     setValidationError(null);
@@ -275,7 +314,9 @@ export default function SearchPage() {
     ? `${result.filtered.toLocaleString("cs-CZ")} nabídek`
     : resultsLoading
       ? "Načítání nabídek"
-      : "Žádné nabídky";
+      : hasActiveSearch
+        ? "Žádné nabídky"
+        : "Začněte vyhledáváním";
 
   return (
     <div>
@@ -535,6 +576,12 @@ export default function SearchPage() {
 
               {error && <div className="search-error">{error}</div>}
               {resultsLoading && <div className="search-loading">Načítám nabídky…</div>}
+              {!resultsLoading && !error && !hasActiveSearch && (
+                <div className="search-empty">
+                  <h3>Začněte vyhledáváním</h3>
+                  <p>Zadejte destinaci, termín nebo vyberte oblast a potom spusťte vyhledávání.</p>
+                </div>
+              )}
               {!resultsLoading && !error && result?.items.length === 0 && (
                 <div className="search-empty">
                   <h3>Nic jsme nenašli</h3>
