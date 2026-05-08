@@ -77,7 +77,7 @@ npm install
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
 echo "▸ Building server …"
-npm --workspace server run build
+(cd server && ../node_modules/.bin/prisma generate && ../node_modules/.bin/tsc -p tsconfig.json)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
