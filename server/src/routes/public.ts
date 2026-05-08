@@ -6,6 +6,7 @@ const router = Router();
 
 router.get("/tours", asyncHandler(async (_req, res) => {
   const tours = await prisma.tour.findMany({
+    where: { source: "manual" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
   res.json({ items: tours });
