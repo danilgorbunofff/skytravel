@@ -23,18 +23,29 @@ function rowToRegion(row: {
   };
 }
 
-/** Read regions for a provider from DB (with in-process L1 cache). */
+/** Read regions for a provider from DB (with in-process L1 cache).
+ *  Rows are grouped by (externalId, name) so providers that store one row per
+ *  departure-route (e.g. Orextravel's town×state pairs) return each destination
+ *  only once, with tourCount summed across all routes. */
 export async function readRegions(providerId: string): Promise<ProviderRegion[]> {
   const cached = l1.get(providerId);
   if (cached && Date.now() - cached.ts < L1_TTL_MS) {
     return cached.data;
   }
-  const rows = await prisma.providerRegion.findMany({
+  const groups = await prisma.providerRegion.groupBy({
+    by: ["externalId", "name"],
     where: { providerId },
+    _sum: { tourCount: true },
     orderBy: { name: "asc" },
-    select: { externalId: true, name: true, tourCount: true, meta: true },
   });
-  const items = rows.map(rowToRegion);
+  const items = groups.map((g) =>
+    rowToRegion({
+      externalId: g.externalId,
+      name: g.name,
+      tourCount: g._sum.tourCount ?? 0,
+      meta: null,
+    }),
+  );
   l1.set(providerId, { ts: Date.now(), data: items });
   return items;
 }
