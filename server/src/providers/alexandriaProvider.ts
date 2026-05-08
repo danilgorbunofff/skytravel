@@ -148,20 +148,22 @@ export class AlexandriaProvider implements TourProvider {
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
     const pf = filters.providerFilters;
     const zeme =
-      pf.zeme !== undefined ? Number(pf.zeme) : config.alexandria.country;
+      pf.zeme !== undefined ? Number(pf.zeme) : undefined;
     const transport = typeof pf.transport === "string" ? pf.transport : "";
     const board = typeof pf.board === "string" ? pf.board : "";
     const stars = typeof pf.stars === "string" ? pf.stars : "";
     const groupBy = typeof pf.groupBy === "string" ? pf.groupBy : "";
 
-    const regionKey = String(zeme);
     const sortBy = filters.sortBy ?? "price";
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(200, Math.max(1, filters.limit ?? 50));
 
     // Build Prisma where clause
-    const where: any = { source: this.id, regionKey };
+    const where: any = { source: this.id };
+    if (zeme !== undefined && Number.isFinite(zeme)) {
+      where.regionKey = String(zeme);
+    }
 
     if (filters.q) {
       const q = filters.q;
@@ -215,7 +217,7 @@ export class AlexandriaProvider implements TourProvider {
         take: limit,
       }),
       prisma.providerTour.count({ where }),
-      prisma.providerTour.count({ where: { source: this.id, regionKey } }),
+      prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } }),
       prisma.providerTour.findMany({
         where,
         select: { destination: true },

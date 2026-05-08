@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
+import SearchPage from "./pages/SearchPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import GdprPage from "./pages/GdprPage";
 import TermsPage from "./pages/TermsPage";
@@ -12,6 +13,7 @@ export default function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/gdpr" element={<GdprPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />

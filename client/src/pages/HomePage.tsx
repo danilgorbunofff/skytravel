@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   favorites,
   heroImages,
@@ -7,7 +7,7 @@ import {
   type OwnTour,
   type PartnerTour,
 } from "../data";
-import { formatPrice, normalizeText } from "../utils";
+import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { useLanguage } from "../hooks/useLanguage";
 import { useTours } from "../hooks/useTours";
@@ -27,6 +27,7 @@ function inBudgetRange(price: number, activeBudget: number) {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const ownTours = useTours();
   const leadPopup = useLeadPopup();
@@ -50,20 +51,16 @@ export default function HomePage() {
   }
 
   const [activeBudget, setActiveBudget] = useState(10000);
-  const [activeDestination, setActiveDestination] = useState("");
-  const [activeTransport, setActiveTransport] = useState("");
   const [heroIndex, setHeroIndex] = useState(0);
   const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [isPeoplePickerOpen, setIsPeoplePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
   const [searchDateEnd, setSearchDateEnd] = useState("2026-04-21");
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
 
   const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
+  const searchTransportRef = useRef<HTMLSelectElement | null>(null);
   const budgetRef = useRef<HTMLDivElement | null>(null);
   const indicatorRef = useRef<HTMLSpanElement | null>(null);
 
@@ -92,20 +89,11 @@ export default function HomePage() {
 
   const filteredPartners = useMemo(() => {
     return partnerTours.filter((tour) => {
-      const normalizedDestination = normalizeText(tour.destination);
-      const normalizedHotel = normalizeText(tour.hotel);
-
-      const destinationMatch =
-        !activeDestination ||
-        normalizedDestination.includes(activeDestination) ||
-        normalizedHotel.includes(activeDestination);
-
-      const transportMatch = !activeTransport || tour.transport === activeTransport;
       const budgetMatch = inBudgetRange(tour.price, activeBudget);
 
-      return destinationMatch && transportMatch && budgetMatch;
+      return budgetMatch;
     });
-  }, [activeDestination, activeTransport, activeBudget]);
+  }, [activeBudget]);
 
   // ── Live Alexandria last-minute offers ──────────────────────
   const [lastMinuteItems, setLastMinuteItems] = useState<AlexandriaLastMinuteItem[]>([]);
@@ -156,9 +144,14 @@ export default function HomePage() {
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const value = searchDestinationRef.current?.value ?? "";
-    setActiveDestination(normalizeText(value.trim()));
-    document.getElementById("allinclusive")?.scrollIntoView({ behavior: "smooth" });
+    const params = new URLSearchParams();
+    const value = searchDestinationRef.current?.value.trim() ?? "";
+    const transport = searchTransportRef.current?.value ?? "";
+    if (value) params.set("q", value);
+    if (searchDateStart) params.set("dateStart", searchDateStart);
+    if (searchDateEnd) params.set("dateEnd", searchDateEnd);
+    if (transport) params.set("transport", transport);
+    navigate(`/search${params.toString() ? `?${params}` : ""}`);
   }
 
   function handleTopSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -167,8 +160,9 @@ export default function HomePage() {
     if (searchDestinationRef.current) {
       searchDestinationRef.current.value = value;
     }
-    setActiveDestination(normalizeText(value.trim()));
-    document.getElementById("allinclusive")?.scrollIntoView({ behavior: "smooth" });
+    const params = new URLSearchParams();
+    if (value.trim()) params.set("q", value.trim());
+    navigate(`/search${params.toString() ? `?${params}` : ""}`);
   }
 
   function openOwnTourModal(tour: OwnTour) {
@@ -224,10 +218,6 @@ export default function HomePage() {
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
-  }
-
-  function handleTransportChange(event: React.ChangeEvent<HTMLSelectElement>) {
-    setActiveTransport(event.target.value);
   }
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
@@ -371,7 +361,7 @@ export default function HomePage() {
 
           <div className="container hero-search-wrap">
             <form id="heroSearch" className="hero-search" onSubmit={handleSearchSubmit}>
-              <div className="hero-search__fields">
+              <div className="hero-search__fields hero-search__fields--three">
                 <div className="hero-search__item">
                   <label htmlFor="searchDestination">{t("searchWhere")}</label>
                   <div className="hero-search__control">
@@ -389,7 +379,6 @@ export default function HomePage() {
                   style={{ position: "relative", cursor: "pointer" }}
                   onClick={() => {
                       setIsDatePickerOpen(!isDatePickerOpen);
-                      setIsPeoplePickerOpen(false);
                   }}
                 >
                   <label style={{ pointerEvents: "none" }}>{t("searchDate")}</label>
@@ -422,63 +411,14 @@ export default function HomePage() {
                 <div className="hero-search__item">
                   <label htmlFor="searchTransport">{t("searchTransport")}</label>
                   <div className="hero-search__control">
-                    <select id="searchTransport" onChange={handleTransportChange}>
+                    <select id="searchTransport" ref={searchTransportRef}>
                       <option value="">{t("transportAny")}</option>
-                      <option value="letecky">{t("transportFlight")}</option>
-                      <option value="autobus">{t("transportBus")}</option>
-                      <option value="vlastni">{t("transportOwn")}</option>
+                      <option value="plane">{t("transportFlight")}</option>
+                      <option value="bus">{t("transportBus")}</option>
+                      <option value="car">{t("transportOwn")}</option>
                     </select>
                     <span className="hero-search__icon">✈</span>
                   </div>
-                </div>
-                <div 
-                  className="hero-search__item" 
-                  style={{ position: "relative", cursor: "pointer" }}
-                  onClick={() => {
-                      setIsPeoplePickerOpen(!isPeoplePickerOpen);
-                      setIsDatePickerOpen(false);
-                  }}
-                >
-                  <label style={{ pointerEvents: "none" }}>{t("searchPeople")}</label>
-                  <div className="hero-search__control">
-                    <input 
-                      id="searchPeople" 
-                      type="text" 
-                      value={lang === "en" 
-                        ? `${adults} adults, ${children} children` 
-                        : lang === "uk"
-                        ? `${adults} дорослі, ${children} діти`
-                        : lang === "ru"
-                        ? `${adults} взрослые, ${children} дети`
-                        : `${adults} dospělí, ${children} dětí`} 
-                      readOnly 
-                      style={{ pointerEvents: "none" }}
-                    />
-                    <span className="hero-search__icon">👥</span>
-                  </div>
-                  {isPeoplePickerOpen && (
-                    <div className="search-popover" onClick={(e) => e.stopPropagation()}>
-                        <div className="popover-row">
-                            <span className="popover-label">{t("searchAdults")}</span>
-                            <div className="stepper">
-                                <button type="button" onClick={() => setAdults(Math.max(1, adults - 1))}>-</button>
-                                <span>{adults}</span>
-                                <button type="button" onClick={() => setAdults(adults + 1)}>+</button>
-                            </div>
-                        </div>
-                        <div className="popover-row">
-                            <span className="popover-label">{t("searchChildren")}</span>
-                            <div className="stepper">
-                                <button type="button" onClick={() => setChildren(Math.max(0, children - 1))}>-</button>
-                                <span>{children}</span>
-                                <button type="button" onClick={() => setChildren(children + 1)}>+</button>
-                            </div>
-                        </div>
-                        <button type="button" className="popover-done" onClick={() => setIsPeoplePickerOpen(false)}>
-                          {t("searchDone")}
-                        </button>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="hero-search__footer">

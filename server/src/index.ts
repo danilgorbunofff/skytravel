@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import { config } from "./config.js";
 import publicRoutes from "./routes/public.js";
 import alexandriaPublicRoutes from "./routes/alexandriaPublic.js";
+import providerSearchPublicRoutes from "./routes/providerSearchPublic.js";
 import adminRoutes from "./routes/admin/index.js";
 import prisma from "./prisma.js";
 
@@ -61,8 +62,17 @@ const inquiryLimiter = rateLimit({
   message: { error: "Too many requests. Try again later." },
 });
 
+const publicSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many search requests. Try again later." },
+});
+
 app.use("/api/admin/login", loginLimiter);
 app.use("/api/inquiries", inquiryLimiter);
+app.use("/api/search", publicSearchLimiter);
 
 // ── Static uploads ────────────────────────────────────────────────────
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
@@ -79,6 +89,7 @@ app.get("/api/test-ip", async (_req, res) => {
 
 app.use("/api", publicRoutes);
 app.use("/api/alexandria", alexandriaPublicRoutes);
+app.use("/api/search", providerSearchPublicRoutes);
 app.use("/api/admin", adminRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────
