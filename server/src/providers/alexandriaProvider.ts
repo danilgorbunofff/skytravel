@@ -20,6 +20,11 @@ import type {
   ProviderRegion,
   FilterFieldDescriptor,
 } from "./types.js";
+import {
+  readRegions,
+  writeRegions,
+  updateRegionTourCount,
+} from "./regionStore.js";
 
 // ── Hardcoded known countries (replaces 200-ID probe loop) ──────────
 const KNOWN_COUNTRIES: { id: number; name: string }[] = [
@@ -38,13 +43,9 @@ export class AlexandriaProvider implements TourProvider {
     number,
     { data: AlexandriaTourInput[]; ts: number }
   >();
-  private regionsCache: {
-    data: ProviderRegion[];
-    ts: number;
-  } | null = null;
 
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 min
-  private readonly REGIONS_TTL = 24 * 60 * 60 * 1000; // 24h
+  private syncMutex: Promise<void> | null = null;
 
   // ── Private helpers ───────────────────────────────────────────────
 
@@ -92,31 +93,15 @@ export class AlexandriaProvider implements TourProvider {
   // ── TourProvider interface ────────────────────────────────────────
 
   async getRegions(): Promise<ProviderRegion[]> {
-    if (
-      this.regionsCache &&
-      Date.now() - this.regionsCache.ts < this.REGIONS_TTL
-    ) {
-      return this.regionsCache.data;
-    }
+    // Fast path: read from DB (with 5-min in-process L1 cache)
+    const fromDb = await readRegions(this.id);
+    if (fromDb.length > 0) return fromDb;
 
-    const results: ProviderRegion[] = [];
-
-    const settled = await Promise.allSettled(
-      KNOWN_COUNTRIES.map(async (c) => {
-        const tours = await this.getCachedFeed(c.id);
-        return { id: c.id, name: c.name, count: tours.length };
-      }),
-    );
-
-    for (const r of settled) {
-      if (r.status === "fulfilled") {
-        results.push(r.value);
-      }
-    }
-
-    results.sort((a, b) => a.name.localeCompare(b.name, "cs"));
-    this.regionsCache = { data: results, ts: Date.now() };
-    return results;
+    // Fallback (cold DB) — return the static known list with no counts so
+    // the UI can render immediately while the background sync populates DB.
+    return KNOWN_COUNTRIES
+      .map((c) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
   }
 
   getProviderFilters(): FilterFieldDescriptor[] {
@@ -209,7 +194,7 @@ export class AlexandriaProvider implements TourProvider {
         ? { startDate: sortDir }
         : { price: sortDir };
 
-    const [items, filtered, total, destResult] = await Promise.all([
+    const [items, filtered, total, uniqueDestinations] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy,
@@ -218,11 +203,13 @@ export class AlexandriaProvider implements TourProvider {
       }),
       prisma.providerTour.count({ where }),
       prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } }),
-      prisma.providerTour.findMany({
-        where,
-        select: { destination: true },
-        distinct: ["destination"],
-      }),
+      // Region count is derived from the persisted region list, not a
+      // distinct scan over ProviderTour. For Alexandria each regionKey is a
+      // country and a country == one destination from the user's POV, so the
+      // number of matching regions == number of destinations.
+      where.regionKey
+        ? Promise.resolve(1)
+        : prisma.providerRegion.count({ where: { providerId: this.id } }),
     ]);
 
     const totalPages = Math.ceil(filtered / limit);
@@ -230,7 +217,7 @@ export class AlexandriaProvider implements TourProvider {
     return {
       total,
       filtered,
-      uniqueDestinations: destResult.length,
+      uniqueDestinations,
       page,
       limit,
       totalPages,
@@ -379,7 +366,6 @@ export class AlexandriaProvider implements TourProvider {
 
   async refreshCache(): Promise<void> {
     this.feedCacheMap.clear();
-    this.regionsCache = null;
     await this.syncToDb();
   }
 
@@ -421,6 +407,28 @@ export class AlexandriaProvider implements TourProvider {
   }
 
   async syncToDb(): Promise<void> {
+    // Per-instance mutex: callers (warm/refresh/scheduler) coalesce on the
+    // same in-flight sync rather than piling on parallel writes.
+    if (this.syncMutex) return this.syncMutex;
+    this.syncMutex = this._syncToDbImpl().finally(() => {
+      this.syncMutex = null;
+    });
+    return this.syncMutex;
+  }
+
+  private async _syncToDbImpl(): Promise<void> {
+    // Persist the static region list up front so getRegions() works even if
+    // the per-country tour fetches fail.
+    await writeRegions(
+      this.id,
+      KNOWN_COUNTRIES.map((c) => ({
+        regionKey: String(c.id),
+        externalId: String(c.id),
+        parentExternalId: "",
+        name: c.name,
+      })),
+    );
+
     for (const country of KNOWN_COUNTRIES) {
       const regionKey = String(country.id);
       await prisma.providerSync.upsert({
@@ -503,6 +511,7 @@ export class AlexandriaProvider implements TourProvider {
           where: { providerId_regionKey: { providerId: this.id, regionKey } },
           data: { status: "idle", lastSyncAt: new Date(), itemCount: count },
         });
+        await updateRegionTourCount(this.id, regionKey, count);
 
         console.log(`[Alexandria] Synced ${count} tours for country ${country.name} (${country.id})`);
       } catch (err) {

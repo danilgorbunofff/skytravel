@@ -30,6 +30,29 @@ router.get(
   }),
 );
 
+// ── GET /bootstrap — providers + all regions in a single response ────
+router.get(
+  "/bootstrap",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const providers = getAllProviders();
+    const entries = await Promise.all(
+      providers.map(async (meta) => {
+        try {
+          const provider = getProvider(meta.id);
+          const items = await provider.getRegions();
+          return [meta.id, items] as const;
+        } catch (err) {
+          console.warn(`[AdminProviders] bootstrap regions failed for ${meta.id}:`, err);
+          return [meta.id, []] as const;
+        }
+      }),
+    );
+    const regionsByProvider: Record<string, readonly unknown[]> = {};
+    for (const [id, items] of entries) regionsByProvider[id] = items;
+    res.json({ providers, regionsByProvider });
+  }),
+);
+
 // ── GET /:id/regions ──────────────────────────────────────────────────
 router.get(
   "/:id/regions",

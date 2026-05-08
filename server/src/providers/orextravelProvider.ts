@@ -21,6 +21,11 @@ import type {
   ProviderRegion,
   FilterFieldDescriptor,
 } from "./types.js";
+import {
+  readRegions,
+  writeRegions,
+  updateRegionTourCount,
+} from "./regionStore.js";
 
 export class OrextravelProvider implements TourProvider {
   readonly id = "orextravel";
@@ -34,6 +39,7 @@ export class OrextravelProvider implements TourProvider {
   >();
 
   private readonly CACHE_TTL = 60 * 60 * 1000; // 60 min
+  private syncMutex: Promise<void> | null = null;
 
   // ── Private helpers ───────────────────────────────────────────────
 
@@ -79,6 +85,15 @@ export class OrextravelProvider implements TourProvider {
   // ── TourProvider interface ────────────────────────────────────────
 
   async getRegions(): Promise<ProviderRegion[]> {
+    // Fast path: read from DB (with 5-min in-process L1 cache).
+    // Each row is a (town, state) pair; the original API shape with
+    // departureId/departureName lives in `meta` so the client renders
+    // the two-level filter exactly as before.
+    const fromDb = await readRegions(this.id);
+    if (fromDb.length > 0) return fromDb;
+
+    // Cold-start fallback: hit upstream once so the very first user after a
+    // fresh deploy still sees something. The next call hits DB.
     const routes = await fetchTownState();
     return routes.map((r) => ({
       id: r.state,
@@ -175,7 +190,7 @@ export class OrextravelProvider implements TourProvider {
         ? { startDate: sortDir }
         : { price: sortDir };
 
-    const [items, filtered, total, destResult] = await Promise.all([
+    const [items, filtered, total, uniqueDestinations] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy,
@@ -184,11 +199,9 @@ export class OrextravelProvider implements TourProvider {
       }),
       prisma.providerTour.count({ where }),
       prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } }),
-      prisma.providerTour.findMany({
-        where,
-        select: { destination: true },
-        distinct: ["destination"],
-      }),
+      // Count distinct destination states from ProviderRegion (small table)
+      // instead of scanning the entire filtered ProviderTour set.
+      this.countDistinctDestinations(townFrom, stateId),
     ]);
 
     const totalPages = Math.ceil(filtered / limit);
@@ -196,12 +209,29 @@ export class OrextravelProvider implements TourProvider {
     return {
       total,
       filtered,
-      uniqueDestinations: destResult.length,
+      uniqueDestinations,
       page,
       limit,
       totalPages,
       items: items.map((row) => this.rowToUnified(row)),
     };
+  }
+
+  private async countDistinctDestinations(
+    townFrom: number | undefined,
+    stateId: number | undefined,
+  ): Promise<number> {
+    if (stateId !== undefined) return 1;
+    const where: Record<string, unknown> = { providerId: this.id };
+    if (townFrom !== undefined) {
+      where.parentExternalId = String(townFrom);
+    }
+    const rows = await prisma.providerRegion.findMany({
+      where,
+      select: { externalId: true },
+      distinct: ["externalId"],
+    });
+    return rows.length;
   }
 
   private rowToUnified(row: any): UnifiedTour {
@@ -332,7 +362,34 @@ export class OrextravelProvider implements TourProvider {
   }
 
   async syncToDb(): Promise<void> {
+    if (this.syncMutex) return this.syncMutex;
+    this.syncMutex = this._syncToDbImpl().finally(() => {
+      this.syncMutex = null;
+    });
+    return this.syncMutex;
+  }
+
+  private async _syncToDbImpl(): Promise<void> {
     const routes = await fetchTownState();
+
+    // Persist regions up front so getRegions() works immediately, even if
+    // tour sync fails for some routes.
+    await writeRegions(
+      this.id,
+      routes.map((r) => ({
+        regionKey: `${r.town}-${r.state}`,
+        externalId: String(r.state),
+        parentExternalId: String(r.town),
+        name: r.stateName,
+        meta: {
+          town: r.town,
+          townName: r.townName,
+          departureId: r.town,
+          departureName: r.townName,
+          packetType: r.packetType,
+        },
+      })),
+    );
 
     // Group routes by departure→destination key
     const routeGroups = new Map<string, typeof routes>();
@@ -432,6 +489,7 @@ export class OrextravelProvider implements TourProvider {
           where: { providerId_regionKey: { providerId: this.id, regionKey } },
           data: { status: "idle", lastSyncAt: new Date(), itemCount: count },
         });
+        await updateRegionTourCount(this.id, regionKey, count);
 
         console.log(`[Orextravel] Synced ${count} tours for route ${regionKey}`);
       } catch (err) {

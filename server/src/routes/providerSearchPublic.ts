@@ -183,6 +183,47 @@ router.get(
   }),
 );
 
+// ── Bootstrap: providers + all regions in a single response ──────────
+// Reduces SearchPage init from 1+N HTTP round-trips (providers + regions
+// per provider) to a single round-trip that the browser can ETag-cache.
+router.get(
+  "/bootstrap",
+  asyncHandler(async (req: Request, res: Response) => {
+    const providers = getAllProviders();
+    const entries = await Promise.all(
+      providers.map(async (meta) => {
+        try {
+          const provider = getProvider(meta.id);
+          const items = await provider.getRegions();
+          return [meta.id, items] as const;
+        } catch (err) {
+          console.warn(`[PublicSearch] bootstrap regions failed for ${meta.id}:`, err);
+          return [meta.id, []] as const;
+        }
+      }),
+    );
+    const regionsByProvider: Record<string, readonly unknown[]> = {};
+    for (const [id, items] of entries) regionsByProvider[id] = items;
+
+    // Version derived from the most recent ProviderSync.lastSyncAt across
+    // all providers. Used as an ETag so the browser returns 304 until the
+    // server-side cache actually changes.
+    const versionParts = providers
+      .map((p) => p.cacheStatus?.lastRefresh ?? 0)
+      .join(":");
+    const etag = `W/"bootstrap-${Buffer.from(versionParts).toString("base64").slice(0, 24)}"`;
+
+    if (req.headers["if-none-match"] === etag) {
+      res.status(304).end();
+      return;
+    }
+
+    res.setHeader("ETag", etag);
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+    res.json({ providers, regionsByProvider, version: etag });
+  }),
+);
+
 router.get(
   "/providers/:id/regions",
   asyncHandler(async (req: Request, res: Response) => {
@@ -190,6 +231,7 @@ router.get(
       const provider = getProvider(req.params.id);
       try {
         const items = await provider.getRegions();
+        res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
         res.json({ items });
       } catch (err) {
         console.warn(`[PublicSearch] Failed to load regions for ${req.params.id}:`, err);

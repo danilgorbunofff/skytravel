@@ -27,6 +27,23 @@ export async function fetchPublicProviders(): Promise<ProviderMeta[]> {
   return data.providers as ProviderMeta[];
 }
 
+export type PublicBootstrap = {
+  providers: ProviderMeta[];
+  regionsByProvider: Record<string, ProviderRegion[]>;
+  version: string;
+};
+
+export async function fetchPublicBootstrap(): Promise<PublicBootstrap> {
+  const res = await fetch(`${API_URL}/api/search/bootstrap`);
+  await throwIfNotOk(res);
+  const data = await res.json();
+  return {
+    providers: data.providers as ProviderMeta[],
+    regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
+    version: String(data.version ?? ""),
+  };
+}
+
 export async function fetchPublicProviderRegions(providerId: string): Promise<ProviderRegion[]> {
   const res = await fetch(`${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/regions`);
   await throwIfNotOk(res);

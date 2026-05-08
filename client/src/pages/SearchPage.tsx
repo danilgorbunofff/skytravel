@@ -4,8 +4,8 @@ import { ArrowLeft, ArrowRight, CalendarDays, ExternalLink, MapPin, Plane, Rotat
 import {
   fetchPublicProviderRegions,
   fetchPublicProviderTours,
-  fetchPublicProviders,
 } from "../api/publicProviders";
+import { loadBootstrap } from "../api/bootstrapCache";
 import type { ProviderMeta, ProviderRegion, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
 import { formatPrice } from "../utils";
@@ -87,6 +87,7 @@ export default function SearchPage() {
 
   const [providers, setProviders] = useState<ProviderMeta[]>([]);
   const [regions, setRegions] = useState<ProviderRegion[]>([]);
+  const [regionsByProvider, setRegionsByProvider] = useState<Record<string, ProviderRegion[]>>({});
   const [providersLoading, setProvidersLoading] = useState(true);
   const [regionsLoading, setRegionsLoading] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -150,23 +151,44 @@ export default function SearchPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setProvidersLoading(true);
-    fetchPublicProviders()
-      .then((items) => {
-        if (cancelled) return;
-        setProviders(items);
-        if (!searchParams.get("provider") && items[0]) {
-          const next = new URLSearchParams(searchParams);
-          next.set("provider", items[0].id);
-          setSearchParams(next, { replace: true });
-        }
+    const { cached, fresh } = loadBootstrap();
+
+    function applyBootstrap(data: { providers: ProviderMeta[]; regionsByProvider: Record<string, ProviderRegion[]> }) {
+      if (cancelled) return;
+      setProviders(data.providers);
+      setRegionsByProvider(data.regionsByProvider);
+      const urlProvider = searchParams.get("provider");
+      const initial =
+        data.providers.find((p) => p.id === urlProvider)?.id ??
+        data.providers[0]?.id ??
+        "";
+      setRegions(data.regionsByProvider[initial] ?? []);
+      if (!urlProvider && initial) {
+        const next = new URLSearchParams(searchParams);
+        next.set("provider", initial);
+        setSearchParams(next, { replace: true });
+      }
+    }
+
+    if (cached) {
+      applyBootstrap(cached);
+      setProvidersLoading(false);
+    }
+
+    fresh
+      .then((data) => {
+        applyBootstrap(data);
+        setProvidersLoading(false);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Nepodařilo se načíst poskytovatele.");
-      })
-      .finally(() => {
-        if (!cancelled) setProvidersLoading(false);
+        if (cancelled) return;
+        if (!cached) {
+          setError(err instanceof Error ? err.message : "Nepodařilo se načíst poskytovatele.");
+          setProvidersLoading(false);
+        }
+        // If we already rendered from cache, swallow the revalidation error.
       });
+
     return () => {
       cancelled = true;
     };
@@ -181,11 +203,23 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (!selectedProviderId) return;
+
+    // Fast path: we already have regions for this provider from bootstrap.
+    const preloaded = regionsByProvider[selectedProviderId];
+    if (preloaded) {
+      setRegions(preloaded);
+      setRegionsLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setRegionsLoading(true);
     fetchPublicProviderRegions(selectedProviderId)
       .then((items) => {
-        if (!cancelled) setRegions(items);
+        if (!cancelled) {
+          setRegions(items);
+          setRegionsByProvider((prev) => ({ ...prev, [selectedProviderId]: items }));
+        }
       })
       .catch(() => {
         if (!cancelled) setRegions([]);
@@ -196,7 +230,7 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProviderId]);
+  }, [selectedProviderId, regionsByProvider]);
 
   useEffect(() => {
     if (!searchParams.get("transport") || transportSupported) return;

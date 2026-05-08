@@ -113,3 +113,19 @@ model ProviderSync {
 
   @@unique([providerId, regionKey])
 }
+
+model ProviderRegion {
+  id               Int      @id @default(autoincrement())
+  providerId       String
+  regionKey        String
+  externalId       String
+  parentExternalId String   @default("")
+  name             String
+  tourCount        Int      @default(0)
+  meta             Json?
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@unique([providerId, regionKey])
+  @@index([providerId])
+}

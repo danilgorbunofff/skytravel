@@ -54,6 +54,15 @@ export type ProviderRegion = {
   meta?: Record<string, unknown>;
 };
 
+/** Internal: derived region key + parent reference used to persist regions. */
+export type ProviderRegionRecord = {
+  regionKey: string;
+  externalId: string;
+  parentExternalId: string;
+  name: string;
+  meta?: Record<string, unknown>;
+};
+
 /** Describes a provider-specific filter field for the UI. */
 export type FilterFieldDescriptor = {
   key: string;

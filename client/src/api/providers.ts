@@ -105,4 +105,21 @@ export async function fetchProviderCacheStatus(
   return res.json() as Promise<CacheStatus>;
 }
 
+export type AdminBootstrap = {
+  providers: ProviderMeta[];
+  regionsByProvider: Record<string, ProviderRegion[]>;
+};
+
+export async function fetchAdminBootstrap(): Promise<AdminBootstrap> {
+  const res = await fetch(`${API_URL}/api/admin/providers/bootstrap`, {
+    credentials: "include",
+  });
+  await throwIfNotOk(res);
+  const data = await res.json();
+  return {
+    providers: data.providers as ProviderMeta[],
+    regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
+  };
+}
+
 

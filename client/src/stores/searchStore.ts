@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  fetchAdminBootstrap,
   fetchProviders,
   fetchProviderRegions,
   fetchProviderCacheStatus,
@@ -105,6 +106,11 @@ function findOrextravelDefaults(
 /** AbortController for the latest loadTours fetch — lets us cancel stale requests. */
 let _loadAbort: AbortController | null = null;
 
+/** Regions hydrated from the admin bootstrap response, keyed by providerId.
+ *  Used as a fast path inside loadRegions so the second region fetch (after
+ *  selecting initial provider) skips the HTTP round-trip entirely. */
+let _bootstrappedRegions: Record<string, ProviderRegion[]> | null = null;
+
 export const useSearchStore = create<SearchState>((set, get) => ({
   // ── Initial state ──
   providers: [],
@@ -138,17 +144,31 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   initProviders: async (urlProvider) => {
     if (get().providersLoaded) return; // already initialized
     try {
-      const providerList = await fetchProviders();
+      // Single round-trip: fetch providers + all regions together.
+      const { providers: providerList, regionsByProvider } = await fetchAdminBootstrap();
       const initialId =
         providerList.find((p) => p.id === urlProvider)?.id ??
         providerList[0]?.id ??
         "";
       set({ providers: providerList, providersLoaded: true, selectedProviderId: initialId });
       if (initialId) {
+        // Hydrate regions immediately from bootstrap (no extra HTTP call).
+        _bootstrappedRegions = regionsByProvider;
         await get().loadRegions(initialId);
       }
     } catch {
-      // ignore
+      // Fall back to legacy two-step path on bootstrap failure.
+      try {
+        const providerList = await fetchProviders();
+        const initialId =
+          providerList.find((p) => p.id === urlProvider)?.id ??
+          providerList[0]?.id ??
+          "";
+        set({ providers: providerList, providersLoaded: true, selectedProviderId: initialId });
+        if (initialId) await get().loadRegions(initialId);
+      } catch {
+        // ignore
+      }
     }
   },
 
@@ -171,8 +191,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   loadRegions: async (providerId) => {
     set({ regionsLoading: true });
     try {
+      const preloaded = _bootstrappedRegions?.[providerId];
       const [regionData, cache] = await Promise.all([
-        fetchProviderRegions(providerId),
+        preloaded ? Promise.resolve(preloaded) : fetchProviderRegions(providerId),
         fetchProviderCacheStatus(providerId),
       ]);
       const provider = get().providers.find((p) => p.id === providerId);
