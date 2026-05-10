@@ -66,7 +66,8 @@ npm install || (rm -rf node_modules server/node_modules client/node_modules && n
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
 echo "▸ Building server …"
-(cd server && ../node_modules/.bin/prisma generate && ../node_modules/.bin/tsc -p tsconfig.json)
+# Limit tsc heap to avoid OOM kill on low-memory VMs (tsc is very memory-hungry).
+(cd server && ../node_modules/.bin/prisma generate && NODE_OPTIONS="--max-old-space-size=512" ../node_modules/.bin/tsc -p tsconfig.json)
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
