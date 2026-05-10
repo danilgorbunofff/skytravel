@@ -1,5 +1,5 @@
 import { Router } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import prisma from "../../prisma.js";
 import { config } from "../../config.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";

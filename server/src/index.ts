@@ -5,7 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import session from "express-session";
 import path from "node:path";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { config } from "./config.js";
 import publicRoutes from "./routes/public.js";
 import alexandriaPublicRoutes from "./routes/alexandriaPublic.js";
