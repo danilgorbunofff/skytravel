@@ -60,9 +60,8 @@ echo "▸ Installing dependencies …"
 # Wipe node_modules completely before installing to avoid ENOTEMPTY on Linux.
 rm -rf node_modules server/node_modules client/node_modules
 npm cache clean --force 2>/dev/null || true
-# bcrypt native build can fail on first run if its sub-deps aren't ready yet.
-# A second install pass always succeeds.
-npm install || npm install
+# On retry, wipe again to clear any partial symlinks (e.g. workspace links).
+npm install || (rm -rf node_modules server/node_modules client/node_modules && npm install)
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
