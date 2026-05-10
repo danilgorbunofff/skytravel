@@ -602,7 +602,7 @@ export default function SearchPage() {
                     >
                       Všechny země
                     </button>
-                    {regions.map((region) => (
+                    {[...new Map(regions.map((r) => [r.id, r])).values()].map((region) => (
                       <button
                         key={region.id}
                         type="button"

@@ -7,7 +7,7 @@
 import type { ProviderMeta, ProviderRegion } from "../types/providers";
 import { fetchPublicBootstrap, type PublicBootstrap } from "../api/publicProviders";
 
-const STORAGE_KEY = "skytravel:bootstrap:v1";
+const STORAGE_KEY = "skytravel:bootstrap:v2";
 
 type Cached = PublicBootstrap & { cachedAt: number };
 
