@@ -129,3 +129,18 @@ model ProviderRegion {
   @@unique([providerId, regionKey])
   @@index([providerId])
 }
+
+model PriceAlert {
+  id          Int       @id @default(autoincrement())
+  email       String
+  providerId  String
+  externalId  String
+  tourTitle   String
+  priceMax    Float
+  createdAt   DateTime  @default(now())
+  triggered   Boolean   @default(false)
+  triggeredAt DateTime?
+
+  @@index([providerId, externalId])
+  @@index([email])
+}

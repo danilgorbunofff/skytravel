@@ -11,6 +11,7 @@ import publicRoutes from "./routes/public.js";
 import alexandriaPublicRoutes from "./routes/alexandriaPublic.js";
 import providerSearchPublicRoutes from "./routes/providerSearchPublic.js";
 import adminRoutes from "./routes/admin/index.js";
+import alertsRouter from "./routes/alerts.js";
 import prisma from "./prisma.js";
 
 const app = express();
@@ -91,6 +92,7 @@ app.use("/api", publicRoutes);
 app.use("/api/alexandria", alexandriaPublicRoutes);
 app.use("/api/search", providerSearchPublicRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/alerts", alertsRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────
 app.use((_req, res) => {

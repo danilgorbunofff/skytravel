@@ -17,6 +17,30 @@ export function useLeadPopup() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Exit-intent: fires once per session after 30s of engagement (desktop only)
+  useEffect(() => {
+    if (window.innerWidth < 769) return;
+    const STORAGE_KEY = "skytravel:exit-popup-shown";
+    if (sessionStorage.getItem(STORAGE_KEY)) return;
+
+    function handleMouseLeave(e: MouseEvent) {
+      if (e.clientY < 10) {
+        setShowLeadPopup(true);
+        sessionStorage.setItem(STORAGE_KEY, "1");
+        document.removeEventListener("mouseleave", handleMouseLeave);
+      }
+    }
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mouseleave", handleMouseLeave);
+    }, 30_000);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
   function handleLeadSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!leadEmail) return;

@@ -13,6 +13,8 @@ type Props = {
   setLeadGdpr: (v: boolean) => void;
   leadError: string;
   handleLeadSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  prefilledQuery?: string;
+  prefilledDateStart?: string;
 };
 
 export default function LeadPopup({
@@ -27,6 +29,7 @@ export default function LeadPopup({
   setLeadGdpr,
   leadError,
   handleLeadSubmit,
+  prefilledQuery,
 }: Props) {
   const { t } = useLanguage();
 
@@ -41,7 +44,11 @@ export default function LeadPopup({
         </button>
         <div className="lead-modal__content">
           <div className="lead-modal__badge">{t("leadBadge")}</div>
-          <h3>{t("leadTitle")}</h3>
+          <h3>
+            {prefilledQuery
+              ? `Nenašli jste vhodný zájezd do ${prefilledQuery}?`
+              : t("leadTitle")}
+          </h3>
           <p>{t("leadDesc")}</p>
           {!leadSubmitted ? (
             <form className="lead-modal__form" onSubmit={handleLeadSubmit}>
