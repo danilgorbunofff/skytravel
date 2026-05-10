@@ -5,6 +5,30 @@ import type { FilterFieldDescriptor, UnifiedFilters } from "../providers/types.j
 
 const router = Router();
 
+// ── In-memory result cache ────────────────────────────────────────────
+// Keyed by "providerId:/full/url?with=params". TTL 30 s, max 500 entries.
+const resultCache = new Map<string, { data: unknown; ts: number }>();
+const RESULT_CACHE_TTL = 30_000;
+const RESULT_CACHE_MAX = 500;
+
+function getCachedResult(key: string): unknown | null {
+  const entry = resultCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > RESULT_CACHE_TTL) {
+    resultCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedResult(key: string, data: unknown): void {
+  if (resultCache.size >= RESULT_CACHE_MAX) {
+    const oldest = resultCache.keys().next().value;
+    if (oldest) resultCache.delete(oldest);
+  }
+  resultCache.set(key, { data, ts: Date.now() });
+}
+
 const SHARED_KEYS = new Set([
   "q",
   "priceMin",
@@ -254,7 +278,20 @@ router.get(
       const provider = getProvider(req.params.id);
       const filters = buildFilters(req, res, provider.getProviderFilters());
       if (!filters) return;
+
+      const cacheKey = `${req.params.id}:${req.url}`;
+      const cached = getCachedResult(cacheKey);
+      if (cached) {
+        res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+        res.setHeader("X-Cache", "HIT");
+        res.json(cached);
+        return;
+      }
+
       const result = await provider.fetchTours(filters);
+      setCachedResult(cacheKey, result);
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      res.setHeader("X-Cache", "MISS");
       res.json(result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {

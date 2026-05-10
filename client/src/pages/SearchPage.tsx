@@ -433,7 +433,7 @@ export default function SearchPage() {
   }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel, selectedProvider]);
 
   useEffect(() => {
-    if (!selectedProviderId || !selectedProvider) return;
+    if (!selectedProviderId) return;
     if (!hasActiveSearch) {
       setResult(null);
       setError(null);
