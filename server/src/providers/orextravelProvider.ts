@@ -97,11 +97,11 @@ export class OrextravelProvider implements TourProvider {
     // Deduplicate by state ID so multiple departure cities for the same
     // state don't produce duplicate Oblast entries.
     const routes = await fetchTownState();
-    const seen = new Map<number, ReturnType<typeof routes[0]['state']['toString']>>();
+    const seen = new Set<number>();
     const deduped: typeof routes = [];
     for (const r of routes) {
       if (!seen.has(r.state)) {
-        seen.set(r.state, r.state);
+        seen.add(r.state);
         deduped.push(r);
       }
     }
