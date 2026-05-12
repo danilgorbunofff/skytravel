@@ -93,11 +93,15 @@ model ProviderTour {
   syncedAt      DateTime @default(now())
   createdAt     DateTime @default(now())
 
+  stateId       Int?
+
   @@unique([source, externalId])
   @@index([source, regionKey])
   @@index([price])
   @@index([startDate])
   @@index([source, regionKey, price])
+  @@index([source, destination(100)])
+  @@index([source, stateId])
 }
 
 model ProviderSync {

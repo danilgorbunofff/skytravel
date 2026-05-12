@@ -153,10 +153,8 @@ export class AlexandriaProvider implements TourProvider {
     if (filters.q) {
       const q = filters.q;
       where.OR = [
-        { destination: { contains: q } },
+        { destination: { startsWith: q } },
         { title: { contains: q } },
-        { description: { contains: q } },
-        { board: { contains: q } },
       ];
     }
 
@@ -194,7 +192,14 @@ export class AlexandriaProvider implements TourProvider {
         ? { startDate: sortDir }
         : { price: sortDir };
 
-    const [items, filtered, total, uniqueDestinations] = await Promise.all([
+    const hasTextFilter = Boolean(filters.q);
+    const hasPriceFilter =
+      filters.priceMin !== undefined || filters.priceMax !== undefined;
+    const hasDateFilter =
+      filters.dateStart !== undefined || filters.dateEnd !== undefined;
+    const needsSeparateTotal = hasTextFilter || hasPriceFilter || hasDateFilter;
+
+    const [items, filtered, rawTotal, uniqueDestinations] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy,
@@ -210,7 +215,9 @@ export class AlexandriaProvider implements TourProvider {
         },
       }),
       prisma.providerTour.count({ where }),
-      prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } }),
+      needsSeparateTotal
+        ? prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } })
+        : Promise.resolve(null),
       // Region count is derived from the persisted region list, not a
       // distinct scan over ProviderTour. For Alexandria each regionKey is a
       // country and a country == one destination from the user's POV, so the
@@ -219,6 +226,8 @@ export class AlexandriaProvider implements TourProvider {
         ? Promise.resolve(1)
         : prisma.providerRegion.count({ where: { providerId: this.id } }),
     ]);
+
+    const total = rawTotal ?? filtered;
 
     const totalPages = Math.ceil(filtered / limit);
 

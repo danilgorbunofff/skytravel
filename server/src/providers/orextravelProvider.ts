@@ -160,18 +160,15 @@ export class OrextravelProvider implements TourProvider {
       } else if (townFrom !== undefined) {
         where.regionKey = { startsWith: `${townFrom}-` };
       } else if (stateId !== undefined) {
-        where.regionKey = { endsWith: `-${stateId}` };
+        where.stateId = stateId;
       }
     }
 
     if (filters.q) {
       const q = filters.q;
       where.OR = [
-        { destination: { contains: q } },
+        { destination: { startsWith: q } },
         { title: { contains: q } },
-        { description: { contains: q } },
-        { board: { contains: q } },
-        { roomType: { contains: q } },
       ];
     }
 
@@ -200,7 +197,14 @@ export class OrextravelProvider implements TourProvider {
         ? { startDate: sortDir }
         : { price: sortDir };
 
-    const [items, filtered, total, uniqueDestinations] = await Promise.all([
+    const hasTextFilter = Boolean(filters.q);
+    const hasPriceFilter =
+      filters.priceMin !== undefined || filters.priceMax !== undefined;
+    const hasDateFilter =
+      filters.dateStart !== undefined || filters.dateEnd !== undefined;
+    const needsSeparateTotal = hasTextFilter || hasPriceFilter || hasDateFilter;
+
+    const [items, filtered, rawTotal, uniqueDestinations] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy,
@@ -216,11 +220,15 @@ export class OrextravelProvider implements TourProvider {
         },
       }),
       prisma.providerTour.count({ where }),
-      prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } }),
+      needsSeparateTotal
+        ? prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } })
+        : Promise.resolve(null),
       // Count distinct destination states from ProviderRegion (small table)
       // instead of scanning the entire filtered ProviderTour set.
       this.countDistinctDestinations(townFrom, stateId),
     ]);
+
+    const total = rawTotal ?? filtered;
 
     const totalPages = Math.ceil(filtered / limit);
 
@@ -442,6 +450,7 @@ export class OrextravelProvider implements TourProvider {
                 externalId: item.externalId,
                 source: this.id,
                 regionKey,
+                stateId: firstRoute.state ?? null,
                 destination: item.destination,
                 title: item.title,
                 price: item.price,
@@ -464,6 +473,7 @@ export class OrextravelProvider implements TourProvider {
               },
               update: {
                 regionKey,
+                stateId: firstRoute.state ?? null,
                 destination: item.destination,
                 title: item.title,
                 price: item.price,
