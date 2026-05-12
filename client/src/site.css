@@ -3385,11 +3385,7 @@ html[lang="ru"] .logo {
   }
 
   .public-search-panel {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .public-search-submit {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .search-sidebar {
