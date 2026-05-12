@@ -253,6 +253,7 @@ export class AlexandriaProvider implements TourProvider {
     const allFiltered = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
+      take: 5_000,   // hard cap — Alexandria rarely exceeds this
     });
 
     const counts = new Map<string, number>();

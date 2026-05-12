@@ -9,6 +9,11 @@ import { fetchPublicBootstrap, type PublicBootstrap } from "../api/publicProvide
 
 const STORAGE_KEY = "skytravel:bootstrap:v2";
 
+// Module-level cooldown — prevents refetch on rapid in-app navigation
+let lastFetchTs = 0;
+const FETCH_COOLDOWN_MS = 10_000; // 10 seconds
+const MAX_CACHE_AGE_MS = 5 * 60 * 1000; // 5 minutes
+
 type Cached = PublicBootstrap & { cachedAt: number };
 
 function readCache(): Cached | null {
@@ -17,6 +22,11 @@ function readCache(): Cached | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Cached;
     if (!parsed || !Array.isArray(parsed.providers)) return null;
+    // Evict stale cache
+    if (Date.now() - (parsed.cachedAt ?? 0) > MAX_CACHE_AGE_MS) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -46,15 +56,31 @@ export function loadBootstrap(): {
   fresh: Promise<BootstrapResult>;
 } {
   const cached = readCache();
-  const fresh = fetchPublicBootstrap()
-    .then((data) => {
-      writeCache(data);
-      return {
-        providers: data.providers,
-        regionsByProvider: data.regionsByProvider,
-        fromCache: false,
-      };
+
+  const now = Date.now();
+  const withinCooldown = now - lastFetchTs < FETCH_COOLDOWN_MS;
+
+  let fresh: Promise<BootstrapResult>;
+
+  if (withinCooldown && cached) {
+    // Already fetched recently — return the cached value as the "fresh" result too
+    fresh = Promise.resolve({
+      providers: cached.providers,
+      regionsByProvider: cached.regionsByProvider,
+      fromCache: true,
     });
+  } else {
+    lastFetchTs = now;
+    fresh = fetchPublicBootstrap()
+      .then((data) => {
+        writeCache(data);
+        return {
+          providers: data.providers,
+          regionsByProvider: data.regionsByProvider,
+          fromCache: false,
+        };
+      });
+  }
 
   return {
     cached: cached
