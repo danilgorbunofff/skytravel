@@ -23,6 +23,9 @@ export type UnifiedTour = {
   // Alexandria-specific
   offersCount?: number;
 
+  // Public grouped-search metadata
+  offerGroupKey?: string;
+
   // Orextravel-specific
   nights?: number;
   adults?: number;
@@ -43,6 +46,7 @@ export type UnifiedFilters = {
   page?: number;
   limit?: number;
   refresh?: boolean;
+  groupResults?: boolean;
   providerFilters: Record<string, unknown>;
 };
 
@@ -77,6 +81,8 @@ export type FilterFieldDescriptor = {
 export type ToursResult = {
   total: number;
   filtered: number;
+  rawTotalOffers?: number;
+  rawFilteredOffers?: number;
   uniqueDestinations: number;
   page: number;
   limit: number;
@@ -118,6 +124,10 @@ export interface TourProvider {
   getRegions(): Promise<ProviderRegion[]>;
   getProviderFilters(): FilterFieldDescriptor[];
   fetchTours(filters: UnifiedFilters): Promise<ToursResult>;
+  fetchOfferGroup(
+    filters: UnifiedFilters,
+    offerGroupKey: string,
+  ): Promise<UnifiedTour[]>;
   streamTours(
     filters: UnifiedFilters,
     onBatch: StreamCallback,

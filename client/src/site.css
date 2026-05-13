@@ -2427,8 +2427,7 @@ html[lang="ru"] .logo {
   display: block;
 }
 
-.public-tour-card__image span,
-.card-source-badge {
+.public-tour-card__image .card-source-badge {
   position: absolute;
   right: 0.6rem;
   top: 0.6rem;
@@ -2439,16 +2438,24 @@ html[lang="ru"] .logo {
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
+  max-width: calc(100% - 4rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 3;
 }
 
 /* Deal badges */
 .card-deal-badges {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 0.5rem;
+  left: 2.4rem;
+  right: 8.5rem;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: flex-start;
+  z-index: 2;
 }
 .badge {
   display: inline-block;
@@ -2458,6 +2465,10 @@ html[lang="ru"] .logo {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .03em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .badge--urgent { background: #e53e3e; color: #fff; }
 .badge--deal   { background: #2f855a; color: #fff; }
@@ -2635,9 +2646,6 @@ html[lang="ru"] .logo {
 .card-heart.is-saved { color: #e53e3e; background: #fff; }
 .card-heart.is-saved svg { fill: #e53e3e; }
 
-/* Adjust deal badges to avoid overlap with heart */
-.card-deal-badges { top: 0.5rem; left: 2.4rem; }
-
 /* Sidebar saved filter button */
 .filter-btn-list__btn {
   text-align: left;
@@ -2660,29 +2668,7 @@ html[lang="ru"] .logo {
 
 /* Hover CTA */
 .public-tour-card__hover-cta {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transform: translateY(100%);
-  transition: transform .22s ease;
-  background: rgba(18, 61, 140, 0.94);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem;
-}
-.public-tour-card__hover-cta a {
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
-}
-.public-tour-card:hover .public-tour-card__hover-cta {
-  transform: translateY(0);
+  display: none;
 }
 
 /* card-img-placeholder */
@@ -3136,12 +3122,12 @@ html[lang="ru"] .logo {
 
 /* Card actions row (alert + compare) */
 .card-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.75rem 0.75rem;
   border-top: 1px solid #e5e7eb;
-  flex-wrap: wrap;
 }
 
 .card-alert-btn {
@@ -3153,7 +3139,10 @@ html[lang="ru"] .logo {
   cursor: pointer;
   color: #374151;
   transition: border-color 0.15s, background 0.15s;
-  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-alert-btn:hover {
@@ -3180,6 +3169,71 @@ html[lang="ru"] .logo {
 .card-compare input:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.card-offers-toggle {
+  width: 100%;
+  border: 1px solid #c9d7ec;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--blue-900);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 0.5rem 0.7rem;
+}
+
+.card-offers-toggle:hover {
+  background: #edf4ff;
+  border-color: var(--blue);
+}
+
+.card-offer-group {
+  border: 1px solid #d7e2f2;
+  border-radius: 10px;
+  background: #fff;
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.35rem;
+}
+
+.card-offer-group p {
+  color: #4f6384;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem;
+}
+
+.card-offer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  color: #2f4d79;
+  padding: 0.45rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.78rem;
+}
+
+.card-offer-row:hover {
+  background: #edf4ff;
+}
+
+.card-offer-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-offer-row strong {
+  color: var(--blue-900);
+  white-space: nowrap;
 }
 
 /* Compare Tray */

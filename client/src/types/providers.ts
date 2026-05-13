@@ -21,6 +21,7 @@ export type UnifiedTour = {
   source: string;
 
   offersCount?: number;
+  offerGroupKey?: string;
   nights?: number;
   adults?: number;
   children?: number;
@@ -46,6 +47,7 @@ export type UnifiedFilters = {
   page?: number;
   limit?: number;
   refresh?: boolean;
+  groupResults?: boolean;
   [key: string]: unknown;
 };
 
@@ -89,6 +91,8 @@ export type CacheStatus = {
 export type ToursResult = {
   total: number;
   filtered: number;
+  rawTotalOffers?: number;
+  rawFilteredOffers?: number;
   uniqueDestinations: number;
   page: number;
   limit: number;

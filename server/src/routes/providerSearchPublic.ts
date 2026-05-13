@@ -39,6 +39,7 @@ const SHARED_KEYS = new Set([
   "sortDir",
   "page",
   "limit",
+  "offerGroupKey",
 ]);
 
 const MAX_QUERY_LENGTH = 120;
@@ -272,6 +273,48 @@ router.get(
 );
 
 router.get(
+  "/providers/:id/offer-group",
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const provider = getProvider(req.params.id);
+      const offerGroupKey = firstQueryValue(req.query.offerGroupKey);
+      if (!offerGroupKey) {
+        res.status(400).json({ error: "offerGroupKey is required." });
+        return;
+      }
+      if (offerGroupKey.length > 500) {
+        res.status(400).json({ error: "offerGroupKey is too long." });
+        return;
+      }
+
+      const filters = buildFilters(req, res, provider.getProviderFilters());
+      if (!filters) return;
+
+      const cacheKey = `${req.params.id}:offer-group:${req.url}`;
+      const cached = getCachedResult(cacheKey);
+      if (cached) {
+        res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+        res.setHeader("X-Cache", "HIT");
+        res.json(cached);
+        return;
+      }
+
+      const result = { items: await provider.fetchOfferGroup(filters, offerGroupKey) };
+      setCachedResult(cacheKey, result);
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      res.setHeader("X-Cache", "MISS");
+      res.json(result);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
+        res.status(404).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
+  }),
+);
+
+router.get(
   "/providers/:id/tours",
   asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -288,7 +331,7 @@ router.get(
         return;
       }
 
-      const result = await provider.fetchTours(filters);
+      const result = await provider.fetchTours({ ...filters, groupResults: true });
       setCachedResult(cacheKey, result);
       res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
       res.setHeader("X-Cache", "MISS");

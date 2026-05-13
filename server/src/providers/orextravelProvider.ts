@@ -26,6 +26,13 @@ import {
   writeRegions,
   updateRegionTourCount,
 } from "./regionStore.js";
+import {
+  countOfferGroupsBy,
+  groupOfferRows,
+  MAX_GROUPED_TOUR_ROWS,
+  sortOfferGroups,
+  sortOfferRows,
+} from "./offerGrouping.js";
 
 export class OrextravelProvider implements TourProvider {
   readonly id = "orextravel";
@@ -90,7 +97,7 @@ export class OrextravelProvider implements TourProvider {
     // departureId/departureName lives in `meta` so the client renders
     // the two-level filter exactly as before.
     const fromDb = await readRegions(this.id);
-    if (fromDb.length > 0) return fromDb;
+    if (fromDb.length > 0) return this.withGroupedRegionCounts(fromDb);
 
     // Cold-start fallback: hit upstream once so the very first user after a
     // fresh deploy still sees something. The next call hits DB.
@@ -118,6 +125,29 @@ export class OrextravelProvider implements TourProvider {
     }));
   }
 
+  private async withGroupedRegionCounts(regions: ProviderRegion[]): Promise<ProviderRegion[]> {
+    const rows = await prisma.providerTour.findMany({
+      where: { source: this.id },
+      select: {
+        regionKey: true,
+        source: true,
+        title: true,
+        destination: true,
+        price: true,
+        startDate: true,
+      },
+    });
+    const counts = countOfferGroupsBy(rows, (row) => row.regionKey);
+    return regions.map((region) => {
+      const departureId = region.meta?.departureId;
+      const key = departureId != null ? `${departureId}-${region.id}` : String(region.id);
+      return {
+        ...region,
+        count: counts.get(key) ?? region.count,
+      };
+    });
+  }
+
   getProviderFilters(): FilterFieldDescriptor[] {
     return [
       {
@@ -136,7 +166,15 @@ export class OrextravelProvider implements TourProvider {
     ];
   }
 
-  async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
+  private buildTourQuery(filters: UnifiedFilters): {
+    where: any;
+    sortBy: string;
+    sortDir: "asc" | "desc";
+    page: number;
+    limit: number;
+    townFrom: number | undefined;
+    stateId: number | undefined;
+  } {
     const pf = filters.providerFilters;
     const townFrom =
       pf.townFrom !== undefined ? Number(pf.townFrom) : undefined;
@@ -190,6 +228,16 @@ export class OrextravelProvider implements TourProvider {
       if (!Number.isNaN(de.getTime())) {
         where.endDate = { ...where.endDate, lte: de };
       }
+    }
+
+    return { where, sortBy, sortDir, page, limit, townFrom, stateId };
+  }
+
+  async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
+    const { where, sortBy, sortDir, page, limit, townFrom, stateId } = this.buildTourQuery(filters);
+
+    if (filters.groupResults) {
+      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit);
     }
 
     const orderBy: any =
@@ -283,6 +331,65 @@ export class OrextravelProvider implements TourProvider {
       roomType: row.roomType ?? undefined,
       currency: row.currency ?? undefined,
     };
+  }
+
+  private async fetchGroupedByOffer(
+    where: any,
+    sortBy: string,
+    sortDir: string,
+    page: number,
+    limit: number,
+  ): Promise<ToursResult> {
+    const [allFiltered, rawFilteredOffers] = await Promise.all([
+      prisma.providerTour.findMany({
+        where,
+        orderBy: { price: "asc" },
+        take: MAX_GROUPED_TOUR_ROWS,
+      }),
+      prisma.providerTour.count({ where }),
+    ]);
+
+    const grouped = sortOfferGroups(groupOfferRows(allFiltered), sortBy, sortDir);
+    const filteredCount = grouped.length;
+    const totalPages = Math.ceil(filteredCount / limit);
+    const start = (page - 1) * limit;
+    const pageItems = grouped.slice(start, start + limit);
+
+    return {
+      total: filteredCount,
+      filtered: filteredCount,
+      rawTotalOffers: rawFilteredOffers,
+      rawFilteredOffers,
+      uniqueDestinations: filteredCount,
+      page,
+      limit,
+      totalPages,
+      items: pageItems.map((entry) => ({
+        ...this.rowToUnified(entry.representative),
+        offerGroupKey: entry.key,
+        offersCount: entry.offers.length,
+      })),
+    };
+  }
+
+  async fetchOfferGroup(
+    filters: UnifiedFilters,
+    offerGroupKey: string,
+  ): Promise<UnifiedTour[]> {
+    const { where, sortBy, sortDir } = this.buildTourQuery(filters);
+    const rows = await prisma.providerTour.findMany({
+      where,
+      orderBy: { price: "asc" },
+      take: MAX_GROUPED_TOUR_ROWS,
+    });
+    const group = groupOfferRows(rows).find((entry) => entry.key === offerGroupKey);
+    if (!group) return [];
+
+    return sortOfferRows(group.offers, sortBy, sortDir).map((row) => ({
+      ...this.rowToUnified(row),
+      offerGroupKey,
+      offersCount: group.offers.length,
+    }));
   }
 
   async streamTours(

@@ -7,6 +7,7 @@ import LeadPopup from "../components/LeadPopup";
 import { PriceAlertModal } from "../components/PriceAlertModal";
 import { CompareTray } from "../components/CompareTray";
 import {
+  fetchPublicProviderOfferGroup,
   fetchPublicProviderRegions,
   fetchPublicProviderTours,
 } from "../api/publicProviders";
@@ -130,6 +131,10 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [result, setResult] = useState<ToursResult | null>(null);
+  const [openOfferGroupKey, setOpenOfferGroupKey] = useState<string | null>(null);
+  const [offerGroupItems, setOfferGroupItems] = useState<Record<string, UnifiedTour[]>>({});
+  const [offerGroupLoading, setOfferGroupLoading] = useState<Record<string, boolean>>({});
+  const [offerGroupErrors, setOfferGroupErrors] = useState<Record<string, string>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     try { return (localStorage.getItem("skytravel:viewMode") as "grid" | "list") ?? "grid"; } catch { return "grid"; }
@@ -194,27 +199,32 @@ export default function SearchPage() {
   const priceMin = Number(searchParams.get("priceMin")) || priceRange.min;
   const priceMax = Number(searchParams.get("priceMax")) || priceRange.max;
 
-  const displayedTours = useMemo(() => {
-    let items = result?.items ?? [];
-    if (showFavoritesOnly) {
-      items = items.filter((t) => favorites.includes(`${t.source}-${t.externalId}`));
+  const applyLocalTourFilters = useCallback((sourceItems: UnifiedTour[], includeFavorites: boolean) => {
+    let items = sourceItems;
+    if (includeFavorites && showFavoritesOnly) {
+      items = items.filter((tour) => favorites.includes(`${tour.source}-${tour.externalId}`));
     }
     if (activeNights) {
       const [lo, hi] = activeNights.split("-").map(Number);
-      items = items.filter((t) => {
-        const n = t.nights ?? Math.round((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / 86400000);
+      items = items.filter((tour) => {
+        const n = tour.nights ?? Math.round((new Date(tour.endDate).getTime() - new Date(tour.startDate).getTime()) / 86400000);
         return n >= lo && n <= hi;
       });
     }
     if (activeStars) {
       const minStars = Number(activeStars);
-      items = items.filter((t) => Number(t.stars) >= minStars);
+      items = items.filter((tour) => Number(tour.stars) >= minStars);
     }
     if (activeBoard) {
-      items = items.filter((t) => t.board === activeBoard);
+      items = items.filter((tour) => tour.board === activeBoard);
     }
     return items;
-  }, [result, activeNights, activeStars, activeBoard, showFavoritesOnly, favorites]);
+  }, [activeNights, activeStars, activeBoard, showFavoritesOnly, favorites]);
+
+  const displayedTours = useMemo(
+    () => applyLocalTourFilters(result?.items ?? [], true),
+    [result, applyLocalTourFilters],
+  );
 
   const departureCities = useMemo(() => {
     if (!isTwoLevel) return [];
@@ -409,6 +419,8 @@ export default function SearchPage() {
     const start = searchParams.get("dateStart");
     const end = searchParams.get("dateEnd");
     const activeTransport = searchParams.get("transport");
+    const activeStarsFilter = searchParams.get("stars");
+    const activeBoardFilter = searchParams.get("board");
     const zeme = searchParams.get("zeme");
     const townFrom = searchParams.get("townFrom");
     const stateId = searchParams.get("stateId");
@@ -418,6 +430,8 @@ export default function SearchPage() {
     if (start) filters.dateStart = start;
     if (end) filters.dateEnd = end;
     if (transportSupported && activeTransport) filters.transport = activeTransport;
+    if (supportsFilter(selectedProvider, "stars") && activeStarsFilter) filters.stars = activeStarsFilter;
+    if (supportsFilter(selectedProvider, "board") && activeBoardFilter) filters.board = activeBoardFilter;
     if (!isTwoLevel && (zeme || inferredZeme)) filters.zeme = zeme || inferredZeme;
     if (isTwoLevel && townFrom) filters.townFrom = townFrom;
     if (isTwoLevel && stateId) filters.stateId = stateId;
@@ -445,7 +459,13 @@ export default function SearchPage() {
     setError(null);
     fetchPublicProviderTours(selectedProviderId, buildFilters())
       .then((data) => {
-        if (!cancelled) setResult(data);
+        if (!cancelled) {
+          setResult(data);
+          setOpenOfferGroupKey(null);
+          setOfferGroupItems({});
+          setOfferGroupLoading({});
+          setOfferGroupErrors({});
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -460,6 +480,43 @@ export default function SearchPage() {
       cancelled = true;
     };
   }, [selectedProviderId, selectedProvider, buildFilters, hasActiveSearch]);
+
+  const toggleOfferGroup = useCallback((tour: UnifiedTour) => {
+    const key = tour.offerGroupKey;
+    if (!key || (tour.offersCount ?? 0) <= 1) return;
+
+    if (openOfferGroupKey === key) {
+      setOpenOfferGroupKey(null);
+      return;
+    }
+
+    setOpenOfferGroupKey(key);
+    if (offerGroupItems[key] || offerGroupLoading[key]) return;
+
+    setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
+    setOfferGroupErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    fetchPublicProviderOfferGroup(selectedProviderId, key, buildFilters())
+      .then((items) => {
+        setOfferGroupItems((prev) => ({
+          ...prev,
+          [key]: applyLocalTourFilters(items, false),
+        }));
+      })
+      .catch((err) => {
+        setOfferGroupErrors((prev) => ({
+          ...prev,
+          [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
+        }));
+      })
+      .finally(() => {
+        setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
+      });
+  }, [applyLocalTourFilters, buildFilters, offerGroupItems, offerGroupLoading, openOfferGroupKey, selectedProviderId]);
 
   function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
     setValidationError(null);
@@ -551,7 +608,7 @@ export default function SearchPage() {
   );
 
   const totalText = result
-    ? `Nalezeno ${result.filtered.toLocaleString("cs-CZ")} nabídek`
+    ? `Nalezeno ${result.filtered.toLocaleString("cs-CZ")} hotelů${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} termínů)` : ""}`
     : resultsLoading
       ? "Hledám zájezdy…"
       : hasActiveSearch
@@ -1129,6 +1186,7 @@ export default function SearchPage() {
               <div className={viewMode === "grid" ? "public-tour-grid" : "public-tour-list"}>
                 {displayedTours.map((tour) => {
                   const tourId = `${tour.source}-${tour.externalId}`;
+                  const groupKey = tour.offerGroupKey;
                   return (
                     <PublicTourCard
                       key={tourId}
@@ -1141,6 +1199,11 @@ export default function SearchPage() {
                       onToggleCompare={() => toggleCompare(tourId)}
                       compareDisabled={!compareIds.includes(tourId) && compareIds.length >= 3}
                       onAlertClick={() => setAlertTour(tour)}
+                      isOfferGroupOpen={groupKey === openOfferGroupKey}
+                      offerGroupItems={groupKey ? offerGroupItems[groupKey] : undefined}
+                      offerGroupLoading={groupKey ? Boolean(offerGroupLoading[groupKey]) : false}
+                      offerGroupError={groupKey ? offerGroupErrors[groupKey] : undefined}
+                      onToggleOfferGroup={groupKey ? () => toggleOfferGroup(tour) : undefined}
                     />
                   );
                 })}
@@ -1324,6 +1387,11 @@ function PublicTourCard({
   onToggleCompare,
   compareDisabled,
   onAlertClick,
+  isOfferGroupOpen,
+  offerGroupItems,
+  offerGroupLoading,
+  offerGroupError,
+  onToggleOfferGroup,
 }: {
   tour: UnifiedTour;
   cheapThreshold: number;
@@ -1334,6 +1402,11 @@ function PublicTourCard({
   onToggleCompare: () => void;
   compareDisabled: boolean;
   onAlertClick: () => void;
+  isOfferGroupOpen: boolean;
+  offerGroupItems?: UnifiedTour[];
+  offerGroupLoading: boolean;
+  offerGroupError?: string;
+  onToggleOfferGroup?: () => void;
 }) {
   const stars = starsDisplay(tour.stars);
 
@@ -1342,7 +1415,8 @@ function PublicTourCard({
   const daysUntilDeparture = Math.floor((departure.getTime() - today.getTime()) / 86_400_000);
   const isLastMinute = daysUntilDeparture >= 0 && daysUntilDeparture <= 14;
   const isCheap = tour.price <= cheapThreshold;
-  const isLastSpot = tour.offersCount != null && tour.offersCount <= 3;
+  const isLastSpot = !tour.offerGroupKey && tour.offersCount != null && tour.offersCount <= 3;
+  const hasMultipleOffers = Boolean(tour.offerGroupKey && (tour.offersCount ?? 0) > 1);
 
   const nights = tour.nights ?? Math.round(
     (new Date(tour.endDate).getTime() - new Date(tour.startDate).getTime()) / 86_400_000,
@@ -1391,6 +1465,7 @@ function PublicTourCard({
         <span>{fmtDate(tour.startDate)} – {fmtDate(tour.endDate)}</span>
         <span>{transportLabel[tour.transport] ?? tour.transport}</span>
         {Number.isFinite(nights) && nights > 0 && <span>{nights} nocí</span>}
+        {hasMultipleOffers && <span>{tour.offersCount} termínů</span>}
       </div>
       <div className="public-tour-card__footer">
         <strong>od {formatPrice(tour.price)}</strong>
@@ -1399,6 +1474,43 @@ function PublicTourCard({
           Detail
         </a>
       </div>
+      {hasMultipleOffers && (
+        <button type="button" className="card-offers-toggle" onClick={onToggleOfferGroup}>
+          <CalendarDays size={16} aria-hidden="true" />
+          {isOfferGroupOpen ? "Skrýt termíny" : `Zobrazit ${tour.offersCount} termínů`}
+        </button>
+      )}
+      {isOfferGroupOpen && (
+        <div className="card-offer-group" aria-live="polite">
+          {offerGroupLoading ? (
+            <p>Načítám termíny…</p>
+          ) : offerGroupError ? (
+            <p>{offerGroupError}</p>
+          ) : offerGroupItems && offerGroupItems.length > 0 ? (
+            offerGroupItems.map((offer) => {
+              const offerNights = offer.nights ?? Math.round(
+                (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
+              );
+              return (
+                <a
+                  key={`${offer.source}-${offer.externalId}`}
+                  className="card-offer-row"
+                  href={offer.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{fmtDate(offer.startDate)} – {fmtDate(offer.endDate)}</span>
+                  <span>{Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : transportLabel[offer.transport] ?? offer.transport}</span>
+                  <strong>od {formatPrice(offer.price)}</strong>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              );
+            })
+          ) : (
+            <p>Žádné další termíny pro zadané filtry.</p>
+          )}
+        </div>
+      )}
       <div className="card-actions">
         <button type="button" className="card-alert-btn" onClick={onAlertClick}>
           🔔 Upozornit na slevu
@@ -1433,17 +1545,6 @@ function PublicTourCard({
     <article className="public-tour-card">
       {imageEl}
       {bodyEl}
-      <div className="public-tour-card__hover-cta">
-        <a
-          href={tour.url}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <ExternalLink size={16} aria-hidden="true" />
-          Zobrazit nabídku
-        </a>
-      </div>
     </article>
   );
 }

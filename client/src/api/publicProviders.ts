@@ -1,4 +1,4 @@
-import type { ProviderMeta, ProviderRegion, ToursResult, UnifiedFilters } from "../types/providers";
+import type { ProviderMeta, ProviderRegion, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -61,4 +61,19 @@ export async function fetchPublicProviderTours(
   );
   await throwIfNotOk(res);
   return res.json() as Promise<ToursResult>;
+}
+
+export async function fetchPublicProviderOfferGroup(
+  providerId: string,
+  offerGroupKey: string,
+  filters: UnifiedFilters,
+): Promise<UnifiedTour[]> {
+  const params = filtersToParams(filters);
+  params.set("offerGroupKey", offerGroupKey);
+  const res = await fetch(
+    `${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/offer-group?${params}`,
+  );
+  await throwIfNotOk(res);
+  const data = await res.json();
+  return data.items as UnifiedTour[];
 }
