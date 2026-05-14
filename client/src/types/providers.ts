@@ -82,8 +82,10 @@ export type PublicDestinationSummary = {
   czechName: string;
   canonicalName: string;
   count: number;
+  rawOfferCount?: number;
   minPrice: number | null;
   providerCounts: Record<string, number>;
+  providerRawOfferCounts?: Record<string, number>;
 };
 
 /** Metadata for a registered provider. */
