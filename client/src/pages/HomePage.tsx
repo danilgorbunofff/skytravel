@@ -200,18 +200,10 @@ export default function HomePage() {
     });
   }
 
-  function openFavoriteModal(item: { destination: string; price: number; image: string }) {
-    setModalDetail({
-      type: t("modalTypeFav"),
-      title: item.destination,
-      description: t("modalDescFav"),
-      location: t("modalLoc"),
-      term: t("modalTerm"),
-      meta: `${t("from")} ${formatPrice(item.price)}`,
-      source: t("transportOffer"),
-      photos: [item.image],
-      isOwnTour: false,
-    });
+  function openFavoriteSearch(item: { destination: string }) {
+    const params = new URLSearchParams();
+    params.set("q", item.destination);
+    navigate(`/search?${params}`);
   }
 
   const closeModal = useCallback(() => setModalDetail(null), []);
@@ -557,7 +549,7 @@ export default function HomePage() {
                   key={item.destination}
                   className="favorite-card"
                   style={{ backgroundImage: `url('${item.image}')` }}
-                  onClick={() => openFavoriteModal(item)}
+                  onClick={() => openFavoriteSearch(item)}
                 >
                   <div className="favorite-card__body">
                     <h3>{item.destination}</h3>

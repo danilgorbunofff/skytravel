@@ -1,33 +1,10 @@
 import { Router, Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { getAllProviders, getProvider } from "../providers/index.js";
+import { getCachedPublicSearchResult, setCachedPublicSearchResult } from "../providers/publicSearchCache.js";
 import type { FilterFieldDescriptor, UnifiedFilters } from "../providers/types.js";
 
 const router = Router();
-
-// ── In-memory result cache ────────────────────────────────────────────
-// Keyed by "providerId:/full/url?with=params". TTL 30 s, max 500 entries.
-const resultCache = new Map<string, { data: unknown; ts: number }>();
-const RESULT_CACHE_TTL = 30_000;
-const RESULT_CACHE_MAX = 500;
-
-function getCachedResult(key: string): unknown | null {
-  const entry = resultCache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > RESULT_CACHE_TTL) {
-    resultCache.delete(key);
-    return null;
-  }
-  return entry.data;
-}
-
-function setCachedResult(key: string, data: unknown): void {
-  if (resultCache.size >= RESULT_CACHE_MAX) {
-    const oldest = resultCache.keys().next().value;
-    if (oldest) resultCache.delete(oldest);
-  }
-  resultCache.set(key, { data, ts: Date.now() });
-}
 
 const SHARED_KEYS = new Set([
   "q",
@@ -35,6 +12,11 @@ const SHARED_KEYS = new Set([
   "priceMax",
   "dateStart",
   "dateEnd",
+  "nights",
+  "stars",
+  "board",
+  "adults",
+  "children",
   "sortBy",
   "sortDir",
   "page",
@@ -167,6 +149,29 @@ function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor
     return undefined;
   }
 
+  const nights = firstQueryValue(req.query.nights);
+  if (nights && !/^\d{1,3}-\d{1,3}$/.test(nights)) {
+    res.status(400).json({ error: "nights must be a range like 7-13." });
+    return undefined;
+  }
+
+  const stars = firstQueryValue(req.query.stars);
+  if (stars && !/^[1-5]$/.test(stars)) {
+    res.status(400).json({ error: "stars must be between 1 and 5." });
+    return undefined;
+  }
+
+  const board = firstQueryValue(req.query.board);
+  if (board && (board.length > 16 || !/^[A-Za-z0-9_-]+$/.test(board))) {
+    res.status(400).json({ error: "board has an unsupported value." });
+    return undefined;
+  }
+
+  const adults = parseOptionalNumber(req, res, "adults", { integer: true, min: 1, max: 9 });
+  if (res.headersSent) return undefined;
+  const children = parseOptionalNumber(req, res, "children", { integer: true, min: 0, max: 6 });
+  if (res.headersSent) return undefined;
+
   const sortBy = firstQueryValue(req.query.sortBy) || "price";
   if (!["price", "date"].includes(sortBy)) {
     res.status(400).json({ error: "sortBy must be price or date." });
@@ -193,6 +198,11 @@ function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor
     priceMax,
     dateStart,
     dateEnd,
+    nights,
+    stars,
+    board,
+    adults,
+    children,
     sortBy,
     sortDir: sortDir as "asc" | "desc",
     page,
@@ -255,7 +265,22 @@ router.get(
     try {
       const provider = getProvider(req.params.id);
       try {
-        const items = await provider.getRegions();
+        const hasFilterParams = Object.keys(req.query).length > 0;
+        let filters: UnifiedFilters | undefined;
+        if (hasFilterParams) {
+          filters = buildFilters(req, res, provider.getProviderFilters());
+          if (!filters) return;
+          const providerFilters = { ...filters.providerFilters };
+          delete providerFilters.zeme;
+          delete providerFilters.stateId;
+          filters = {
+            ...filters,
+            page: 1,
+            providerFilters,
+          };
+        }
+
+        const items = await provider.getRegions(filters);
         res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
         res.json({ items });
       } catch (err) {
@@ -291,7 +316,7 @@ router.get(
       if (!filters) return;
 
       const cacheKey = `${req.params.id}:offer-group:${req.url}`;
-      const cached = getCachedResult(cacheKey);
+      const cached = getCachedPublicSearchResult(cacheKey);
       if (cached) {
         res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
         res.setHeader("X-Cache", "HIT");
@@ -300,7 +325,7 @@ router.get(
       }
 
       const result = { items: await provider.fetchOfferGroup(filters, offerGroupKey) };
-      setCachedResult(cacheKey, result);
+      setCachedPublicSearchResult(cacheKey, result);
       res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
       res.setHeader("X-Cache", "MISS");
       res.json(result);
@@ -323,7 +348,7 @@ router.get(
       if (!filters) return;
 
       const cacheKey = `${req.params.id}:${req.url}`;
-      const cached = getCachedResult(cacheKey);
+      const cached = getCachedPublicSearchResult(cacheKey);
       if (cached) {
         res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
         res.setHeader("X-Cache", "HIT");
@@ -332,7 +357,7 @@ router.get(
       }
 
       const result = await provider.fetchTours({ ...filters, groupResults: true });
-      setCachedResult(cacheKey, result);
+      setCachedPublicSearchResult(cacheKey, result);
       res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
       res.setHeader("X-Cache", "MISS");
       res.json(result);

@@ -41,6 +41,11 @@ export type UnifiedFilters = {
   priceMax?: number;
   dateStart?: string;
   dateEnd?: string;
+  nights?: string;
+  stars?: string;
+  board?: string;
+  adults?: number;
+  children?: number;
   sortBy?: string;
   sortDir?: "asc" | "desc";
   page?: number;
@@ -121,7 +126,7 @@ export interface TourProvider {
   readonly supportsStreaming: boolean;
   readonly refreshIntervalMs: number;
 
-  getRegions(): Promise<ProviderRegion[]>;
+  getRegions(filters?: UnifiedFilters): Promise<ProviderRegion[]>;
   getProviderFilters(): FilterFieldDescriptor[];
   fetchTours(filters: UnifiedFilters): Promise<ToursResult>;
   fetchOfferGroup(

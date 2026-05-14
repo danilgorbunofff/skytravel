@@ -42,6 +42,11 @@ export type UnifiedFilters = {
   priceMax?: number;
   dateStart?: string;
   dateEnd?: string;
+  nights?: string;
+  stars?: string;
+  board?: string;
+  adults?: number;
+  children?: number;
   sortBy?: string;
   sortDir?: "asc" | "desc";
   page?: number;

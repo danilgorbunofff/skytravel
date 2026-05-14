@@ -33,6 +33,28 @@ import {
   sortOfferGroups,
   sortOfferRows,
 } from "./offerGrouping.js";
+import { invalidatePublicSearchCache } from "./publicSearchCache.js";
+
+type NightsRange = { min: number; max: number } | null;
+
+function parseNightsRange(value: string | undefined): NightsRange {
+  if (!value) return null;
+  const [min, max] = value.split("-").map(Number);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  return { min, max };
+}
+
+function nightsFromDates(startDate: Date | string, endDate: Date | string): number | null {
+  const start = startDate instanceof Date ? startDate : new Date(startDate);
+  const end = endDate instanceof Date ? endDate : new Date(endDate);
+  const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+  return Number.isFinite(nights) && nights > 0 ? nights : null;
+}
+
+function photosFromJson(value: unknown, image: string): string[] {
+  const photos = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+  return photos.length > 0 ? photos : image ? [image] : [];
+}
 
 export class OrextravelProvider implements TourProvider {
   readonly id = "orextravel";
@@ -91,13 +113,13 @@ export class OrextravelProvider implements TourProvider {
 
   // ── TourProvider interface ────────────────────────────────────────
 
-  async getRegions(): Promise<ProviderRegion[]> {
+  async getRegions(filters?: UnifiedFilters): Promise<ProviderRegion[]> {
     // Fast path: read from DB (with 5-min in-process L1 cache).
     // Each row is a (town, state) pair; the original API shape with
     // departureId/departureName lives in `meta` so the client renders
     // the two-level filter exactly as before.
     const fromDb = await readRegions(this.id);
-    if (fromDb.length > 0) return this.withGroupedRegionCounts(fromDb);
+    if (fromDb.length > 0) return this.withGroupedRegionCounts(fromDb, filters);
 
     // Cold-start fallback: hit upstream once so the very first user after a
     // fresh deploy still sees something. The next call hits DB.
@@ -125,9 +147,10 @@ export class OrextravelProvider implements TourProvider {
     }));
   }
 
-  private async withGroupedRegionCounts(regions: ProviderRegion[]): Promise<ProviderRegion[]> {
+  private async withGroupedRegionCounts(regions: ProviderRegion[], filters?: UnifiedFilters): Promise<ProviderRegion[]> {
+    const { where, nightsRange } = this.buildTourQuery(filters ?? { providerFilters: {} });
     const rows = await prisma.providerTour.findMany({
-      where: { source: this.id },
+      where,
       select: {
         regionKey: true,
         source: true,
@@ -135,15 +158,17 @@ export class OrextravelProvider implements TourProvider {
         destination: true,
         price: true,
         startDate: true,
+        endDate: true,
+        nights: true,
       },
     });
-    const counts = countOfferGroupsBy(rows, (row) => row.regionKey);
+    const counts = countOfferGroupsBy(this.filterRowsByNights(rows, nightsRange), (row) => row.regionKey);
     return regions.map((region) => {
       const departureId = region.meta?.departureId;
       const key = departureId != null ? `${departureId}-${region.id}` : String(region.id);
       return {
         ...region,
-        count: counts.get(key) ?? region.count,
+        count: counts.get(key) ?? undefined,
       };
     });
   }
@@ -163,6 +188,8 @@ export class OrextravelProvider implements TourProvider {
         options: [],
         dependsOn: "townFrom",
       },
+      { key: "board", label: "Stravování", type: "select", options: [] },
+      { key: "stars", label: "Hvězdy", type: "select", options: [] },
     ];
   }
 
@@ -174,6 +201,7 @@ export class OrextravelProvider implements TourProvider {
     limit: number;
     townFrom: number | undefined;
     stateId: number | undefined;
+    nightsRange: NightsRange;
   } {
     const pf = filters.providerFilters;
     const townFrom =
@@ -186,6 +214,9 @@ export class OrextravelProvider implements TourProvider {
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(200, Math.max(1, filters.limit ?? 50));
+    const board = typeof filters.board === "string" ? filters.board : typeof pf.board === "string" ? pf.board : "";
+    const stars = typeof filters.stars === "string" ? filters.stars : typeof pf.stars === "string" ? pf.stars : "";
+    const nightsRange = parseNightsRange(filters.nights);
 
     // Build Prisma where clause
     const where: any = { source: this.id };
@@ -210,6 +241,14 @@ export class OrextravelProvider implements TourProvider {
       ];
     }
 
+    if (board) where.board = board;
+    if (stars) {
+      const minStars = Number(stars);
+      if (Number.isFinite(minStars)) {
+        where.stars = { in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars) };
+      }
+    }
+
     if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
       where.price = { ...where.price, gte: filters.priceMin };
     }
@@ -230,14 +269,25 @@ export class OrextravelProvider implements TourProvider {
       }
     }
 
-    return { where, sortBy, sortDir, page, limit, townFrom, stateId };
+    return { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange };
+  }
+
+  private filterRowsByNights<T extends { startDate: Date | string; endDate: Date | string; nights?: number | null }>(
+    rows: T[],
+    nightsRange: NightsRange,
+  ): T[] {
+    if (!nightsRange) return rows;
+    return rows.filter((row) => {
+      const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate);
+      return nights != null && nights >= nightsRange.min && nights <= nightsRange.max;
+    });
   }
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
-    const { where, sortBy, sortDir, page, limit, townFrom, stateId } = this.buildTourQuery(filters);
+    const { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange } = this.buildTourQuery(filters);
 
     if (filters.groupResults) {
-      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit);
+      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange);
     }
 
     const orderBy: any =
@@ -309,6 +359,7 @@ export class OrextravelProvider implements TourProvider {
   }
 
   private rowToUnified(row: any): UnifiedTour {
+    const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate) ?? undefined;
     return {
       externalId: row.externalId,
       destination: row.destination,
@@ -319,13 +370,13 @@ export class OrextravelProvider implements TourProvider {
       endDate: row.endDate instanceof Date ? row.endDate.toISOString() : row.endDate,
       transport: row.transport,
       image: row.image,
-      description: null,
-      photos: [],
+      description: row.description ?? null,
+      photos: photosFromJson(row.photos, row.image),
       url: row.url,
       stars: row.stars,
       board: row.board,
       source: this.id,
-      nights: row.nights ?? undefined,
+      nights,
       adults: row.adults ?? undefined,
       children: row.children ?? undefined,
       roomType: row.roomType ?? undefined,
@@ -339,8 +390,9 @@ export class OrextravelProvider implements TourProvider {
     sortDir: string,
     page: number,
     limit: number,
+    nightsRange: NightsRange,
   ): Promise<ToursResult> {
-    const [allFiltered, rawFilteredOffers] = await Promise.all([
+    const [allFiltered, rawFilteredDb] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy: { price: "asc" },
@@ -349,7 +401,9 @@ export class OrextravelProvider implements TourProvider {
       prisma.providerTour.count({ where }),
     ]);
 
-    const grouped = sortOfferGroups(groupOfferRows(allFiltered), sortBy, sortDir);
+    const filteredRows = this.filterRowsByNights(allFiltered, nightsRange);
+    const rawFilteredOffers = nightsRange ? filteredRows.length : rawFilteredDb;
+    const grouped = sortOfferGroups(groupOfferRows(filteredRows), sortBy, sortDir);
     const filteredCount = grouped.length;
     const totalPages = Math.ceil(filteredCount / limit);
     const start = (page - 1) * limit;
@@ -376,13 +430,13 @@ export class OrextravelProvider implements TourProvider {
     filters: UnifiedFilters,
     offerGroupKey: string,
   ): Promise<UnifiedTour[]> {
-    const { where, sortBy, sortDir } = this.buildTourQuery(filters);
+    const { where, sortBy, sortDir, nightsRange } = this.buildTourQuery(filters);
     const rows = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
       take: MAX_GROUPED_TOUR_ROWS,
     });
-    const group = groupOfferRows(rows).find((entry) => entry.key === offerGroupKey);
+    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find((entry) => entry.key === offerGroupKey);
     if (!group) return [];
 
     return sortOfferRows(group.offers, sortBy, sortDir).map((row) => ({
@@ -637,5 +691,6 @@ export class OrextravelProvider implements TourProvider {
       }
     }
     await this.loadCacheStatus();
+    invalidatePublicSearchCache(this.id);
   }
 }

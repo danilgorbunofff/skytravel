@@ -44,8 +44,15 @@ export async function fetchPublicBootstrap(): Promise<PublicBootstrap> {
   };
 }
 
-export async function fetchPublicProviderRegions(providerId: string): Promise<ProviderRegion[]> {
-  const res = await fetch(`${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/regions`);
+export async function fetchPublicProviderRegions(
+  providerId: string,
+  filters?: UnifiedFilters,
+): Promise<ProviderRegion[]> {
+  const params = filters ? filtersToParams(filters) : new URLSearchParams();
+  const query = params.toString();
+  const res = await fetch(
+    `${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/regions${query ? `?${query}` : ""}`,
+  );
   await throwIfNotOk(res);
   const data = await res.json();
   return data.items as ProviderRegion[];

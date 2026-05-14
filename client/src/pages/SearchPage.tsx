@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, ExternalLink, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -77,7 +77,8 @@ function normalizeSearchText(value: string): string {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
-    .trim();
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function inferSingleLevelRegion(provider: ProviderMeta | null, query: string): string | null {
@@ -86,12 +87,29 @@ function inferSingleLevelRegion(provider: ProviderMeta | null, query: string): s
   if (!regionField?.options?.length) return null;
 
   const normalizedQuery = normalizeSearchText(query);
-  const match = regionField.options.find((option) => {
-    const label = normalizeSearchText(String(option.label));
-    return normalizedQuery.includes(label) || label.includes(normalizedQuery);
-  });
+  const match = regionField.options.find((option) => normalizeSearchText(String(option.label)) === normalizedQuery);
 
   return match ? String(match.value) : null;
+}
+
+function inferTwoLevelState(regions: ProviderRegion[], query: string, townFrom: string): string | null {
+  if (!query) return null;
+  const normalizedQuery = normalizeSearchText(query);
+  const match = regions.find((region) => {
+    if (townFrom && String(region.meta?.departureId) !== townFrom) return false;
+    return normalizeSearchText(region.name) === normalizedQuery;
+  });
+  return match ? String(match.id) : null;
+}
+
+function stableFilterKey(filters: UnifiedFilters): string {
+  const params = new URLSearchParams();
+  for (const key of Object.keys(filters).sort()) {
+    const value = filters[key];
+    if (value === undefined || value === null || value === "") continue;
+    params.set(key, String(value));
+  }
+  return params.toString();
 }
 
 function hasTwoLevelRegions(provider: ProviderMeta | null): boolean {
@@ -131,10 +149,10 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [result, setResult] = useState<ToursResult | null>(null);
-  const [openOfferGroupKey, setOpenOfferGroupKey] = useState<string | null>(null);
   const [offerGroupItems, setOfferGroupItems] = useState<Record<string, UnifiedTour[]>>({});
   const [offerGroupLoading, setOfferGroupLoading] = useState<Record<string, boolean>>({});
   const [offerGroupErrors, setOfferGroupErrors] = useState<Record<string, string>>({});
+  const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     try { return (localStorage.getItem("skytravel:viewMode") as "grid" | "list") ?? "grid"; } catch { return "grid"; }
@@ -177,8 +195,9 @@ export default function SearchPage() {
   const activeNights = searchParams.get("nights") ?? "";
   const activeStars = searchParams.get("stars") ?? "";
   const activeBoard = searchParams.get("board") ?? "";
+  const hasPriceFilter = Boolean(searchParams.get("priceMin") || searchParams.get("priceMax"));
   const hasActiveSearch = Boolean(
-    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeZeme || activeTownFrom || activeStateId,
+    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeZeme || activeTownFrom || activeStateId || activeNights || activeStars || activeBoard || hasPriceFilter,
   );
 
   const cheapThreshold = useMemo(() => {
@@ -204,22 +223,8 @@ export default function SearchPage() {
     if (includeFavorites && showFavoritesOnly) {
       items = items.filter((tour) => favorites.includes(`${tour.source}-${tour.externalId}`));
     }
-    if (activeNights) {
-      const [lo, hi] = activeNights.split("-").map(Number);
-      items = items.filter((tour) => {
-        const n = tour.nights ?? Math.round((new Date(tour.endDate).getTime() - new Date(tour.startDate).getTime()) / 86400000);
-        return n >= lo && n <= hi;
-      });
-    }
-    if (activeStars) {
-      const minStars = Number(activeStars);
-      items = items.filter((tour) => Number(tour.stars) >= minStars);
-    }
-    if (activeBoard) {
-      items = items.filter((tour) => tour.board === activeBoard);
-    }
     return items;
-  }, [activeNights, activeStars, activeBoard, showFavoritesOnly, favorites]);
+  }, [showFavoritesOnly, favorites]);
 
   const displayedTours = useMemo(
     () => applyLocalTourFilters(result?.items ?? [], true),
@@ -408,33 +413,38 @@ export default function SearchPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const buildFilters = useCallback((): UnifiedFilters => {
+  const buildFilters = useCallback((options: { forRegions?: boolean; includePaging?: boolean } = {}): UnifiedFilters => {
     const filters: UnifiedFilters = {
-      page,
-      limit,
       sortBy,
       sortDir,
     };
+    if (options.includePaging !== false) {
+      filters.page = page;
+      filters.limit = limit;
+    }
     const q = searchParams.get("q")?.trim();
     const start = searchParams.get("dateStart");
     const end = searchParams.get("dateEnd");
     const activeTransport = searchParams.get("transport");
     const activeStarsFilter = searchParams.get("stars");
     const activeBoardFilter = searchParams.get("board");
+    const activeNightsFilter = searchParams.get("nights");
     const zeme = searchParams.get("zeme");
     const townFrom = searchParams.get("townFrom");
     const stateId = searchParams.get("stateId");
     const inferredZeme = !isTwoLevel && !zeme && q ? inferSingleLevelRegion(selectedProvider, q) : null;
+    const inferredStateId = isTwoLevel && !stateId && q ? inferTwoLevelState(regions, q, townFrom ?? "") : null;
 
-    if (q) filters.q = q;
+    if (q && !inferredZeme && !inferredStateId) filters.q = q;
     if (start) filters.dateStart = start;
     if (end) filters.dateEnd = end;
     if (transportSupported && activeTransport) filters.transport = activeTransport;
-    if (supportsFilter(selectedProvider, "stars") && activeStarsFilter) filters.stars = activeStarsFilter;
-    if (supportsFilter(selectedProvider, "board") && activeBoardFilter) filters.board = activeBoardFilter;
-    if (!isTwoLevel && (zeme || inferredZeme)) filters.zeme = zeme || inferredZeme;
+    if (activeStarsFilter) filters.stars = activeStarsFilter;
+    if (activeBoardFilter) filters.board = activeBoardFilter;
+    if (activeNightsFilter) filters.nights = activeNightsFilter;
+    if (!options.forRegions && !isTwoLevel && (zeme || inferredZeme)) filters.zeme = zeme || inferredZeme;
     if (isTwoLevel && townFrom) filters.townFrom = townFrom;
-    if (isTwoLevel && stateId) filters.stateId = stateId;
+    if (!options.forRegions && isTwoLevel && (stateId || inferredStateId)) filters.stateId = stateId || inferredStateId;
     const pMin = searchParams.get("priceMin");
     const pMax = searchParams.get("priceMax");
     if (pMin) filters.priceMin = Number(pMin);
@@ -444,7 +454,34 @@ export default function SearchPage() {
     if (adultCount) filters.adults = Number(adultCount);
     if (childCount) filters.children = Number(childCount);
     return filters;
-  }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel, selectedProvider]);
+  }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel, selectedProvider, regions]);
+
+  const searchFilters = useMemo(() => buildFilters(), [buildFilters]);
+  const searchFilterKey = useMemo(() => stableFilterKey(searchFilters), [searchFilters]);
+  const regionFilters = useMemo(
+    () => hasActiveSearch ? buildFilters({ forRegions: true, includePaging: false }) : null,
+    [buildFilters, hasActiveSearch],
+  );
+  const regionFilterKey = useMemo(() => regionFilters ? stableFilterKey(regionFilters) : "", [regionFilters]);
+
+  useEffect(() => {
+    if (!selectedProviderId || !hasActiveSearch || !regionFilters) return;
+    let cancelled = false;
+    setRegionsLoading(true);
+    fetchPublicProviderRegions(selectedProviderId, regionFilters)
+      .then((items) => {
+        if (!cancelled) setRegions(items);
+      })
+      .catch(() => {
+        if (!cancelled) setRegions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setRegionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProviderId, hasActiveSearch, regionFilterKey]);
 
   useEffect(() => {
     if (!selectedProviderId) return;
@@ -457,14 +494,14 @@ export default function SearchPage() {
     let cancelled = false;
     setResultsLoading(true);
     setError(null);
-    fetchPublicProviderTours(selectedProviderId, buildFilters())
+    fetchPublicProviderTours(selectedProviderId, searchFilters)
       .then((data) => {
         if (!cancelled) {
           setResult(data);
-          setOpenOfferGroupKey(null);
           setOfferGroupItems({});
           setOfferGroupLoading({});
           setOfferGroupErrors({});
+          setDetailTour(null);
         }
       })
       .catch((err) => {
@@ -479,19 +516,12 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProviderId, selectedProvider, buildFilters, hasActiveSearch]);
+  }, [selectedProviderId, searchFilterKey, hasActiveSearch]);
 
-  const toggleOfferGroup = useCallback((tour: UnifiedTour) => {
+  const openTourDetail = useCallback((tour: UnifiedTour) => {
     const key = tour.offerGroupKey;
-    if (!key || (tour.offersCount ?? 0) <= 1) return;
-
-    if (openOfferGroupKey === key) {
-      setOpenOfferGroupKey(null);
-      return;
-    }
-
-    setOpenOfferGroupKey(key);
-    if (offerGroupItems[key] || offerGroupLoading[key]) return;
+    setDetailTour(tour);
+    if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key] || offerGroupLoading[key]) return;
 
     setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
     setOfferGroupErrors((prev) => {
@@ -500,11 +530,11 @@ export default function SearchPage() {
       return next;
     });
 
-    fetchPublicProviderOfferGroup(selectedProviderId, key, buildFilters())
+    fetchPublicProviderOfferGroup(selectedProviderId, key, buildFilters({ includePaging: false }))
       .then((items) => {
         setOfferGroupItems((prev) => ({
           ...prev,
-          [key]: applyLocalTourFilters(items, false),
+          [key]: items,
         }));
       })
       .catch((err) => {
@@ -516,7 +546,7 @@ export default function SearchPage() {
       .finally(() => {
         setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
       });
-  }, [applyLocalTourFilters, buildFilters, offerGroupItems, offerGroupLoading, openOfferGroupKey, selectedProviderId]);
+  }, [buildFilters, offerGroupItems, offerGroupLoading, selectedProviderId]);
 
   function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
     setValidationError(null);
@@ -1186,7 +1216,6 @@ export default function SearchPage() {
               <div className={viewMode === "grid" ? "public-tour-grid" : "public-tour-list"}>
                 {displayedTours.map((tour) => {
                   const tourId = `${tour.source}-${tour.externalId}`;
-                  const groupKey = tour.offerGroupKey;
                   return (
                     <PublicTourCard
                       key={tourId}
@@ -1199,11 +1228,7 @@ export default function SearchPage() {
                       onToggleCompare={() => toggleCompare(tourId)}
                       compareDisabled={!compareIds.includes(tourId) && compareIds.length >= 3}
                       onAlertClick={() => setAlertTour(tour)}
-                      isOfferGroupOpen={groupKey === openOfferGroupKey}
-                      offerGroupItems={groupKey ? offerGroupItems[groupKey] : undefined}
-                      offerGroupLoading={groupKey ? Boolean(offerGroupLoading[groupKey]) : false}
-                      offerGroupError={groupKey ? offerGroupErrors[groupKey] : undefined}
-                      onToggleOfferGroup={groupKey ? () => toggleOfferGroup(tour) : undefined}
+                      onOpenDetail={() => openTourDetail(tour)}
                     />
                   );
                 })}
@@ -1373,6 +1398,17 @@ export default function SearchPage() {
         onRemove={(id) => setCompareIds((prev) => prev.filter((x) => x !== id))}
         onClear={() => setCompareIds([])}
       />
+      {detailTour && (
+        <ProviderTourModal
+          tour={detailTour}
+          providerLabel={providers.find((provider) => provider.id === detailTour.source)?.label ?? detailTour.source}
+          offers={detailTour.offerGroupKey && offerGroupItems[detailTour.offerGroupKey] ? offerGroupItems[detailTour.offerGroupKey] : [detailTour]}
+          loading={detailTour.offerGroupKey ? Boolean(offerGroupLoading[detailTour.offerGroupKey]) : false}
+          error={detailTour.offerGroupKey ? offerGroupErrors[detailTour.offerGroupKey] : undefined}
+          onClose={() => setDetailTour(null)}
+          onAlertClick={(tour) => setAlertTour(tour)}
+        />
+      )}
     </div>
   );
 }
@@ -1387,11 +1423,7 @@ function PublicTourCard({
   onToggleCompare,
   compareDisabled,
   onAlertClick,
-  isOfferGroupOpen,
-  offerGroupItems,
-  offerGroupLoading,
-  offerGroupError,
-  onToggleOfferGroup,
+  onOpenDetail,
 }: {
   tour: UnifiedTour;
   cheapThreshold: number;
@@ -1402,11 +1434,7 @@ function PublicTourCard({
   onToggleCompare: () => void;
   compareDisabled: boolean;
   onAlertClick: () => void;
-  isOfferGroupOpen: boolean;
-  offerGroupItems?: UnifiedTour[];
-  offerGroupLoading: boolean;
-  offerGroupError?: string;
-  onToggleOfferGroup?: () => void;
+  onOpenDetail: () => void;
 }) {
   const stars = starsDisplay(tour.stars);
 
@@ -1421,6 +1449,17 @@ function PublicTourCard({
   const nights = tour.nights ?? Math.round(
     (new Date(tour.endDate).getTime() - new Date(tour.startDate).getTime()) / 86_400_000,
   );
+
+  function stopCardAction(event: React.MouseEvent, action: () => void) {
+    event.stopPropagation();
+    action();
+  }
+
+  function handleCardKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onOpenDetail();
+  }
 
   const imageEl = (
     <div className="public-tour-card__image">
@@ -1440,7 +1479,7 @@ function PublicTourCard({
         type="button"
         className={`card-heart${isFavorite ? " is-saved" : ""}`}
         aria-label={isFavorite ? "Odebrat ze záložek" : "Přidat do záložek"}
-        onClick={onToggleFavorite}
+        onClick={(event) => stopCardAction(event, onToggleFavorite)}
       >
         <Heart size={16} aria-hidden="true" />
       </button>
@@ -1469,53 +1508,22 @@ function PublicTourCard({
       </div>
       <div className="public-tour-card__footer">
         <strong>od {formatPrice(tour.price)}</strong>
-        <a href={tour.url} target="_blank" rel="noreferrer" className="btn-detail">
-          <ExternalLink size={16} aria-hidden="true" />
+        <button type="button" className="btn-detail" onClick={(event) => stopCardAction(event, onOpenDetail)}>
+          <Search size={16} aria-hidden="true" />
           Detail
-        </a>
+        </button>
       </div>
       {hasMultipleOffers && (
-        <button type="button" className="card-offers-toggle" onClick={onToggleOfferGroup}>
+        <button type="button" className="card-offers-toggle" onClick={(event) => stopCardAction(event, onOpenDetail)}>
           <CalendarDays size={16} aria-hidden="true" />
-          {isOfferGroupOpen ? "Skrýt termíny" : `Zobrazit ${tour.offersCount} termínů`}
+          Zobrazit {tour.offersCount} termínů
         </button>
-      )}
-      {isOfferGroupOpen && (
-        <div className="card-offer-group" aria-live="polite">
-          {offerGroupLoading ? (
-            <p>Načítám termíny…</p>
-          ) : offerGroupError ? (
-            <p>{offerGroupError}</p>
-          ) : offerGroupItems && offerGroupItems.length > 0 ? (
-            offerGroupItems.map((offer) => {
-              const offerNights = offer.nights ?? Math.round(
-                (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
-              );
-              return (
-                <a
-                  key={`${offer.source}-${offer.externalId}`}
-                  className="card-offer-row"
-                  href={offer.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>{fmtDate(offer.startDate)} – {fmtDate(offer.endDate)}</span>
-                  <span>{Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : transportLabel[offer.transport] ?? offer.transport}</span>
-                  <strong>od {formatPrice(offer.price)}</strong>
-                  <ExternalLink size={14} aria-hidden="true" />
-                </a>
-              );
-            })
-          ) : (
-            <p>Žádné další termíny pro zadané filtry.</p>
-          )}
-        </div>
       )}
       <div className="card-actions">
-        <button type="button" className="card-alert-btn" onClick={onAlertClick}>
+        <button type="button" className="card-alert-btn" onClick={(event) => stopCardAction(event, onAlertClick)}>
           🔔 Upozornit na slevu
         </button>
-        <label className="card-compare">
+        <label className="card-compare" onClick={(event) => event.stopPropagation()}>
           <input
             type="checkbox"
             checked={isComparing}
@@ -1530,21 +1538,164 @@ function PublicTourCard({
 
   if (viewMode === "list") {
     return (
-      <article className="public-tour-list-item">
+      <article className="public-tour-list-item" role="button" tabIndex={0} onClick={onOpenDetail} onKeyDown={handleCardKeyDown}>
         {imageEl}
         {bodyEl}
-        <a href={tour.url} target="_blank" rel="noreferrer" className="btn-detail btn-detail--list">
-          <ExternalLink size={16} aria-hidden="true" />
+        <button type="button" className="btn-detail btn-detail--list" onClick={(event) => stopCardAction(event, onOpenDetail)}>
+          <Search size={16} aria-hidden="true" />
           Detail
-        </a>
+        </button>
       </article>
     );
   }
 
   return (
-    <article className="public-tour-card">
+    <article className="public-tour-card" role="button" tabIndex={0} onClick={onOpenDetail} onKeyDown={handleCardKeyDown}>
       {imageEl}
       {bodyEl}
     </article>
+  );
+}
+
+function ProviderTourModal({
+  tour,
+  providerLabel,
+  offers,
+  loading,
+  error,
+  onClose,
+  onAlertClick,
+}: {
+  tour: UnifiedTour;
+  providerLabel: string;
+  offers: UnifiedTour[];
+  loading: boolean;
+  error?: string;
+  onClose: () => void;
+  onAlertClick: (tour: UnifiedTour) => void;
+}) {
+  const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
+  const [photoIndex, setPhotoIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedOfferId(`${tour.source}-${tour.externalId}`);
+    setPhotoIndex(0);
+  }, [tour]);
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
+  const sortedOffers = useMemo(
+    () => [...offers].sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime() || left.price - right.price),
+    [offers],
+  );
+  const selectedOffer = sortedOffers.find((offer) => `${offer.source}-${offer.externalId}` === selectedOfferId) ?? sortedOffers[0] ?? tour;
+  const photos = selectedOffer.photos?.length ? selectedOffer.photos : selectedOffer.image ? [selectedOffer.image] : ["/placeholder-tour.svg"];
+  const nights = selectedOffer.nights ?? Math.round(
+    (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) / 86_400_000,
+  );
+  const stars = starsDisplay(selectedOffer.stars);
+  const contactSubject = encodeURIComponent(`Poptávka zájezdu: ${selectedOffer.title}`);
+
+  return (
+    <div className="provider-tour-modal" role="dialog" aria-modal="true" aria-label={selectedOffer.title}>
+      <div className="provider-tour-modal__backdrop" onClick={onClose} />
+      <div className="provider-tour-modal__content">
+        <button type="button" className="provider-tour-modal__close" onClick={onClose} aria-label="Zavřít">✕</button>
+        <div className="provider-tour-modal__media">
+          {photos.map((photo, index) => (
+            <img
+              key={`${photo}-${index}`}
+              className={index === photoIndex ? "is-active" : ""}
+              src={photo}
+              alt=""
+              loading="lazy"
+              onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg"; }}
+            />
+          ))}
+          {photos.length > 1 && (
+            <div className="provider-tour-modal__dots">
+              {photos.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={index === photoIndex ? "is-active" : ""}
+                  aria-label={`Fotka ${index + 1}`}
+                  onClick={() => setPhotoIndex(index)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="provider-tour-modal__body">
+          <div className="provider-tour-modal__heading">
+            <span>{providerLabel}</span>
+            <h2>{selectedOffer.title}</h2>
+            <p>{selectedOffer.destination}</p>
+          </div>
+
+          <div className="provider-tour-modal__facts">
+            <div><span>Termín</span><strong>{fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}</strong></div>
+            <div><span>Délka</span><strong>{Number.isFinite(nights) && nights > 0 ? `${nights} nocí` : "Dle nabídky"}</strong></div>
+            <div><span>Doprava</span><strong>{transportLabel[selectedOffer.transport] ?? (selectedOffer.transport || "Dle nabídky")}</strong></div>
+            <div><span>Strava</span><strong>{boardLabel[selectedOffer.board] ?? (selectedOffer.board || "Dle nabídky")}</strong></div>
+            {stars && <div><span>Hotel</span><strong>{stars}</strong></div>}
+            {selectedOffer.roomType && <div><span>Pokoj</span><strong>{selectedOffer.roomType}</strong></div>}
+            <div className="provider-tour-modal__price"><span>Cena od</span><strong>{formatPrice(selectedOffer.price)}</strong></div>
+          </div>
+
+          {selectedOffer.description && (
+            <p className="provider-tour-modal__description">{selectedOffer.description}</p>
+          )}
+
+          <section className="provider-tour-modal__offers" aria-live="polite">
+            <h3>Dostupné termíny</h3>
+            {loading ? (
+              <p>Načítám termíny…</p>
+            ) : error ? (
+              <p>{error}</p>
+            ) : sortedOffers.length > 0 ? (
+              <div className="provider-tour-modal__offer-list">
+                {sortedOffers.map((offer) => {
+                  const offerId = `${offer.source}-${offer.externalId}`;
+                  const offerNights = offer.nights ?? Math.round(
+                    (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
+                  );
+                  return (
+                    <button
+                      key={offerId}
+                      type="button"
+                      className={offerId === `${selectedOffer.source}-${selectedOffer.externalId}` ? "is-active" : ""}
+                      onClick={() => setSelectedOfferId(offerId)}
+                    >
+                      <span>{fmtDate(offer.startDate)} – {fmtDate(offer.endDate)}</span>
+                      <span>{Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : boardLabel[offer.board] ?? offer.board}</span>
+                      <strong>{formatPrice(offer.price)}</strong>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p>Žádné termíny pro zadané filtry.</p>
+            )}
+          </section>
+
+          <div className="provider-tour-modal__actions">
+            <a href={`mailto:info@skytravel.cz?subject=${contactSubject}`}>Poptat zájezd</a>
+            <a href="tel:+420721163860">Zavolat</a>
+            <button type="button" onClick={() => onAlertClick(selectedOffer)}>Upozornit na slevu</button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
