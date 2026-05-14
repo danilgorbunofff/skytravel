@@ -45,6 +45,8 @@ export type UnifiedFilters = {
   nights?: string;
   stars?: string;
   board?: string;
+  transport?: string;
+  destinationSlug?: string;
   adults?: number;
   children?: number;
   sortBy?: string;
@@ -113,6 +115,9 @@ export type ToursResult = {
   limit: number;
   totalPages: number;
   items: UnifiedTour[];
+  degraded?: boolean;
+  providerErrors?: Array<{ providerId: string; message: string }>;
+  providers?: Array<{ id: string; label: string; filtered: number }>;
 };
 
 /** Result of an import operation. */

@@ -203,7 +203,7 @@ export class AlexandriaProvider implements TourProvider {
     const sortBy = filters.sortBy ?? "price";
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
-    const limit = Math.min(200, Math.max(1, filters.limit ?? 50));
+    const limit = Math.min(1_000, Math.max(1, filters.limit ?? 50));
 
     // Build Prisma where clause
     const where: any = { source: this.id };

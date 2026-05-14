@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { getAllProviders, getProvider } from "../providers/index.js";
 import { getCachedPublicSearchResult, setCachedPublicSearchResult } from "../providers/publicSearchCache.js";
-import { listPublicDestinations } from "../providers/destinationStore.js";
-import type { FilterFieldDescriptor, UnifiedFilters } from "../providers/types.js";
+import { getDestinationSearchContext, listPublicDestinations } from "../providers/destinationStore.js";
+import type { FilterFieldDescriptor, ToursResult, UnifiedFilters, UnifiedTour } from "../providers/types.js";
 
 const router = Router();
 
@@ -18,11 +18,13 @@ const SHARED_KEYS = new Set([
   "board",
   "adults",
   "children",
+  "transport",
   "sortBy",
   "sortDir",
   "page",
   "limit",
   "offerGroupKey",
+  "destinationSlug",
 ]);
 
 const MAX_QUERY_LENGTH = 120;
@@ -212,10 +214,137 @@ function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor
   };
 }
 
+function sortTours(items: UnifiedTour[], sortBy: string | undefined, sortDir: "asc" | "desc" | undefined): UnifiedTour[] {
+  const dir = sortDir === "desc" ? -1 : 1;
+  return [...items].sort((left, right) => {
+    const leftValue = sortBy === "date" ? new Date(left.startDate).getTime() : left.price;
+    const rightValue = sortBy === "date" ? new Date(right.startDate).getTime() : right.price;
+    if (leftValue !== rightValue) return (leftValue - rightValue) * dir;
+    return `${left.source}:${left.externalId}`.localeCompare(`${right.source}:${right.externalId}`);
+  });
+}
+
+function sumOptional(values: Array<number | undefined>): number | undefined {
+  const filtered = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  return filtered.length > 0 ? filtered.reduce((sum, value) => sum + value, 0) : undefined;
+}
+
 router.get(
   "/providers",
   asyncHandler(async (_req: Request, res: Response) => {
     res.json({ providers: getAllProviders() });
+  }),
+);
+
+router.get(
+  "/all/tours",
+  asyncHandler(async (req: Request, res: Response) => {
+    const filters = buildFilters(req, res, []);
+    if (!filters) return;
+
+    const destinationSlug = firstQueryValue(req.query.destinationSlug);
+    if (destinationSlug && !/^[a-z0-9-]{1,120}$/.test(destinationSlug)) {
+      res.status(400).json({ error: "destinationSlug has an unsupported value." });
+      return;
+    }
+
+    const transport = firstQueryValue(req.query.transport);
+    if (transport && !/^[A-Za-z0-9_-]{1,24}$/.test(transport)) {
+      res.status(400).json({ error: "transport has an unsupported value." });
+      return;
+    }
+
+    const destinationContext = destinationSlug ? await getDestinationSearchContext(destinationSlug) : null;
+    if (destinationSlug && !destinationContext) {
+      const emptyResult = {
+        total: 0,
+        filtered: 0,
+        uniqueDestinations: 0,
+        page: filters.page ?? 1,
+        limit: filters.limit ?? 24,
+        totalPages: 1,
+        items: [],
+        degraded: false,
+        providerErrors: [],
+        providers: [],
+      };
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      res.json(emptyResult);
+      return;
+    }
+    const page = Math.max(1, filters.page ?? 1);
+    const limit = Math.min(MAX_PUBLIC_LIMIT, Math.max(1, filters.limit ?? 24));
+    const perProviderLimit = Math.min(1_000, page * limit);
+    const providers = getAllProviders();
+    const cacheKey = `all:tours:${req.url}`;
+    const cached = getCachedPublicSearchResult(cacheKey);
+    if (cached) {
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+      res.setHeader("X-Cache", "HIT");
+      res.json(cached);
+      return;
+    }
+
+    const settled = await Promise.allSettled(
+      providers.map(async (meta) => {
+        const provider = getProvider(meta.id);
+        const providerFilters: Record<string, unknown> = {};
+        if (transport) providerFilters.transport = transport;
+
+        const mapping = destinationContext?.mappings.find((item) => item.providerId === meta.id);
+        if (mapping) providerFilters[mapping.providerKey] = mapping.providerValue;
+
+        const providerQuery: UnifiedFilters = {
+          ...filters,
+          q: mapping ? filters.q : (filters.q ?? destinationContext?.destination.czechName),
+          page: 1,
+          limit: perProviderLimit,
+          providerFilters,
+          groupResults: true,
+        };
+        const result = await provider.fetchTours(providerQuery);
+        return { meta, result };
+      }),
+    );
+
+    const providerErrors: Array<{ providerId: string; message: string }> = [];
+    const successful: Array<{ meta: { id: string; label: string }; result: ToursResult }> = [];
+    for (let index = 0; index < settled.length; index += 1) {
+      const item = settled[index];
+      const meta = providers[index];
+      if (item.status === "fulfilled") {
+        successful.push(item.value);
+      } else {
+        const message = item.reason instanceof Error ? item.reason.message : String(item.reason);
+        providerErrors.push({ providerId: meta.id, message });
+        console.warn(`[PublicSearch] all-provider search failed for ${meta.id}:`, item.reason);
+      }
+    }
+
+    const mergedItems = sortTours(successful.flatMap(({ result }) => result.items), filters.sortBy, filters.sortDir);
+    const filtered = successful.reduce((sum, { result }) => sum + result.filtered, 0);
+    const total = successful.reduce((sum, { result }) => sum + result.total, 0);
+    const start = (page - 1) * limit;
+    const items = mergedItems.slice(start, start + limit);
+    const result = {
+      total,
+      filtered,
+      rawTotalOffers: sumOptional(successful.map(({ result }) => result.rawTotalOffers)),
+      rawFilteredOffers: sumOptional(successful.map(({ result }) => result.rawFilteredOffers)),
+      uniqueDestinations: new Set(mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ"))).size,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(filtered / limit)),
+      items,
+      degraded: providerErrors.length > 0,
+      providerErrors,
+      providers: successful.map(({ meta, result }) => ({ id: meta.id, label: meta.label, filtered: result.filtered })),
+    };
+
+    setCachedPublicSearchResult(cacheKey, result);
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+    res.setHeader("X-Cache", "MISS");
+    res.json(result);
   }),
 );
 

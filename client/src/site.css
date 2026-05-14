@@ -2480,7 +2480,6 @@ html[lang="ru"] .logo {
   white-space: nowrap;
 }
 .badge--urgent { background: #e53e3e; color: #fff; }
-.badge--deal   { background: #2f855a; color: #fff; }
 .badge--spot   { background: #c05621; color: #fff; }
 
 .public-tour-card__body {
@@ -2721,7 +2720,7 @@ html[lang="ru"] .logo {
   inset: 0;
   z-index: 160;
   display: grid;
-  place-items: stretch;
+  place-items: center;
   background: rgba(9, 20, 42, 0.66);
 }
 
@@ -2734,13 +2733,13 @@ html[lang="ru"] .logo {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.05fr);
-  width: min(1360px, calc(100vw - 32px));
-  height: min(860px, calc(100vh - 32px));
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  width: min(1060px, calc(100vw - 48px));
+  height: min(700px, calc(100vh - 56px));
   margin: auto;
   background: #f5f7fb;
   border: 1px solid #d4e0f2;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 28px 64px rgba(13, 32, 68, 0.35);
 }
@@ -2759,6 +2758,25 @@ html[lang="ru"] .logo {
   font-weight: 900;
   cursor: pointer;
 }
+
+.provider-tour-modal__photo-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(12, 35, 76, 0.72);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.provider-tour-modal__photo-nav--prev { left: 0.8rem; }
+.provider-tour-modal__photo-nav--next { right: 0.8rem; }
 
 .provider-tour-modal__media {
   position: relative;
@@ -2804,11 +2822,11 @@ html[lang="ru"] .logo {
 
 .provider-tour-modal__body {
   min-height: 0;
-  overflow-y: auto;
-  padding: 2rem;
+  overflow: hidden;
+  padding: 1.1rem 1.25rem;
   display: grid;
   align-content: start;
-  gap: 1.05rem;
+  gap: 0.7rem;
 }
 
 .provider-tour-modal__heading span {
@@ -2822,14 +2840,14 @@ html[lang="ru"] .logo {
 }
 
 .provider-tour-modal__heading h2 {
-  margin-top: 0.7rem;
+  margin-top: 0.45rem;
   color: var(--blue-900);
-  font-size: clamp(2rem, 4vw, 3.2rem);
-  line-height: 1;
+  font-size: clamp(1.85rem, 3vw, 2.55rem);
+  line-height: 0.98;
 }
 
 .provider-tour-modal__heading p {
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
   color: #4f6384;
   font-size: 1.1rem;
   font-weight: 800;
@@ -2838,7 +2856,7 @@ html[lang="ru"] .logo {
 .provider-tour-modal__facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .provider-tour-modal__facts div {
@@ -2846,9 +2864,9 @@ html[lang="ru"] .logo {
   gap: 0.25rem;
   min-width: 0;
   border: 1px solid #d5e0f1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
-  padding: 0.7rem 0.8rem;
+  padding: 0.5rem 0.65rem;
 }
 
 .provider-tour-modal__facts span {
@@ -2872,82 +2890,107 @@ html[lang="ru"] .logo {
 .provider-tour-modal__price strong {
   color: var(--blue-900);
   font-family: "Barlow Condensed", sans-serif;
-  font-size: 1.7rem;
+  font-size: 1.45rem;
   line-height: 1;
 }
 
 .provider-tour-modal__description {
   color: #2d456e;
-  line-height: 1.5;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .provider-tour-modal__offers h3 {
   color: var(--blue-900);
-  font-size: 1.35rem;
-  margin-bottom: 0.65rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
 }
 
-.provider-tour-modal__offer-list {
+.provider-tour-modal__date-select {
   display: grid;
-  gap: 0.45rem;
-  max-height: 310px;
-  overflow-y: auto;
-  padding-right: 0.25rem;
+  gap: 0.35rem;
 }
 
-.provider-tour-modal__offer-list button {
+.provider-tour-modal__date-select span,
+.provider-tour-modal__inquiry span {
+  color: #6a7d9a;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.provider-tour-modal__date-select select,
+.provider-tour-modal__inquiry input {
   width: 100%;
   border: 1px solid #d4e0f2;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   color: #21406f;
-  padding: 0.65rem 0.8rem;
+  padding: 0.55rem 0.65rem;
+  font-weight: 800;
+}
+
+.provider-tour-modal__inquiry {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) auto auto;
-  gap: 0.75rem;
-  align-items: center;
-  text-align: left;
-  cursor: pointer;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem 0.65rem;
+  align-items: end;
 }
 
-.provider-tour-modal__offer-list button.is-active {
-  border-color: var(--blue-900);
-  background: #eaf2ff;
+.provider-tour-modal__inquiry label:first-child {
+  display: grid;
+  gap: 0.3rem;
 }
 
-.provider-tour-modal__offer-list span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.provider-tour-modal__consent,
+.provider-tour-modal__form-error,
+.provider-tour-modal__form-success {
+  grid-column: 1 / -1;
 }
 
-.provider-tour-modal__offer-list strong {
+.provider-tour-modal__consent {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  color: #405578;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.provider-tour-modal__consent a {
   color: var(--blue-900);
 }
 
-.provider-tour-modal__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding-top: 0.3rem;
+.provider-tour-modal__form-error {
+  color: #c53030;
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
-.provider-tour-modal__actions a,
-.provider-tour-modal__actions button {
+.provider-tour-modal__form-success {
+  color: #2f855a;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.provider-tour-modal__inquiry button {
   min-height: 42px;
-  border: 1px solid #c8d6ea;
+  border: 1px solid var(--yellow);
   border-radius: 10px;
-  background: #fff;
+  background: var(--yellow);
   color: var(--blue-900);
   padding: 0.55rem 0.85rem;
   font-weight: 900;
-  text-decoration: none;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.provider-tour-modal__actions a:first-child {
-  background: var(--yellow);
-  border-color: var(--yellow);
+.provider-tour-modal__inquiry button:disabled {
+  opacity: 0.68;
+  cursor: wait;
 }
 
 /* ── End Phase 3 ─────────────────────────────────────────────── */
@@ -3376,57 +3419,6 @@ html[lang="ru"] .logo {
   margin-bottom: 0.5rem;
 }
 
-/* Card actions row (alert + compare) */
-.card-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.75rem 0.75rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.card-alert-btn {
-  background: none;
-  border: 1.5px solid #d1d5db;
-  border-radius: 8px;
-  padding: 0.3rem 0.65rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: #374151;
-  transition: border-color 0.15s, background 0.15s;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-alert-btn:hover {
-  border-color: var(--blue);
-  background: #eff6ff;
-  color: var(--blue);
-}
-
-.card-compare {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: #6b7280;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.card-compare input[type="checkbox"] {
-  accent-color: var(--blue);
-  cursor: pointer;
-}
-
-.card-compare input:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 .card-offers-toggle {
   width: 100%;
   border: 1px solid #c9d7ec;
@@ -3490,91 +3482,6 @@ html[lang="ru"] .logo {
 .card-offer-row strong {
   color: var(--blue-900);
   white-space: nowrap;
-}
-
-/* Compare Tray */
-.compare-tray {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 150;
-  background: #fff;
-  border-top: 2px solid var(--blue);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
-}
-
-.compare-tray__bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 1.25rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1e3a5f;
-}
-
-.compare-tray__bar button {
-  background: var(--blue);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 0.4rem 0.9rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.compare-tray__clear {
-  background: none !important;
-  color: #6b7280 !important;
-  text-decoration: underline;
-  font-weight: 400 !important;
-}
-
-.compare-table-wrap {
-  overflow-x: auto;
-  padding: 0 1.25rem 1rem;
-}
-
-.compare-table {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-  font-size: 0.88rem;
-}
-
-.compare-table th,
-.compare-table td {
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.compare-table thead th {
-  background: #f1f5f9;
-  font-weight: 600;
-  vertical-align: bottom;
-}
-
-.compare-table tr:last-child td {
-  border-bottom: none;
-}
-
-.compare-table__title {
-  display: block;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compare-table__remove {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-  color: #9ca3af;
-  margin-left: 0.3rem;
 }
 
 /* ── End Phase 6 ─────────────────────────────────────────────── */
@@ -3715,13 +3622,13 @@ html[lang="ru"] .logo {
 @media (max-width: 1100px) {
   .provider-tour-modal__content {
     grid-template-columns: 1fr;
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
+    width: min(720px, calc(100vw - 20px));
+    height: min(92vh, 840px);
+    border-radius: 14px;
   }
 
   .provider-tour-modal__media {
-    min-height: 34vh;
+    min-height: 28vh;
   }
 
   .provider-tour-modal__body {
@@ -3732,12 +3639,8 @@ html[lang="ru"] .logo {
     grid-template-columns: 1fr;
   }
 
-  .provider-tour-modal__offer-list button {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .provider-tour-modal__offer-list button span:nth-child(2) {
-    display: none;
+  .provider-tour-modal__inquiry {
+    grid-template-columns: 1fr;
   }
 
   .desktop-only {

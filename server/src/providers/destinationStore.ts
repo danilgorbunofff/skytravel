@@ -18,6 +18,21 @@ export type PublicDestinationSummary = {
   providerCounts: Record<string, number>;
 };
 
+export type DestinationSearchContext = {
+  destination: {
+    id: number;
+    slug: string;
+    czechName: string;
+    canonicalName: string;
+  };
+  mappings: Array<{
+    providerId: string;
+    providerKey: string;
+    providerValue: string;
+    providerLabel: string;
+  }>;
+};
+
 const KNOWN_DESTINATIONS: KnownDestination[] = [
   {
     slug: "bulharsko",
@@ -205,4 +220,27 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
       providerCounts: entry.providerCounts,
     };
   });
+}
+
+export async function getDestinationSearchContext(slug: string): Promise<DestinationSearchContext | null> {
+  await ensureKnownDestinations();
+  const destination = await prisma.destination.findUnique({
+    where: { slug },
+    include: { mappings: true },
+  });
+  if (!destination) return null;
+  return {
+    destination: {
+      id: destination.id,
+      slug: destination.slug,
+      czechName: destination.czechName,
+      canonicalName: destination.canonicalName,
+    },
+    mappings: destination.mappings.map((mapping) => ({
+      providerId: mapping.providerId,
+      providerKey: mapping.providerKey,
+      providerValue: mapping.providerValue,
+      providerLabel: mapping.providerLabel,
+    })),
+  };
 }

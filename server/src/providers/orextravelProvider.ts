@@ -214,7 +214,7 @@ export class OrextravelProvider implements TourProvider {
     const sortBy = filters.sortBy ?? "price";
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
-    const limit = Math.min(200, Math.max(1, filters.limit ?? 50));
+    const limit = Math.min(1_000, Math.max(1, filters.limit ?? 50));
     const board = typeof filters.board === "string" ? filters.board : typeof pf.board === "string" ? pf.board : "";
     const stars = typeof filters.stars === "string" ? filters.stars : typeof pf.stars === "string" ? pf.stars : "";
     const nightsRange = parseNightsRange(filters.nights);

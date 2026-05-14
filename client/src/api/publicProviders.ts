@@ -80,6 +80,13 @@ export async function fetchPublicProviderTours(
   return res.json() as Promise<ToursResult>;
 }
 
+export async function fetchPublicAllProviderTours(filters: UnifiedFilters): Promise<ToursResult> {
+  const params = filtersToParams(filters);
+  const res = await fetch(`${API_URL}/api/search/all/tours?${params}`);
+  await throwIfNotOk(res);
+  return res.json() as Promise<ToursResult>;
+}
+
 export async function fetchPublicProviderOfferGroup(
   providerId: string,
   offerGroupKey: string,

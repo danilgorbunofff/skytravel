@@ -4,25 +4,19 @@ import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, Map
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
-import { PriceAlertModal } from "../components/PriceAlertModal";
-import { CompareTray } from "../components/CompareTray";
 import {
+  fetchPublicAllProviderTours,
+  fetchPublicDestinations,
   fetchPublicProviderOfferGroup,
-  fetchPublicProviderRegions,
-  fetchPublicProviderTours,
 } from "../api/publicProviders";
+import { createInquiry } from "../api";
 import { loadBootstrap } from "../api/bootstrapCache";
-import type { ProviderMeta, ProviderRegion, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
+import type { ProviderMeta, PublicDestinationSummary, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
 import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
 import { PriceRangeSlider } from "../components/PriceRangeSlider";
 import "../site.css";
-
-const PROVIDER_LOGOS: Record<string, string> = {
-  alexandria: "/logos/alexandria.png",
-  orextravel: "/logos/orextravel.png",
-};
 
 const TRANSPORT_OPTIONS = [
   { value: "plane", label: "Letecky" },
@@ -72,36 +66,6 @@ const boardLabel: Record<string, string> = {
   SC: "Bez stravy",
 };
 
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function inferSingleLevelRegion(provider: ProviderMeta | null, query: string): string | null {
-  if (!provider || !query) return null;
-  const regionField = provider.filterFields.find((field) => field.key === "zeme");
-  if (!regionField?.options?.length) return null;
-
-  const normalizedQuery = normalizeSearchText(query);
-  const match = regionField.options.find((option) => normalizeSearchText(String(option.label)) === normalizedQuery);
-
-  return match ? String(match.value) : null;
-}
-
-function inferTwoLevelState(regions: ProviderRegion[], query: string, townFrom: string): string | null {
-  if (!query) return null;
-  const normalizedQuery = normalizeSearchText(query);
-  const match = regions.find((region) => {
-    if (townFrom && String(region.meta?.departureId) !== townFrom) return false;
-    return normalizeSearchText(region.name) === normalizedQuery;
-  });
-  return match ? String(match.id) : null;
-}
-
 function stableFilterKey(filters: UnifiedFilters): string {
   const params = new URLSearchParams();
   for (const key of Object.keys(filters).sort()) {
@@ -110,14 +74,6 @@ function stableFilterKey(filters: UnifiedFilters): string {
     params.set(key, String(value));
   }
   return params.toString();
-}
-
-function hasTwoLevelRegions(provider: ProviderMeta | null): boolean {
-  return Boolean(provider?.filterFields.some((field) => field.dependsOn != null));
-}
-
-function supportsFilter(provider: ProviderMeta | null, key: string): boolean {
-  return Boolean(provider?.filterFields.some((field) => field.key === key));
 }
 
 function fmtDate(value: string): string {
@@ -141,10 +97,7 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [providers, setProviders] = useState<ProviderMeta[]>([]);
-  const [regions, setRegions] = useState<ProviderRegion[]>([]);
-  const [regionsByProvider, setRegionsByProvider] = useState<Record<string, ProviderRegion[]>>({});
-  const [providersLoading, setProvidersLoading] = useState(true);
-  const [regionsLoading, setRegionsLoading] = useState(false);
+  const [destinations, setDestinations] = useState<PublicDestinationSummary[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -161,8 +114,6 @@ export default function SearchPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { favorites, toggle: toggleFavorite, isFavorite } = useFavorites();
   const leadPopup = useLeadPopup();
-  const [alertTour, setAlertTour] = useState<UnifiedTour | null>(null);
-  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [heroExpanded, setHeroExpanded] = useState(() => !searchParams.get("q"));
   const [pastHero, setPastHero] = useState(false);
@@ -174,13 +125,10 @@ export default function SearchPage() {
   const [adults, setAdults] = useState(Number(searchParams.get("adults")) || 2);
   const [children, setChildren] = useState(Number(searchParams.get("children")) || 0);
 
-  const selectedProviderId = searchParams.get("provider") || providers[0]?.id || "";
-  const selectedProvider = useMemo(
-    () => providers.find((provider) => provider.id === selectedProviderId) ?? null,
-    [providers, selectedProviderId],
+  const providerLabels = useMemo(
+    () => Object.fromEntries(providers.map((provider) => [provider.id, provider.label])),
+    [providers],
   );
-  const isTwoLevel = hasTwoLevelRegions(selectedProvider);
-  const transportSupported = supportsFilter(selectedProvider, "transport");
   const page = getParamNumber(searchParams, "page", 1);
   const limit = getParamNumber(searchParams, "limit", 24);
   const sortBy = searchParams.get("sortBy") === "date" ? "date" : "price";
@@ -189,22 +137,14 @@ export default function SearchPage() {
   const activeDateStart = searchParams.get("dateStart") ?? "";
   const activeDateEnd = searchParams.get("dateEnd") ?? "";
   const activeTransport = searchParams.get("transport") ?? "";
-  const activeZeme = searchParams.get("zeme") ?? "";
-  const activeTownFrom = searchParams.get("townFrom") ?? "";
-  const activeStateId = searchParams.get("stateId") ?? "";
+  const activeDestinationSlug = searchParams.get("destinationSlug") ?? "";
   const activeNights = searchParams.get("nights") ?? "";
   const activeStars = searchParams.get("stars") ?? "";
   const activeBoard = searchParams.get("board") ?? "";
   const hasPriceFilter = Boolean(searchParams.get("priceMin") || searchParams.get("priceMax"));
   const hasActiveSearch = Boolean(
-    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeZeme || activeTownFrom || activeStateId || activeNights || activeStars || activeBoard || hasPriceFilter,
+    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeDestinationSlug || activeNights || activeStars || activeBoard || hasPriceFilter,
   );
-
-  const cheapThreshold = useMemo(() => {
-    if (!result?.items.length) return Infinity;
-    const sorted = [...result.items].map((t) => t.price).sort((a, b) => a - b);
-    return sorted[Math.floor(sorted.length * 0.25)] ?? Infinity;
-  }, [result]);
 
   const priceRange = useMemo(() => {
     if (!result?.items.length) return { min: 0, max: 200000 };
@@ -231,49 +171,15 @@ export default function SearchPage() {
     [result, applyLocalTourFilters],
   );
 
-  const departureCities = useMemo(() => {
-    if (!isTwoLevel) return [];
-    const map = new Map<number, string>();
-    for (const region of regions) {
-      const id = region.meta?.departureId as number | undefined;
-      const name = region.meta?.departureName as string | undefined;
-      if (id != null && name) map.set(id, name);
-    }
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
-  }, [regions, isTwoLevel]);
-
-  const destinationCountries = useMemo(() => {
-    if (!isTwoLevel) return [];
-    const townFrom = searchParams.get("townFrom");
-    const filtered = townFrom
-      ? regions.filter((region) => String(region.meta?.departureId) === townFrom)
-      : regions;
-    const map = new Map<number, string>();
-    for (const region of filtered) map.set(region.id, region.name);
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
-  }, [regions, isTwoLevel, searchParams]);
-
   const activeChips = useMemo(() => {
     const chips: { label: string; clear: Record<string, null> }[] = [];
     if (activeQuery) chips.push({ label: `"${activeQuery}"`, clear: { q: null } });
     if (activeDateStart) chips.push({ label: `Od ${fmtDate(activeDateStart)}`, clear: { dateStart: null } });
     if (activeDateEnd) chips.push({ label: `Do ${fmtDate(activeDateEnd)}`, clear: { dateEnd: null } });
     if (activeTransport) chips.push({ label: transportLabel[activeTransport] ?? activeTransport, clear: { transport: null } });
-    if (activeZeme) {
-      const region = regions.find((r) => String(r.id) === activeZeme);
-      chips.push({ label: region?.name ?? activeZeme, clear: { zeme: null } });
-    }
-    if (activeStateId) {
-      const dest = destinationCountries.find((c) => String(c.id) === activeStateId);
-      chips.push({ label: dest?.name ?? activeStateId, clear: { stateId: null } });
-    }
-    if (activeTownFrom) {
-      const city = departureCities.find((c) => String(c.id) === activeTownFrom);
-      chips.push({ label: `Z: ${city?.name ?? activeTownFrom}`, clear: { townFrom: null, stateId: null } });
+    if (activeDestinationSlug) {
+      const destination = destinations.find((item) => item.slug === activeDestinationSlug);
+      chips.push({ label: destination?.czechName ?? activeDestinationSlug, clear: { destinationSlug: null } });
     }
     if (activeNights) {
       const opt = NIGHTS_OPTIONS.find((o) => o.value === activeNights);
@@ -291,44 +197,29 @@ export default function SearchPage() {
       });
     }
     return chips;
-  }, [activeQuery, activeDateStart, activeDateEnd, activeTransport, activeZeme, activeStateId, activeTownFrom, activeNights, activeStars, activeBoard, searchParams, regions, destinationCountries, departureCities, priceRange]);
+  }, [activeQuery, activeDateStart, activeDateEnd, activeTransport, activeDestinationSlug, activeNights, activeStars, activeBoard, searchParams, priceRange, destinations]);
 
   useEffect(() => {
     let cancelled = false;
     const { cached, fresh } = loadBootstrap();
 
-    function applyBootstrap(data: { providers: ProviderMeta[]; regionsByProvider: Record<string, ProviderRegion[]> }) {
+    function applyBootstrap(data: { providers: ProviderMeta[] }) {
       if (cancelled) return;
       setProviders(data.providers);
-      setRegionsByProvider(data.regionsByProvider);
-      const urlProvider = searchParams.get("provider");
-      const initial =
-        data.providers.find((p) => p.id === urlProvider)?.id ??
-        data.providers[0]?.id ??
-        "";
-      setRegions(data.regionsByProvider[initial] ?? []);
-      if (!urlProvider && initial) {
-        const next = new URLSearchParams(searchParams);
-        next.set("provider", initial);
-        setSearchParams(next, { replace: true });
-      }
     }
 
     if (cached) {
       applyBootstrap(cached);
-      setProvidersLoading(false);
     }
 
     fresh
       .then((data) => {
         applyBootstrap(data);
-        setProvidersLoading(false);
       })
       .catch((err) => {
         if (cancelled) return;
         if (!cached) {
           setError(err instanceof Error ? err.message : "Nepodařilo se načíst poskytovatele.");
-          setProvidersLoading(false);
         }
         // If we already rendered from cache, swallow the revalidation error.
       });
@@ -339,6 +230,20 @@ export default function SearchPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    let cancelled = false;
+    fetchPublicDestinations()
+      .then((items) => {
+        if (!cancelled) setDestinations(items.filter((item) => item.count > 0));
+      })
+      .catch(() => {
+        if (!cancelled) setDestinations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     setQuery(searchParams.get("q") ?? "");
     setDateStart(searchParams.get("dateStart") ?? "");
     setDateEnd(searchParams.get("dateEnd") ?? "");
@@ -346,57 +251,6 @@ export default function SearchPage() {
     setAdults(Number(searchParams.get("adults")) || 2);
     setChildren(Number(searchParams.get("children")) || 0);
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!selectedProviderId) return;
-
-    // Fast path: we already have regions for this provider from bootstrap.
-    const preloaded = regionsByProvider[selectedProviderId];
-    if (preloaded) {
-      setRegions(preloaded);
-      setRegionsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setRegionsLoading(true);
-    fetchPublicProviderRegions(selectedProviderId)
-      .then((items) => {
-        if (!cancelled) {
-          setRegions(items);
-          setRegionsByProvider((prev) => ({ ...prev, [selectedProviderId]: items }));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setRegions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRegionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProviderId, regionsByProvider]);
-
-  useEffect(() => {
-    if (!searchParams.get("transport") || transportSupported) return;
-    const next = new URLSearchParams(searchParams);
-    next.delete("transport");
-    next.set("page", "1");
-    setSearchParams(next, { replace: true });
-  }, [searchParams, transportSupported, setSearchParams]);
-
-  useEffect(() => {
-    if (!isTwoLevel) return;
-    const stateId = searchParams.get("stateId");
-    if (!stateId) return;
-    const isValidState = destinationCountries.some((country) => String(country.id) === stateId);
-    if (isValidState) return;
-    const next = new URLSearchParams(searchParams);
-    next.delete("stateId");
-    next.set("page", "1");
-    setSearchParams(next, { replace: true });
-  }, [isTwoLevel, destinationCountries, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (mobileFiltersOpen) {
@@ -429,22 +283,16 @@ export default function SearchPage() {
     const activeStarsFilter = searchParams.get("stars");
     const activeBoardFilter = searchParams.get("board");
     const activeNightsFilter = searchParams.get("nights");
-    const zeme = searchParams.get("zeme");
-    const townFrom = searchParams.get("townFrom");
-    const stateId = searchParams.get("stateId");
-    const inferredZeme = !isTwoLevel && !zeme && q ? inferSingleLevelRegion(selectedProvider, q) : null;
-    const inferredStateId = isTwoLevel && !stateId && q ? inferTwoLevelState(regions, q, townFrom ?? "") : null;
+    const destinationSlug = searchParams.get("destinationSlug");
 
-    if (q && !inferredZeme && !inferredStateId) filters.q = q;
+    if (q) filters.q = q;
+    if (destinationSlug) filters.destinationSlug = destinationSlug;
     if (start) filters.dateStart = start;
     if (end) filters.dateEnd = end;
-    if (transportSupported && activeTransport) filters.transport = activeTransport;
+    if (activeTransport) filters.transport = activeTransport;
     if (activeStarsFilter) filters.stars = activeStarsFilter;
     if (activeBoardFilter) filters.board = activeBoardFilter;
     if (activeNightsFilter) filters.nights = activeNightsFilter;
-    if (!options.forRegions && !isTwoLevel && (zeme || inferredZeme)) filters.zeme = zeme || inferredZeme;
-    if (isTwoLevel && townFrom) filters.townFrom = townFrom;
-    if (!options.forRegions && isTwoLevel && (stateId || inferredStateId)) filters.stateId = stateId || inferredStateId;
     const pMin = searchParams.get("priceMin");
     const pMax = searchParams.get("priceMax");
     if (pMin) filters.priceMin = Number(pMin);
@@ -454,37 +302,11 @@ export default function SearchPage() {
     if (adultCount) filters.adults = Number(adultCount);
     if (childCount) filters.children = Number(childCount);
     return filters;
-  }, [searchParams, page, limit, sortBy, sortDir, transportSupported, isTwoLevel, selectedProvider, regions]);
+  }, [searchParams, page, limit, sortBy, sortDir]);
 
   const searchFilters = useMemo(() => buildFilters(), [buildFilters]);
   const searchFilterKey = useMemo(() => stableFilterKey(searchFilters), [searchFilters]);
-  const regionFilters = useMemo(
-    () => hasActiveSearch ? buildFilters({ forRegions: true, includePaging: false }) : null,
-    [buildFilters, hasActiveSearch],
-  );
-  const regionFilterKey = useMemo(() => regionFilters ? stableFilterKey(regionFilters) : "", [regionFilters]);
-
   useEffect(() => {
-    if (!selectedProviderId || !hasActiveSearch || !regionFilters) return;
-    let cancelled = false;
-    setRegionsLoading(true);
-    fetchPublicProviderRegions(selectedProviderId, regionFilters)
-      .then((items) => {
-        if (!cancelled) setRegions(items);
-      })
-      .catch(() => {
-        if (!cancelled) setRegions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRegionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedProviderId, hasActiveSearch, regionFilterKey]);
-
-  useEffect(() => {
-    if (!selectedProviderId) return;
     if (!hasActiveSearch) {
       setResult(null);
       setError(null);
@@ -494,7 +316,7 @@ export default function SearchPage() {
     let cancelled = false;
     setResultsLoading(true);
     setError(null);
-    fetchPublicProviderTours(selectedProviderId, searchFilters)
+    fetchPublicAllProviderTours(searchFilters)
       .then((data) => {
         if (!cancelled) {
           setResult(data);
@@ -516,7 +338,7 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedProviderId, searchFilterKey, hasActiveSearch]);
+    }, [searchFilterKey, hasActiveSearch]);
 
   const openTourDetail = useCallback((tour: UnifiedTour) => {
     const key = tour.offerGroupKey;
@@ -530,7 +352,7 @@ export default function SearchPage() {
       return next;
     });
 
-    fetchPublicProviderOfferGroup(selectedProviderId, key, buildFilters({ includePaging: false }))
+    fetchPublicProviderOfferGroup(tour.source, key, buildFilters({ includePaging: false }))
       .then((items) => {
         setOfferGroupItems((prev) => ({
           ...prev,
@@ -546,7 +368,7 @@ export default function SearchPage() {
       .finally(() => {
         setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
       });
-  }, [buildFilters, offerGroupItems, offerGroupLoading, selectedProviderId]);
+  }, [buildFilters, offerGroupItems, offerGroupLoading]);
 
   function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
     setValidationError(null);
@@ -566,41 +388,19 @@ export default function SearchPage() {
     }
     setValidationError(null);
     updateParams({
-      provider: selectedProviderId,
       q: query.trim(),
       dateStart,
       dateEnd,
-      transport: transportSupported ? transport : null,
+      transport,
       adults,
       children,
       page: 1,
     });
   }
 
-  function changeProvider(providerId: string) {
-    setValidationError(null);
-    const next = new URLSearchParams(searchParams);
-    next.set("provider", providerId);
-    next.set("page", "1");
-    next.delete("zeme");
-    next.delete("townFrom");
-    next.delete("stateId");
-    const nextProvider = providers.find((provider) => provider.id === providerId) ?? null;
-    if (!supportsFilter(nextProvider, "transport")) next.delete("transport");
-    setSearchParams(next);
-  }
-
   function setView(mode: "grid" | "list") {
     setViewMode(mode);
     try { localStorage.setItem("skytravel:viewMode", mode); } catch {}
-  }
-
-  function toggleCompare(id: string) {
-    setCompareIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 3) return prev;
-      return [...prev, id];
-    });
   }
 
   async function shareSearch() {
@@ -617,7 +417,6 @@ export default function SearchPage() {
 
   function resetFilters() {
     const next = new URLSearchParams();
-    if (selectedProviderId) next.set("provider", selectedProviderId);
     setSearchParams(next);
     setValidationError(null);
   }
@@ -634,11 +433,6 @@ export default function SearchPage() {
       document.querySelector(".search-results-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
   }
-
-  const compareTours = useMemo(
-    () => displayedTours.filter((t) => compareIds.includes(`${t.source}-${t.externalId}`)),
-    [displayedTours, compareIds],
-  );
 
   const visibleFrom = result && result.filtered > 0 ? (result.page - 1) * result.limit + 1 : 0;
   const visibleTo = result ? Math.min(result.page * result.limit, result.filtered) : 0;
@@ -815,7 +609,6 @@ export default function SearchPage() {
                   <Plane size={18} aria-hidden="true" />
                   <select
                     value={transport}
-                    disabled={!transportSupported}
                     onChange={(event) => {
                       setValidationError(null);
                       setTransport(event.target.value);
@@ -828,23 +621,6 @@ export default function SearchPage() {
                   </select>
                 </div>
               </label>
-              {isTwoLevel && (
-                <label>
-                  <span>Odjezd z</span>
-                  <div className="public-search-input">
-                    <Plane size={18} aria-hidden="true" />
-                    <select
-                      value={searchParams.get("townFrom") ?? ""}
-                      onChange={(e) => updateParams({ townFrom: e.target.value, stateId: null, page: 1 })}
-                    >
-                      <option value="">Všechna města</option>
-                      {departureCities.map((city) => (
-                        <option key={city.id} value={city.id}>{city.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </label>
-              )}
               <label>
                 <span>Cestující</span>
                 <div className="public-search-input guests-picker">
@@ -940,89 +716,27 @@ export default function SearchPage() {
           <div className="container search-results-layout">
             <aside className="search-sidebar">
               <div className="search-filter-block">
-                <h2>Partner</h2>
-                {providersLoading ? (
-                  <p>Načítání partnerů…</p>
-                ) : (
-                  <div className="search-provider-list">
-                    {providers.map((provider) => (
-                      <button
-                        key={provider.id}
-                        type="button"
-                        className={provider.id === selectedProviderId ? "is-active" : ""}
-                        onClick={() => changeProvider(provider.id)}
-                      >
-                        {PROVIDER_LOGOS[provider.id] && (
-                          <img
-                            src={PROVIDER_LOGOS[provider.id]}
-                            alt=""
-                            className="provider-logo"
-                            aria-hidden="true"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                          />
-                        )}
-                        {provider.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="search-filter-block">
-                <h2>Oblast</h2>
-                {regionsLoading ? (
-                  <p>Načítání oblastí…</p>
-                ) : isTwoLevel ? (
-                  <div className="search-stacked-controls">
-                    <label>
-                      <span>Odjezd z</span>
-                      <select
-                        value={searchParams.get("townFrom") ?? ""}
-                        onChange={(event) => updateParams({ townFrom: event.target.value, stateId: null, page: 1 })}
-                      >
-                        <option value="">Všechna města</option>
-                        {departureCities.map((city) => (
-                          <option key={city.id} value={city.id}>{city.name}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Destinace</span>
-                      <select
-                        value={searchParams.get("stateId") ?? ""}
-                        onChange={(event) => updateParams({ stateId: event.target.value, page: 1 })}
-                      >
-                        <option value="">Všechny destinace</option>
-                        {destinationCountries.map((country) => (
-                          <option key={country.id} value={country.id}>{country.name}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="search-region-list">
+                <h2>Destinace</h2>
+                <div className="search-region-list">
+                  <button
+                    type="button"
+                    className={!activeDestinationSlug ? "is-active" : ""}
+                    onClick={() => updateParams({ destinationSlug: null, page: 1 })}
+                  >
+                    Všechny destinace
+                  </button>
+                  {destinations.map((destination) => (
                     <button
+                      key={destination.slug}
                       type="button"
-                      className={!searchParams.get("zeme") ? "is-active" : ""}
-                      onClick={() => updateParams({ zeme: null, page: 1 })}
+                      className={activeDestinationSlug === destination.slug ? "is-active" : ""}
+                      onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}
                     >
-                      Všechny země
+                      {destination.czechName}
+                      {destination.count > 0 && <span className="region-count">({destination.count})</span>}
                     </button>
-                    {[...new Map(regions.map((r) => [r.id, r])).values()].map((region) => (
-                      <button
-                        key={region.id}
-                        type="button"
-                        className={searchParams.get("zeme") === String(region.id) ? "is-active" : ""}
-                        onClick={() => updateParams({ zeme: region.id, page: 1 })}
-                      >
-                        {region.name}
-                        {region.count != null && region.count > 0 && (
-                          <span className="region-count">({region.count})</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               {result && (
@@ -1119,7 +833,7 @@ export default function SearchPage() {
               <div className="search-results-toolbar">
                 <div>
                   <h2>{totalText}</h2>
-                  <p>{selectedProvider?.label ?? "Partner"}</p>
+                  <p>Všichni partneři</p>
                   {result && result.filtered !== result.total && (
                     <p className="results-sub">
                       Zobrazeno {displayedTours.length.toLocaleString("cs-CZ")} z {result.total.toLocaleString("cs-CZ")} celkem
@@ -1225,14 +939,9 @@ export default function SearchPage() {
                     <PublicTourCard
                       key={tourId}
                       tour={tour}
-                      cheapThreshold={cheapThreshold}
                       viewMode={viewMode}
                       isFavorite={isFavorite(tourId)}
                       onToggleFavorite={() => toggleFavorite(tourId)}
-                      isComparing={compareIds.includes(tourId)}
-                      onToggleCompare={() => toggleCompare(tourId)}
-                      compareDisabled={!compareIds.includes(tourId) && compareIds.length >= 3}
-                      onAlertClick={() => setAlertTour(tour)}
                       onOpenDetail={() => openTourDetail(tour)}
                     />
                   );
@@ -1273,9 +982,9 @@ export default function SearchPage() {
         <div className="mobile-filter-fab mobile-only">
           <button type="button" onClick={() => setMobileFiltersOpen(true)}>
             ⚙ Filtrovat
-            {[activeZeme, activeStateId, activeTownFrom, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length > 0 && (
+            {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length > 0 && (
               <span className="mobile-filter-fab__count">
-                {[activeZeme, activeStateId, activeTownFrom, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length}
+                {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -1291,55 +1000,16 @@ export default function SearchPage() {
             </div>
             <div className="mobile-filter-drawer__body">
               <div className="search-filter-block">
-                <h2>Partner</h2>
-                {providersLoading ? <p>Načítání partnerů…</p> : (
-                  <div className="search-provider-list">
-                    {providers.map((provider) => (
-                      <button
-                        key={provider.id}
-                        type="button"
-                        className={provider.id === selectedProviderId ? "is-active" : ""}
-                        onClick={() => { changeProvider(provider.id); setMobileFiltersOpen(false); }}
-                      >
-                        {PROVIDER_LOGOS[provider.id] && (
-                          <img src={PROVIDER_LOGOS[provider.id]} alt="" className="provider-logo" aria-hidden="true" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                        )}
-                        {provider.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="search-filter-block">
-                <h2>Oblast</h2>
-                {regionsLoading ? <p>Načítání oblastí…</p> : isTwoLevel ? (
-                  <div className="search-stacked-controls">
-                    <label>
-                      <span>Odjezd z</span>
-                      <select value={searchParams.get("townFrom") ?? ""} onChange={(e) => updateParams({ townFrom: e.target.value, stateId: null, page: 1 })}>
-                        <option value="">Všechna města</option>
-                        {departureCities.map((city) => <option key={city.id} value={city.id}>{city.name}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Destinace</span>
-                      <select value={searchParams.get("stateId") ?? ""} onChange={(e) => updateParams({ stateId: e.target.value, page: 1 })}>
-                        <option value="">Všechny destinace</option>
-                        {destinationCountries.map((country) => <option key={country.id} value={country.id}>{country.name}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="search-region-list">
-                    <button type="button" className={!searchParams.get("zeme") ? "is-active" : ""} onClick={() => updateParams({ zeme: null, page: 1 })}>Všechny země</button>
-                    {[...new Map(regions.map((r) => [r.id, r])).values()].map((region) => (
-                      <button key={region.id} type="button" className={searchParams.get("zeme") === String(region.id) ? "is-active" : ""} onClick={() => updateParams({ zeme: region.id, page: 1 })}>
-                        {region.name}
-                        {region.count != null && region.count > 0 && <span className="region-count">({region.count})</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <h2>Destinace</h2>
+                <div className="search-region-list">
+                  <button type="button" className={!activeDestinationSlug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: null, page: 1 })}>Všechny destinace</button>
+                  {destinations.map((destination) => (
+                    <button key={destination.slug} type="button" className={activeDestinationSlug === destination.slug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}>
+                      {destination.czechName}
+                      {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
               {result && (
                 <div className="search-filter-block">
@@ -1397,21 +1067,14 @@ export default function SearchPage() {
       )}
 
       <LeadPopup {...leadPopup} prefilledQuery={activeQuery || undefined} prefilledDateStart={activeDateStart || undefined} />
-      {alertTour && <PriceAlertModal tour={alertTour} onClose={() => setAlertTour(null)} />}
-      <CompareTray
-        tours={compareTours}
-        onRemove={(id) => setCompareIds((prev) => prev.filter((x) => x !== id))}
-        onClear={() => setCompareIds([])}
-      />
       {detailTour && (
         <ProviderTourModal
           tour={detailTour}
-          providerLabel={providers.find((provider) => provider.id === detailTour.source)?.label ?? detailTour.source}
+          providerLabel={providerLabels[detailTour.source] ?? detailTour.source}
           offers={detailTour.offerGroupKey && offerGroupItems[detailTour.offerGroupKey] ? offerGroupItems[detailTour.offerGroupKey] : [detailTour]}
           loading={detailTour.offerGroupKey ? Boolean(offerGroupLoading[detailTour.offerGroupKey]) : false}
           error={detailTour.offerGroupKey ? offerGroupErrors[detailTour.offerGroupKey] : undefined}
           onClose={() => setDetailTour(null)}
-          onAlertClick={(tour) => setAlertTour(tour)}
         />
       )}
     </div>
@@ -1420,25 +1083,15 @@ export default function SearchPage() {
 
 function PublicTourCard({
   tour,
-  cheapThreshold,
   viewMode,
   isFavorite,
   onToggleFavorite,
-  isComparing,
-  onToggleCompare,
-  compareDisabled,
-  onAlertClick,
   onOpenDetail,
 }: {
   tour: UnifiedTour;
-  cheapThreshold: number;
   viewMode: "grid" | "list";
   isFavorite: boolean;
   onToggleFavorite: () => void;
-  isComparing: boolean;
-  onToggleCompare: () => void;
-  compareDisabled: boolean;
-  onAlertClick: () => void;
   onOpenDetail: () => void;
 }) {
   const stars = starsDisplay(tour.stars);
@@ -1447,7 +1100,6 @@ function PublicTourCard({
   const departure = new Date(tour.startDate);
   const daysUntilDeparture = Math.floor((departure.getTime() - today.getTime()) / 86_400_000);
   const isLastMinute = daysUntilDeparture >= 0 && daysUntilDeparture <= 14;
-  const isCheap = tour.price <= cheapThreshold;
   const isLastSpot = !tour.offerGroupKey && tour.offersCount != null && tour.offersCount <= 3;
   const hasMultipleOffers = Boolean(tour.offerGroupKey && (tour.offersCount ?? 0) > 1);
 
@@ -1491,7 +1143,6 @@ function PublicTourCard({
       <span className="card-source-badge">{tour.source}</span>
       <div className="card-deal-badges">
         {isLastMinute && <span className="badge badge--urgent">Last Minute</span>}
-        {isCheap && !isLastMinute && <span className="badge badge--deal">Výhodná cena</span>}
         {isLastSpot && <span className="badge badge--spot">Poslední místo</span>}
       </div>
     </div>
@@ -1524,20 +1175,6 @@ function PublicTourCard({
           Zobrazit {tour.offersCount} termínů
         </button>
       )}
-      <div className="card-actions">
-        <button type="button" className="card-alert-btn" onClick={(event) => stopCardAction(event, onAlertClick)}>
-          🔔 Upozornit na slevu
-        </button>
-        <label className="card-compare" onClick={(event) => event.stopPropagation()}>
-          <input
-            type="checkbox"
-            checked={isComparing}
-            onChange={onToggleCompare}
-            disabled={compareDisabled}
-          />
-          Porovnat
-        </label>
-      </div>
     </div>
   );
 
@@ -1569,7 +1206,6 @@ function ProviderTourModal({
   loading,
   error,
   onClose,
-  onAlertClick,
 }: {
   tour: UnifiedTour;
   providerLabel: string;
@@ -1577,27 +1213,20 @@ function ProviderTourModal({
   loading: boolean;
   error?: string;
   onClose: () => void;
-  onAlertClick: (tour: UnifiedTour) => void;
 }) {
   const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquiryConsent, setInquiryConsent] = useState(false);
+  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [inquiryError, setInquiryError] = useState("");
 
   useEffect(() => {
     setSelectedOfferId(`${tour.source}-${tour.externalId}`);
     setPhotoIndex(0);
+    setInquiryStatus("idle");
+    setInquiryError("");
   }, [tour]);
-
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [onClose]);
 
   const sortedOffers = useMemo(
     () => [...offers].sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime() || left.price - right.price),
@@ -1609,7 +1238,53 @@ function ProviderTourModal({
     (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) / 86_400_000,
   );
   const stars = starsDisplay(selectedOffer.stars);
-  const contactSubject = encodeURIComponent(`Poptávka zájezdu: ${selectedOffer.title}`);
+  const hasMultiplePhotos = photos.length > 1;
+
+  function showPreviousPhoto() {
+    if (!hasMultiplePhotos) return;
+    setPhotoIndex((current) => (current - 1 + photos.length) % photos.length);
+  }
+
+  function showNextPhoto() {
+    if (!hasMultiplePhotos) return;
+    setPhotoIndex((current) => (current + 1) % photos.length);
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowLeft") showPreviousPhoto();
+      if (event.key === "ArrowRight") showNextPhoto();
+    }
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [hasMultiplePhotos, onClose, photos.length]);
+
+  async function submitInquiry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setInquiryError("");
+    if (!inquiryConsent) {
+      setInquiryError("Potvrďte prosím souhlas se zpracováním údajů.");
+      return;
+    }
+    setInquiryStatus("sending");
+    try {
+      await createInquiry({
+        email: inquiryEmail,
+        destination: `${providerLabel}: ${selectedOffer.title}, ${selectedOffer.destination}, ${fmtDate(selectedOffer.startDate)} - ${fmtDate(selectedOffer.endDate)}, ${formatPrice(selectedOffer.price)}`,
+        gdprConsent: true,
+        source: "provider-tour-modal",
+      });
+      setInquiryStatus("sent");
+    } catch {
+      setInquiryStatus("error");
+      setInquiryError("Poptávku se nepodařilo odeslat. Zkontrolujte e-mail a zkuste to znovu.");
+    }
+  }
 
   return (
     <div className="provider-tour-modal" role="dialog" aria-modal="true" aria-label={selectedOffer.title}>
@@ -1627,7 +1302,17 @@ function ProviderTourModal({
               onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg"; }}
             />
           ))}
-          {photos.length > 1 && (
+          {hasMultiplePhotos && (
+            <>
+              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--prev" onClick={showPreviousPhoto} aria-label="Předchozí fotka">
+                <ArrowLeft size={18} aria-hidden="true" />
+              </button>
+              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--next" onClick={showNextPhoto} aria-label="Další fotka">
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            </>
+          )}
+          {hasMultiplePhotos && (
             <div className="provider-tour-modal__dots">
               {photos.map((_, index) => (
                 <button
@@ -1669,36 +1354,53 @@ function ProviderTourModal({
             ) : error ? (
               <p>{error}</p>
             ) : sortedOffers.length > 0 ? (
-              <div className="provider-tour-modal__offer-list">
-                {sortedOffers.map((offer) => {
-                  const offerId = `${offer.source}-${offer.externalId}`;
-                  const offerNights = offer.nights ?? Math.round(
-                    (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
-                  );
-                  return (
-                    <button
-                      key={offerId}
-                      type="button"
-                      className={offerId === `${selectedOffer.source}-${selectedOffer.externalId}` ? "is-active" : ""}
-                      onClick={() => setSelectedOfferId(offerId)}
-                    >
-                      <span>{fmtDate(offer.startDate)} – {fmtDate(offer.endDate)}</span>
-                      <span>{Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : boardLabel[offer.board] ?? offer.board}</span>
-                      <strong>{formatPrice(offer.price)}</strong>
-                    </button>
-                  );
-                })}
-              </div>
+              <label className="provider-tour-modal__date-select">
+                <span>Vyberte termín</span>
+                <select value={`${selectedOffer.source}-${selectedOffer.externalId}`} onChange={(event) => setSelectedOfferId(event.target.value)}>
+                  {sortedOffers.map((offer) => {
+                    const offerId = `${offer.source}-${offer.externalId}`;
+                    const offerNights = offer.nights ?? Math.round(
+                      (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
+                    );
+                    return (
+                      <option key={offerId} value={offerId}>
+                        {fmtDate(offer.startDate)} - {fmtDate(offer.endDate)} · {Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : "délka dle nabídky"} · {formatPrice(offer.price)}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
             ) : (
               <p>Žádné termíny pro zadané filtry.</p>
             )}
           </section>
 
-          <div className="provider-tour-modal__actions">
-            <a href={`mailto:info@skytravel.cz?subject=${contactSubject}`}>Poptat zájezd</a>
-            <a href="tel:+420721163860">Zavolat</a>
-            <button type="button" onClick={() => onAlertClick(selectedOffer)}>Upozornit na slevu</button>
-          </div>
+          <form className="provider-tour-modal__inquiry" onSubmit={submitInquiry}>
+            <label>
+              <span>E-mail pro poptávku</span>
+              <input
+                type="email"
+                value={inquiryEmail}
+                onChange={(event) => setInquiryEmail(event.target.value)}
+                placeholder="vas@email.cz"
+                required
+              />
+            </label>
+            <label className="provider-tour-modal__consent">
+              <input
+                type="checkbox"
+                checked={inquiryConsent}
+                onChange={(event) => setInquiryConsent(event.target.checked)}
+                required
+              />
+              Souhlasím se zpracováním údajů podle <Link to="/gdpr">GDPR</Link>.
+            </label>
+            {inquiryError && <p className="provider-tour-modal__form-error">{inquiryError}</p>}
+            {inquiryStatus === "sent" && <p className="provider-tour-modal__form-success">Poptávka byla odeslána. Ozveme se vám co nejdříve.</p>}
+            <button type="submit" disabled={inquiryStatus === "sending"}>
+              {inquiryStatus === "sending" ? "Odesílám…" : "Poptat zájezd"}
+            </button>
+          </form>
         </div>
       </div>
     </div>
