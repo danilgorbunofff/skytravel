@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { getAllProviders, getProvider } from "../providers/index.js";
 import { getCachedPublicSearchResult, setCachedPublicSearchResult } from "../providers/publicSearchCache.js";
+import { listPublicDestinations } from "../providers/destinationStore.js";
 import type { FilterFieldDescriptor, UnifiedFilters } from "../providers/types.js";
 
 const router = Router();
@@ -256,6 +257,32 @@ router.get(
     res.setHeader("ETag", etag);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     res.json({ providers, regionsByProvider, version: etag });
+  }),
+);
+
+router.get(
+  "/destinations",
+  asyncHandler(async (req: Request, res: Response) => {
+    const providerId = firstQueryValue(req.query.providerId);
+    if (providerId && providerId.length > MAX_QUERY_LENGTH) {
+      res.status(400).json({ error: "providerId is too long." });
+      return;
+    }
+
+    const cacheKey = `destinations:${providerId ?? "all"}`;
+    const cached = getCachedPublicSearchResult(cacheKey);
+    if (cached) {
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+      res.setHeader("X-Cache", "HIT");
+      res.json(cached);
+      return;
+    }
+
+    const result = { items: await listPublicDestinations(providerId) };
+    setCachedPublicSearchResult(cacheKey, result);
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+    res.setHeader("X-Cache", "MISS");
+    res.json(result);
   }),
 );
 

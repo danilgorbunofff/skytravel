@@ -9,6 +9,8 @@ import {
 } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
+import { fetchPublicDestinations } from "../api/publicProviders";
+import type { PublicDestinationSummary } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
@@ -57,6 +59,7 @@ export default function HomePage() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
   const [searchDateEnd, setSearchDateEnd] = useState("2026-04-21");
+  const [destinationCounts, setDestinationCounts] = useState<Record<string, PublicDestinationSummary>>({});
 
   const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
@@ -69,6 +72,23 @@ export default function HomePage() {
       setHeroIndex((prev) => (prev + 1) % heroImages.length);
     }, 6000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDestinations() {
+      try {
+        const items = await fetchPublicDestinations();
+        if (cancelled) return;
+        setDestinationCounts(
+          Object.fromEntries(items.map((item) => [item.czechName, item])),
+        );
+      } catch {
+        if (!cancelled) setDestinationCounts({});
+      }
+    }
+    loadDestinations();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -545,6 +565,11 @@ export default function HomePage() {
             </header>
             <div id="favoriteGrid" className="favorite-grid">
               {favorites.map((item) => (
+                (() => {
+                  const liveDestination = destinationCounts[item.destination];
+                  const livePrice = liveDestination?.minPrice ?? item.price;
+                  const liveCount = liveDestination?.count ?? 0;
+                  return (
                 <article
                   key={item.destination}
                   className="favorite-card"
@@ -553,9 +578,16 @@ export default function HomePage() {
                 >
                   <div className="favorite-card__body">
                     <h3>{item.destination}</h3>
-                    <span className="price-pill">{t("from")} {formatPrice(item.price)}</span>
+                    <span className="price-pill">{t("from")} {formatPrice(livePrice)}</span>
+                    {liveCount > 0 && (
+                      <span className="favorite-card__count">
+                        {liveCount.toLocaleString("cs-CZ")} termínů
+                      </span>
+                    )}
                   </div>
                 </article>
+                  );
+                })()
               ))}
             </div>
           </div>

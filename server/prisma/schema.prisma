@@ -90,10 +90,12 @@ model ProviderTour {
   roomType      String?
   currency      String?
   offersCount   Int?
+  destinationId Int?
   syncedAt      DateTime @default(now())
   createdAt     DateTime @default(now())
 
   stateId       Int?
+  canonicalDestination Destination? @relation(fields: [destinationId], references: [id], onDelete: SetNull)
 
   @@unique([source, externalId])
   @@index([source, regionKey])
@@ -101,7 +103,39 @@ model ProviderTour {
   @@index([startDate])
   @@index([source, regionKey, price])
   @@index([source, destination(100)])
+  @@index([destinationId])
   @@index([source, stateId])
+}
+
+model Destination {
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique
+  czechName     String   @unique
+  canonicalName String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mappings DestinationMapping[]
+  providerTours ProviderTour[]
+
+  @@index([slug])
+  @@index([czechName])
+}
+
+model DestinationMapping {
+  id            Int         @id @default(autoincrement())
+  destinationId Int
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  providerId    String
+  providerKey   String
+  providerValue String
+  providerLabel String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([providerId, providerKey, providerValue])
+  @@index([destinationId])
+  @@index([providerId, providerLabel])
 }
 
 model ProviderSync {

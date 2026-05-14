@@ -33,6 +33,7 @@ import {
   sortOfferRows,
 } from "./offerGrouping.js";
 import { invalidatePublicSearchCache } from "./publicSearchCache.js";
+import { ensureProviderDestinationMapping } from "./destinationStore.js";
 
 // ── Hardcoded known countries (replaces 200-ID probe loop) ──────────
 const KNOWN_COUNTRIES: { id: number; name: string }[] = [
@@ -608,6 +609,12 @@ export class AlexandriaProvider implements TourProvider {
       try {
         const parsed = await fetchAlexandriaParsed(country.id);
         const items = extractToursFromParsed(parsed);
+        const destinationId = await ensureProviderDestinationMapping({
+          providerId: this.id,
+          providerKey: "zeme",
+          providerValue: regionKey,
+          providerLabel: country.name,
+        });
 
         // Upsert in batches
         const BATCH = 100;
@@ -637,6 +644,7 @@ export class AlexandriaProvider implements TourProvider {
                 url: item.url,
                 stars: item.stars,
                 board: item.board,
+                destinationId,
                 syncedAt: new Date(),
               },
               update: {
@@ -654,6 +662,7 @@ export class AlexandriaProvider implements TourProvider {
                 url: item.url,
                 stars: item.stars,
                 board: item.board,
+                destinationId,
                 syncedAt: new Date(),
               },
             });

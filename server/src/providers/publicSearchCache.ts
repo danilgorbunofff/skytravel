@@ -29,6 +29,6 @@ export function invalidatePublicSearchCache(providerId?: string): void {
   }
 
   for (const key of resultCache.keys()) {
-    if (key.startsWith(`${providerId}:`)) resultCache.delete(key);
+    if (key.startsWith(`${providerId}:`) || key.startsWith("destinations:")) resultCache.delete(key);
   }
 }

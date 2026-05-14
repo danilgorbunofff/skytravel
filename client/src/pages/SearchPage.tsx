@@ -630,6 +630,9 @@ export default function SearchPage() {
   function pageTo(nextPage: number) {
     if (nextPage < 1 || nextPage > (result?.totalPages || 1)) return;
     updateParams({ page: nextPage });
+    window.setTimeout(() => {
+      document.querySelector(".search-results-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   const compareTours = useMemo(
@@ -637,8 +640,10 @@ export default function SearchPage() {
     [displayedTours, compareIds],
   );
 
+  const visibleFrom = result && result.filtered > 0 ? (result.page - 1) * result.limit + 1 : 0;
+  const visibleTo = result ? Math.min(result.page * result.limit, result.filtered) : 0;
   const totalText = result
-    ? `Nalezeno ${result.filtered.toLocaleString("cs-CZ")} hotelů${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} termínů)` : ""}`
+    ? `Zobrazeno ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} z ${result.filtered.toLocaleString("cs-CZ")} hotelů${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} termínů)` : ""}`
     : resultsLoading
       ? "Hledám zájezdy…"
       : hasActiveSearch

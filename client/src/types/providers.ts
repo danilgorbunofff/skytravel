@@ -74,6 +74,16 @@ export type ProviderRegion = {
   meta?: Record<string, unknown>;
 };
 
+export type PublicDestinationSummary = {
+  id: number;
+  slug: string;
+  czechName: string;
+  canonicalName: string;
+  count: number;
+  minPrice: number | null;
+  providerCounts: Record<string, number>;
+};
+
 /** Metadata for a registered provider. */
 export type ProviderMeta = {
   id: string;

@@ -34,6 +34,7 @@ import {
   sortOfferRows,
 } from "./offerGrouping.js";
 import { invalidatePublicSearchCache } from "./publicSearchCache.js";
+import { ensureProviderDestinationMapping } from "./destinationStore.js";
 
 type NightsRange = { min: number; max: number } | null;
 
@@ -596,6 +597,12 @@ export class OrextravelProvider implements TourProvider {
 
       try {
         const items = await fetchOrextravelTours(firstRoute.town, firstRoute.state);
+        const destinationId = await ensureProviderDestinationMapping({
+          providerId: this.id,
+          providerKey: "stateId",
+          providerValue: String(firstRoute.state),
+          providerLabel: firstRoute.stateName,
+        });
 
         const BATCH = 100;
         const seenIds = new Set<string>();
@@ -630,6 +637,7 @@ export class OrextravelProvider implements TourProvider {
                 children: item.children,
                 roomType: item.roomType,
                 currency: item.currency,
+                destinationId,
                 syncedAt: new Date(),
               },
               update: {
@@ -653,6 +661,7 @@ export class OrextravelProvider implements TourProvider {
                 children: item.children,
                 roomType: item.roomType,
                 currency: item.currency,
+                destinationId,
                 syncedAt: new Date(),
               },
             });
