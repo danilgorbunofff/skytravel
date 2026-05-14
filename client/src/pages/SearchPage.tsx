@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -66,6 +66,32 @@ const boardLabel: Record<string, string> = {
   SC: "Bez stravy",
 };
 
+const fallbackDestinationAliases: Record<string, string> = {
+  bulgaria: "bulharsko",
+  egypt: "egypt",
+  greece: "recko",
+  tunisia: "tunisko",
+  turkey: "turecko",
+};
+
+function normalizeFallbackText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getTourFallbackImage(destination: string): string {
+  const normalizedDestination = normalizeFallbackText(destination);
+  const alias = Object.entries(fallbackDestinationAliases).find(([key]) => normalizedDestination.includes(key))?.[1];
+  const match = popularDestinations.find((item) => {
+    const normalizedFavorite = normalizeFallbackText(item.destination);
+    return normalizedDestination.includes(normalizedFavorite) || (alias != null && normalizedFavorite.includes(alias));
+  });
+  return match?.image ?? "/placeholder-tour.svg";
+}
+
 function stableFilterKey(filters: UnifiedFilters): string {
   const params = new URLSearchParams();
   for (const key of Object.keys(filters).sort()) {
@@ -110,7 +136,7 @@ export default function SearchPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     try { return (localStorage.getItem("skytravel:viewMode") as "grid" | "list") ?? "grid"; } catch { return "grid"; }
   });
-  const [shareCopied, setShareCopied] = useState(false);
+
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { favorites, toggle: toggleFavorite, isFavorite } = useFavorites();
   const leadPopup = useLeadPopup();
@@ -401,18 +427,6 @@ export default function SearchPage() {
   function setView(mode: "grid" | "list") {
     setViewMode(mode);
     try { localStorage.setItem("skytravel:viewMode", mode); } catch {}
-  }
-
-  async function shareSearch() {
-    const url = window.location.href;
-    if (navigator.share) {
-      try { await navigator.share({ title: "SkyTravel search", url }); return; } catch {}
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
-    } catch {}
   }
 
   function resetFilters() {
@@ -855,12 +869,7 @@ export default function SearchPage() {
                       <LayoutList size={16} aria-hidden="true" />
                     </button>
                   </div>
-                  {hasActiveSearch && result && (
-                    <button type="button" className="share-btn" onClick={shareSearch}>
-                      <Share2 size={14} aria-hidden="true" />
-                      {shareCopied ? "Zkopírováno!" : "Sdílet"}
-                    </button>
-                  )}
+
                 </div>
               </div>
 
@@ -1094,19 +1103,6 @@ function PublicTourCard({
   onToggleFavorite: () => void;
   onOpenDetail: () => void;
 }) {
-  const stars = starsDisplay(tour.stars);
-
-  const today = new Date();
-  const departure = new Date(tour.startDate);
-  const daysUntilDeparture = Math.floor((departure.getTime() - today.getTime()) / 86_400_000);
-  const isLastMinute = daysUntilDeparture >= 0 && daysUntilDeparture <= 14;
-  const isLastSpot = !tour.offerGroupKey && tour.offersCount != null && tour.offersCount <= 3;
-  const hasMultipleOffers = Boolean(tour.offerGroupKey && (tour.offersCount ?? 0) > 1);
-
-  const nights = tour.nights ?? Math.round(
-    (new Date(tour.endDate).getTime() - new Date(tour.startDate).getTime()) / 86_400_000,
-  );
-
   function stopCardAction(event: React.MouseEvent, action: () => void) {
     event.stopPropagation();
     action();
@@ -1120,18 +1116,14 @@ function PublicTourCard({
 
   const imageEl = (
     <div className="public-tour-card__image">
-      {tour.image ? (
-        <img
-          src={tour.image}
-          alt={tour.title}
-          loading="lazy"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
-          }}
-        />
-      ) : (
-        <div className="card-img-placeholder" />
-      )}
+      <img
+        src={tour.image || getTourFallbackImage(tour.destination)}
+        alt={tour.title}
+        loading="lazy"
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+        }}
+      />
       <button
         type="button"
         className={`card-heart${isFavorite ? " is-saved" : ""}`}
@@ -1140,28 +1132,13 @@ function PublicTourCard({
       >
         <Heart size={16} aria-hidden="true" />
       </button>
-      <span className="card-source-badge">{tour.source}</span>
-      <div className="card-deal-badges">
-        {isLastMinute && <span className="badge badge--urgent">Last Minute</span>}
-        {isLastSpot && <span className="badge badge--spot">Poslední místo</span>}
-      </div>
     </div>
   );
 
   const bodyEl = (
     <div className="public-tour-card__body">
-      <div className="public-tour-card__meta">
-        <span>{boardLabel[tour.board] ?? (tour.board || "Strava dle nabídky")}</span>
-        {stars && <span className="public-tour-stars">{stars}</span>}
-      </div>
       <h3>{tour.title}</h3>
       <p>{tour.destination}</p>
-      <div className="public-tour-facts">
-        <span>{fmtDate(tour.startDate)} – {fmtDate(tour.endDate)}</span>
-        <span>{transportLabel[tour.transport] ?? tour.transport}</span>
-        {Number.isFinite(nights) && nights > 0 && <span>{nights} nocí</span>}
-        {hasMultipleOffers && <span>{tour.offersCount} termínů</span>}
-      </div>
       <div className="public-tour-card__footer">
         <strong>od {formatPrice(tour.price)}</strong>
         <button type="button" className="btn-detail" onClick={(event) => stopCardAction(event, onOpenDetail)}>
@@ -1169,12 +1146,6 @@ function PublicTourCard({
           Detail
         </button>
       </div>
-      {hasMultipleOffers && (
-        <button type="button" className="card-offers-toggle" onClick={(event) => stopCardAction(event, onOpenDetail)}>
-          <CalendarDays size={16} aria-hidden="true" />
-          Zobrazit {tour.offersCount} termínů
-        </button>
-      )}
     </div>
   );
 
@@ -1233,7 +1204,9 @@ function ProviderTourModal({
     [offers],
   );
   const selectedOffer = sortedOffers.find((offer) => `${offer.source}-${offer.externalId}` === selectedOfferId) ?? sortedOffers[0] ?? tour;
-  const photos = selectedOffer.photos?.length ? selectedOffer.photos : selectedOffer.image ? [selectedOffer.image] : ["/placeholder-tour.svg"];
+  const photos = selectedOffer.photos?.length
+    ? selectedOffer.photos
+    : [selectedOffer.image || getTourFallbackImage(selectedOffer.destination)];
   const nights = selectedOffer.nights ?? Math.round(
     (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) / 86_400_000,
   );
@@ -1355,7 +1328,7 @@ function ProviderTourModal({
               <p>{error}</p>
             ) : sortedOffers.length > 0 ? (
               <label className="provider-tour-modal__date-select">
-                <span>Vyberte termín</span>
+                <span className="provider-tour-modal__field-label">Vyberte termín</span>
                 <select value={`${selectedOffer.source}-${selectedOffer.externalId}`} onChange={(event) => setSelectedOfferId(event.target.value)}>
                   {sortedOffers.map((offer) => {
                     const offerId = `${offer.source}-${offer.externalId}`;
@@ -1377,7 +1350,7 @@ function ProviderTourModal({
 
           <form className="provider-tour-modal__inquiry" onSubmit={submitInquiry}>
             <label>
-              <span>E-mail pro poptávku</span>
+              <span className="provider-tour-modal__field-label">E-mail pro poptávku</span>
               <input
                 type="email"
                 value={inquiryEmail}
@@ -1393,7 +1366,9 @@ function ProviderTourModal({
                 onChange={(event) => setInquiryConsent(event.target.checked)}
                 required
               />
-              Souhlasím se zpracováním údajů podle <Link to="/gdpr">GDPR</Link>.
+              <span className="provider-tour-modal__consent-text">
+                Souhlasím se zpracováním údajů podle <Link to="/gdpr">GDPR</Link>.
+              </span>
             </label>
             {inquiryError && <p className="provider-tour-modal__form-error">{inquiryError}</p>}
             {inquiryStatus === "sent" && <p className="provider-tour-modal__form-success">Poptávka byla odeslána. Ozveme se vám co nejdříve.</p>}

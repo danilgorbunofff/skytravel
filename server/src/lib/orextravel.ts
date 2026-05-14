@@ -10,6 +10,7 @@ const DEFAULT_TOWN_FROM = config.orextravel.townFrom;
 
 const DELAY_MS = 50;
 const CONCURRENCY = 6;
+const OREX_EUR_TO_CZK = Number(process.env.OREX_EUR_TO_CZK || 25.5);
 
 // ──────────────────────────────────────────────
 // XML parser
@@ -91,6 +92,21 @@ function parseSamoPrice(raw: string | number | undefined | null): number {
   // Standard decimal: "3115.6000", "1006.89", "93000"
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
+}
+
+function isEuroCurrency(value: string): boolean {
+  const normalized = value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+  return normalized === "eur" || normalized === "euro" || normalized.includes("euro") || normalized.includes("eur");
+}
+
+function normalizeOrexPrice(price: number, peopleCount: number, currencyName: string): number {
+  const perPersonPrice = price / Math.max(peopleCount, 1);
+  const amountInCzk = isEuroCurrency(currencyName) ? perPersonPrice * OREX_EUR_TO_CZK : perPersonPrice;
+  return Math.max(0, Math.round(amountInCzk));
 }
 
 // ──────────────────────────────────────────────
@@ -619,6 +635,7 @@ function mapClaimToTour(
   const starsLabel = resolveLabel(refCache.stars, claim.hotel, "");
   const currencyName = resolveLabel(refCache.currencies, claim.currency, "");
   const hotelDesc = refCache.hotelDescriptions.get(claim.hotel) || null;
+  const price = normalizeOrexPrice(claim.price, claim.peopleCount, currencyName);
 
   const checkinDate = new Date(claim.checkin);
   const checkoutDate = claim.dateOut
@@ -634,8 +651,8 @@ function mapClaimToTour(
     externalId,
     destination: stateName,
     title: hotelName,
-    price: Math.round(claim.price / Math.max(claim.peopleCount, 1)),
-    originalPrice: Math.round(claim.price / Math.max(claim.peopleCount, 1)),
+    price,
+    originalPrice: price,
     startDate: checkinDate,
     endDate: checkoutDate,
     transport,
@@ -650,7 +667,7 @@ function mapClaimToTour(
     children: claim.child,
     roomType: htplaceName || roomName,
     hotelId: claim.hotel,
-    currency: currencyName,
+    currency: isEuroCurrency(currencyName) ? "CZK" : currencyName,
   };
 }
 

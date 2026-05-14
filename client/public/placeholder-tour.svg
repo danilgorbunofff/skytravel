@@ -1,5 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
-  <rect width="400" height="250" fill="#dbe7f7"/>
-  <text x="200" y="110" font-family="sans-serif" font-size="48" fill="#8cabd4" text-anchor="middle">✈</text>
-  <text x="200" y="155" font-family="sans-serif" font-size="14" fill="#8cabd4" text-anchor="middle">Obrázek není k dispozici</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250" role="img" aria-label="SkyTravel">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dce9fb"/>
+      <stop offset="1" stop-color="#b8cceb"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#164493"/>
+      <stop offset="1" stop-color="#2f71c8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#sky)"/>
+  <circle cx="315" cy="58" r="28" fill="#ffe370" opacity="0.9"/>
+  <path d="M0 176 C70 151 135 198 205 174 C276 149 326 163 400 145 L400 250 L0 250 Z" fill="url(#sea)" opacity="0.9"/>
+  <path d="M0 203 C72 183 127 222 203 199 C276 177 331 190 400 171 L400 250 L0 250 Z" fill="#ffffff" opacity="0.28"/>
+  <path d="M182 93 l58 23 c8 3 8 14 0 17 l-58 23 -13 35 -15 0 7-43 -49-20 c-7-3-7-13 0-16 l49-20 -7-43 15 0 13 44Z" fill="#123d8c" opacity="0.72"/>
 </svg>
