@@ -60,16 +60,16 @@ echo "▸ Installing dependencies …"
 # Wipe node_modules completely before installing to avoid ENOTEMPTY on Linux.
 # Use find + rm to force removal of stubborn files on unclean server state.
 for dir in node_modules server/node_modules client/node_modules; do
-  if [[ -d "$dir" ]]; then
-    find "$dir" -type f -delete 2>/dev/null || true
-    find "$dir" -type d -delete 2>/dev/null || true
-    rm -rf "$dir" 2>/dev/null || true
+  if [[ -d "\$dir" ]]; then
+    find "\$dir" -type f -delete 2>/dev/null || true
+    find "\$dir" -type d -delete 2>/dev/null || true
+    rm -rf "\$dir" 2>/dev/null || true
   fi
 done
 npm cache clean --force 2>/dev/null || true
 sleep 2
 # On retry, wipe again to clear any partial symlinks (e.g. workspace links).
-npm install || (for dir in node_modules server/node_modules client/node_modules; do find "$dir" -type f -delete 2>/dev/null || true; find "$dir" -type d -delete 2>/dev/null || true; rm -rf "$dir" 2>/dev/null || true; done && npm install)
+npm install || (for dir in node_modules server/node_modules client/node_modules; do find "\$dir" -type f -delete 2>/dev/null || true; find "\$dir" -type d -delete 2>/dev/null || true; rm -rf "\$dir" 2>/dev/null || true; done && npm install)
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
