@@ -67,6 +67,9 @@ npm cache clean --force 2>/dev/null || true
 sleep 3
 # Use npm install (not ci) for more flexible dependency resolution
 npm install --legacy-peer-deps 2>&1
+# Explicitly reinstall each workspace to ensure devDependencies are available
+cd client && npm install --legacy-peer-deps 2>&1 && cd ..
+cd server && npm install --legacy-peer-deps 2>&1 && cd ..
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
