@@ -58,18 +58,34 @@ sleep 5
 
 echo "▸ Installing dependencies …"
 # Wipe node_modules completely before installing to avoid ENOTEMPTY on Linux.
-# Use find + rm to force removal of stubborn files on unclean server state.
-for dir in node_modules server/node_modules client/node_modules; do
-  if [[ -d "\$dir" ]]; then
-    find "\$dir" -type f -delete 2>/dev/null || true
-    find "\$dir" -type d -delete 2>/dev/null || true
-    rm -rf "\$dir" 2>/dev/null || true
+# Use find + xargs to force removal of all files/dirs in one pass.
+if [[ -d node_modules ]]; then
+  find node_modules -mindepth 1 -type f -delete 2>/dev/null || true
+  find node_modules -mindepth 1 -type d -empty -delete 2>/dev/null || true
+  find node_modules -mindepth 1 -type d -delete 2>/dev/null || true
+  rm -rf node_modules 2>/dev/null || true
+fi
+for subdir in server/node_modules client/node_modules; do
+  if [[ -d "\$subdir" ]]; then
+    find "\$subdir" -mindepth 1 -type f -delete 2>/dev/null || true
+    find "\$subdir" -mindepth 1 -type d -empty -delete 2>/dev/null || true
+    find "\$subdir" -mindepth 1 -type d -delete 2>/dev/null || true
+    rm -rf "\$subdir" 2>/dev/null || true
   fi
 done
 npm cache clean --force 2>/dev/null || true
-sleep 2
-# On retry, wipe again to clear any partial symlinks (e.g. workspace links).
-npm install || (for dir in node_modules server/node_modules client/node_modules; do find "\$dir" -type f -delete 2>/dev/null || true; find "\$dir" -type d -delete 2>/dev/null || true; rm -rf "\$dir" 2>/dev/null || true; done && npm install)
+sleep 3
+# Install with explicit workspace configuration
+npm install --legacy-peer-deps 2>&1 || true
+# If first attempt had issues, do full cleanup and retry
+if [[ ! -f node_modules/.package-lock.json ]]; then
+  echo "  (Retrying npm install after cleanup)"
+  for dir in node_modules server/node_modules client/node_modules; do
+    find "\$dir" -mindepth 1 -type f -delete 2>/dev/null || true
+    find "\$dir" -mindepth 1 -type d -delete 2>/dev/null || true
+  done
+  npm install --legacy-peer-deps
+fi
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
