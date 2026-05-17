@@ -81,7 +81,22 @@ echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
-npm --workspace client run build
+# Try building from within client directory with explicit vite command
+cd client
+echo "  Current directory: \$(pwd)"
+echo "  Node version: \$(node --version)"
+echo "  npm version: \$(npm --version)"
+echo "  Checking for vite..."
+ls -la node_modules/.bin/vite 2>/dev/null || echo "  ✗ vite not in ./node_modules/.bin"
+ls -la ../node_modules/.bin/vite 2>/dev/null || echo "  ✗ vite not in ../node_modules/.bin"
+echo "  Checking for vite package..."
+ls -la node_modules/vite 2>/dev/null | head -5 || echo "  ✗ vite not in ./node_modules"
+ls -la ../node_modules/vite 2>/dev/null | head -5 || echo "  ✗ vite not in ../node_modules"
+echo "  Attempting npm list vite..."
+npm list vite 2>&1 | head -5
+echo "  Attempting build…"
+npm run build
+cd ..
 
 echo "▸ Restarting PM2 apps …"
 pm2 start ecosystem.config.cjs
