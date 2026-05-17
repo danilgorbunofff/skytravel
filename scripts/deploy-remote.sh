@@ -57,19 +57,24 @@ pkill -9 esbuild 2>/dev/null || true
 sleep 5
 
 echo "▸ Installing dependencies …"
-# Kill ALL node processes including any stray daemons
-pkill -9 -f "npm|node|esbuild" 2>/dev/null || true
-sleep 10
-# Forcefully remove all node_modules directories using multiple strategies
-rm -rf node_modules server/node_modules client/node_modules 2>/dev/null || true
-find . -maxdepth 3 -name "node_modules" -type d -exec rm -rf {} + 2>/dev/null || true
+# Maximum aggressive cleanup for corrupted node_modules
+pkill -9 -f "npm|node|esbuild|yarn" 2>/dev/null || true
+sleep 15
+# Multiple passes of removal to ensure everything is gone
+for i in {1..3}; do
+  rm -rf node_modules server/node_modules client/node_modules 2>/dev/null || true
+  find . -maxdepth 3 -type d -name "node_modules" -exec rm -rf {} + 2>/dev/null || true
+  find . -maxdepth 4 -type f -path "*/node_modules/*" -delete 2>/dev/null || true
+done
+# Clear npm cache multiple times
 npm cache clean --force 2>/dev/null || true
-sleep 3
-# Use npm install (not ci) for more flexible dependency resolution
-npm install --legacy-peer-deps 2>&1
-# Explicitly reinstall each workspace to ensure devDependencies are available
-cd client && npm install --legacy-peer-deps 2>&1 && cd ..
-cd server && npm install --legacy-peer-deps 2>&1 && cd ..
+npm cache verify 2>/dev/null || true
+sleep 5
+# Install with minimal flags to avoid corruption issues
+npm install 2>&1 | grep -E "(added|up to date|packages)" | head -5
+# Explicitly reinstall each workspace to ensure devDependencies
+cd client && npm install 2>&1 | grep -E "(added|up to date|packages)" | head -2 && cd ..
+cd server && npm install 2>&1 | grep -E "(added|up to date|packages)" | head -2 && cd ..
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
