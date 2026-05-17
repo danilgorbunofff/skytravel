@@ -87,10 +87,8 @@ echo "▸ Running database migrations …"
 
 echo "▸ Building client …"
 # Ensure vite is available in root node_modules for @vitejs/plugin-react to find it
-npm install vite@8.0.8 --save-dev 2>&1 | tail -2
+npm install vite@8.0.8 --save-dev --legacy-peer-deps 2>&1 | tail -2
 export NODE_PATH="$(pwd)/node_modules:\${NODE_PATH:-}"
-echo "  Checking vite…"
-which vite || ls -la node_modules/.bin/vite || echo "vite not found"
 echo "  Running build from client directory…"
 (cd client && npm run build)
 
