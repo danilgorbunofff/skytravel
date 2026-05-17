@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { UnifiedTour } from "../types/providers";
 import { formatPrice } from "../utils";
+import { fmtDate, starsDisplay } from "../lib/formatters";
 
 const boardLabel: Record<string, string> = {
   AI: "All Inclusive", UAI: "Ultra AI", FB: "Plná penze",
@@ -9,17 +10,6 @@ const boardLabel: Record<string, string> = {
 const transportLabel: Record<string, string> = {
   plane: "Letecky", bus: "Autobusem", train: "Vlakem", car: "Vlastní", boat: "Lodí",
 };
-
-function fmtDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("cs-CZ");
-}
-
-function starsDisplay(value: string | undefined): string {
-  const s = Number(value);
-  if (!Number.isFinite(s) || s < 1 || s > 5) return "—";
-  return "★".repeat(s) + "☆".repeat(5 - s);
-}
 
 function nightsOf(t: UnifiedTour): number {
   return t.nights ??
@@ -43,7 +33,7 @@ export function CompareTray({ tours, onRemove, onClear }: Props) {
     ["Odlet", (t) => fmtDate(t.startDate)],
     ["Nocí", (t) => String(nightsOf(t))],
     ["Strava", (t) => boardLabel[t.board] ?? t.board],
-    ["Hvězdy", (t) => starsDisplay(t.stars)],
+    ["Hvězdy", (t) => starsDisplay(t.stars) || "—"],
     ["Doprava", (t) => transportLabel[t.transport] ?? t.transport],
   ];
 

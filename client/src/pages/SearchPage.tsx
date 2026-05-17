@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * Public search page.
+ *
+ * State management:
+ * - Source of truth for query/filters is the URL (`useSearchParams`); local
+ *   `useState` is reserved for transient UI (drawer open, share toast, etc.).
+ * - Intentionally does NOT use `stores/searchStore` (admin-only) or the
+ *   `useProviderTours` hook (used by admin tables). Mixing them here would
+ *   create duplicate sources of truth and cause filter/URL drift.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -9,62 +19,18 @@ import {
   fetchPublicDestinations,
   fetchPublicProviderOfferGroup,
 } from "../api/publicProviders";
-import { createInquiry } from "../api";
 import { loadBootstrap } from "../api/bootstrapCache";
 import type { ProviderMeta, PublicDestinationSummary, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
+import type { TranslationKey } from "../hooks/useLanguage";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
 import { PriceRangeSlider } from "../components/PriceRangeSlider";
+import { TourDetailModal } from "../components/TourDetailModal";
+import { buildSrcSet } from "../lib/images";
+import { fmtDate } from "../lib/formatters";
 import "../site.css";
-
-const TRANSPORT_OPTIONS = [
-  { value: "plane", label: "Letecky" },
-  { value: "bus", label: "Autobusem" },
-  { value: "car", label: "Vlastní" },
-];
-
-const NIGHTS_OPTIONS = [
-  { value: "",      label: "Libovolná délka" },
-  { value: "1-6",   label: "do 6 nocí" },
-  { value: "7-9",   label: "7–9 nocí" },
-  { value: "10-13", label: "10–13 nocí" },
-  { value: "14-99", label: "14 a více nocí" },
-];
-
-const BOARD_OPTIONS = [
-  { value: "AI",  label: "All Inclusive" },
-  { value: "UAI", label: "Ultra AI" },
-  { value: "FB",  label: "Plná penze" },
-  { value: "HB",  label: "Polopenze" },
-  { value: "BB",  label: "Snídaně" },
-  { value: "RO",  label: "Bez stravy" },
-];
-
-const PRESETS = [
-  { label: "⚡ Last Minute",   params: { dateStart: new Date().toISOString().slice(0, 10), dateEnd: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) } },
-  { label: "🍽 All Inclusive", params: { board: "AI" } },
-  { label: "👨\u200d👩\u200d👧 Rodina",      params: { board: "AI", nights: "7-13" } },
-  { label: "✈ Krátký výlet",  params: { nights: "1-6" } },
-] as const;
-
-const transportLabel: Record<string, string> = {
-  plane: "Letecky",
-  bus: "Autobusem",
-  train: "Vlakem",
-  car: "Vlastní",
-  boat: "Lodí",
-};
-
-const boardLabel: Record<string, string> = {
-  AI: "All Inclusive",
-  UAI: "Ultra AI",
-  FB: "Plná penze",
-  HB: "Polopenze",
-  BB: "Snídaně",
-  RO: "Bez stravy",
-  SC: "Bez stravy",
-};
 
 const fallbackDestinationAliases: Record<string, string> = {
   bulgaria: "bulharsko",
@@ -83,14 +49,20 @@ function normalizeFallbackText(value: string): string {
 }
 
 function getTourFallbackImage(destination: string): string {
+  const cached = fallbackImageCache.get(destination);
+  if (cached !== undefined) return cached;
   const normalizedDestination = normalizeFallbackText(destination);
   const alias = Object.entries(fallbackDestinationAliases).find(([key]) => normalizedDestination.includes(key))?.[1];
   const match = popularDestinations.find((item) => {
     const normalizedFavorite = normalizeFallbackText(item.destination);
     return normalizedDestination.includes(normalizedFavorite) || (alias != null && normalizedFavorite.includes(alias));
   });
-  return match?.image ?? "/placeholder-tour.svg";
+  const resolved = match?.image ?? "/placeholder-tour.svg";
+  fallbackImageCache.set(destination, resolved);
+  return resolved;
 }
+
+const fallbackImageCache = new Map<string, string>();
 
 function stableFilterKey(filters: UnifiedFilters): string {
   const params = new URLSearchParams();
@@ -102,17 +74,6 @@ function stableFilterKey(filters: UnifiedFilters): string {
   return params.toString();
 }
 
-function fmtDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("cs-CZ");
-}
-
-function starsDisplay(value: string | undefined): string {
-  const stars = Number(value);
-  if (!Number.isFinite(stars) || stars < 1 || stars > 5) return "";
-  return "★".repeat(stars) + "☆".repeat(5 - stars);
-}
-
 function getParamNumber(searchParams: URLSearchParams, key: string, fallback: number): number {
   const value = Number(searchParams.get(key));
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -122,8 +83,47 @@ export default function SearchPage() {
   const { lang, setLang, t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const transportLabel: Record<string, string> = {
+    plane: t("sTransportPlane"),
+    bus: t("sTransportBus"),
+    train: t("train"),
+    car: t("sTransportCar"),
+    boat: t("boat"),
+  };
+  const TRANSPORT_OPTIONS = [
+    { value: "plane", label: t("sTransportPlane") },
+    { value: "bus", label: t("sTransportBus") },
+    { value: "car", label: t("sTransportCar") },
+  ];
+  const NIGHTS_OPTIONS = [
+    { value: "", label: t("sNightsAny") },
+    { value: "1-6", label: t("sNightsShort") },
+    { value: "7-9", label: t("sNights79") },
+    { value: "10-13", label: t("sNights1013") },
+    { value: "14-99", label: t("sNights14") },
+  ];
+  const BOARD_OPTIONS = [
+    { value: "AI", label: t("sBoardAI") },
+    { value: "UAI", label: t("sBoardUAI") },
+    { value: "FB", label: t("sBoardFB") },
+    { value: "HB", label: t("sBoardHB") },
+    { value: "BB", label: t("sBoardBB") },
+    { value: "RO", label: t("sBoardRO") },
+  ];
+  const PRESETS = [
+    { label: t("sPresetLastMin"), params: { dateStart: new Date().toISOString().slice(0, 10), dateEnd: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) } },
+    { label: t("sPresetAllInc"), params: { board: "AI" } },
+    { label: t("sPresetFamily"), params: { board: "AI", nights: "7-13" } },
+    { label: t("sPresetShort"), params: { nights: "1-6" } },
+  ];
+
   const [providers, setProviders] = useState<ProviderMeta[]>([]);
-  const [destinations, setDestinations] = useState<PublicDestinationSummary[]>([]);
+  type DestinationsState =
+    | { status: "loading" }
+    | { status: "error"; message: string }
+    | { status: "ready"; items: PublicDestinationSummary[] };
+  const [destinationsState, setDestinationsState] = useState<DestinationsState>({ status: "loading" });
+  const destinations = destinationsState.status === "ready" ? destinationsState.items : [];
   const [resultsLoading, setResultsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -138,11 +138,18 @@ export default function SearchPage() {
   });
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const offerGroupControllers = useRef<Map<string, AbortController>>(new Map());
+  const resultsSectionRef = useRef<HTMLElement | null>(null);
+  const previousPageRef = useRef<number>(1);
   const { favorites, toggle: toggleFavorite, isFavorite } = useFavorites();
   const leadPopup = useLeadPopup();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [heroExpanded, setHeroExpanded] = useState(() => !searchParams.get("q"));
   const [pastHero, setPastHero] = useState(false);
+  const [shareConfirmation, setShareConfirmation] = useState<"copied" | "failed" | null>(null);
+  const shareTimeoutRef = useRef<number | null>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const [accumulatedItems, setAccumulatedItems] = useState<UnifiedTour[]>([]);
 
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [dateStart, setDateStart] = useState(searchParams.get("dateStart") ?? "");
@@ -167,7 +174,9 @@ export default function SearchPage() {
   const activeNights = searchParams.get("nights") ?? "";
   const activeStars = searchParams.get("stars") ?? "";
   const activeBoard = searchParams.get("board") ?? "";
-  const hasPriceFilter = Boolean(searchParams.get("priceMin") || searchParams.get("priceMax"));
+  const activePriceMin = searchParams.get("priceMin") ?? "";
+  const activePriceMax = searchParams.get("priceMax") ?? "";
+  const hasPriceFilter = Boolean(activePriceMin || activePriceMax);
   const hasActiveSearch = Boolean(
     activeQuery || activeDateStart || activeDateEnd || activeTransport || activeDestinationSlug || activeNights || activeStars || activeBoard || hasPriceFilter,
   );
@@ -198,32 +207,53 @@ export default function SearchPage() {
   );
 
   const activeChips = useMemo(() => {
-    const chips: { label: string; clear: Record<string, null> }[] = [];
-    if (activeQuery) chips.push({ label: `"${activeQuery}"`, clear: { q: null } });
-    if (activeDateStart) chips.push({ label: `Od ${fmtDate(activeDateStart)}`, clear: { dateStart: null } });
-    if (activeDateEnd) chips.push({ label: `Do ${fmtDate(activeDateEnd)}`, clear: { dateEnd: null } });
-    if (activeTransport) chips.push({ label: transportLabel[activeTransport] ?? activeTransport, clear: { transport: null } });
+    const chips: { label: string; onClear: () => void }[] = [];
+    if (activeQuery) chips.push({ label: `"${activeQuery}"`, onClear: () => updateParams({ q: null, page: 1 }) });
+    if (activeDateStart) chips.push({ label: `${t("sChipFrom")} ${fmtDate(activeDateStart)}`, onClear: () => updateParams({ dateStart: null, page: 1 }) });
+    if (activeDateEnd) chips.push({ label: `${t("sChipTo")} ${fmtDate(activeDateEnd)}`, onClear: () => updateParams({ dateEnd: null, page: 1 }) });
+    if (activeTransport) chips.push({ label: transportLabel[activeTransport] ?? activeTransport, onClear: () => updateParams({ transport: null, page: 1 }) });
     if (activeDestinationSlug) {
       const destination = destinations.find((item) => item.slug === activeDestinationSlug);
-      chips.push({ label: destination?.czechName ?? activeDestinationSlug, clear: { destinationSlug: null } });
+      chips.push({ label: destination?.czechName ?? activeDestinationSlug, onClear: () => updateParams({ destinationSlug: null, page: 1 }) });
     }
     if (activeNights) {
       const opt = NIGHTS_OPTIONS.find((o) => o.value === activeNights);
-      chips.push({ label: opt?.label ?? activeNights, clear: { nights: null } });
+      chips.push({ label: opt?.label ?? activeNights, onClear: () => updateParams({ nights: null, page: 1 }) });
     }
-    if (activeStars) chips.push({ label: `★${activeStars}+`, clear: { stars: null } });
+    if (activeStars) chips.push({ label: `★${activeStars}+`, onClear: () => updateParams({ stars: null, page: 1 }) });
     if (activeBoard) {
       const opt = BOARD_OPTIONS.find((o) => o.value === activeBoard);
-      chips.push({ label: opt?.label ?? activeBoard, clear: { board: null } });
+      chips.push({ label: opt?.label ?? activeBoard, onClear: () => updateParams({ board: null, page: 1 }) });
     }
-    if (searchParams.get("priceMin") || searchParams.get("priceMax")) {
+    if (activePriceMin || activePriceMax) {
       chips.push({
-        label: `Cena: ${(Number(searchParams.get("priceMin")) || priceRange.min).toLocaleString("cs-CZ")} – ${(Number(searchParams.get("priceMax")) || priceRange.max).toLocaleString("cs-CZ")} Kč`,
-        clear: { priceMin: null, priceMax: null },
+        label: `${t("sChipPrice")}: ${(Number(activePriceMin) || priceRange.min).toLocaleString("cs-CZ")} – ${(Number(activePriceMax) || priceRange.max).toLocaleString("cs-CZ")} Kč`,
+        onClear: () => updateParams({ priceMin: null, priceMax: null, page: 1 }),
       });
     }
+    if (showFavoritesOnly) {
+      chips.push({ label: t("sChipFavorites"), onClear: () => setShowFavoritesOnly(false) });
+    }
     return chips;
-  }, [activeQuery, activeDateStart, activeDateEnd, activeTransport, activeDestinationSlug, activeNights, activeStars, activeBoard, searchParams, priceRange, destinations]);
+    // `destinations` is intentionally omitted: it's only used to look up the human-readable
+    // label and is keyed by `activeDestinationSlug`. Re-deriving on every destination list
+    // change would invalidate the memo every poll without producing different chip output.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeQuery,
+    activeDateStart,
+    activeDateEnd,
+    activeTransport,
+    activeDestinationSlug,
+    activeNights,
+    activeStars,
+    activeBoard,
+    activePriceMin,
+    activePriceMax,
+    priceRange,
+    showFavoritesOnly,
+    t,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,21 +283,56 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
+    // Bootstrap providers exactly once on mount. `loadBootstrap` is a stable
+    // module-level helper and re-running on dep changes would refetch needlessly.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
+  const loadDestinations = useCallback(() => {
     let cancelled = false;
+    setDestinationsState({ status: "loading" });
     fetchPublicDestinations()
       .then((items) => {
-        if (!cancelled) setDestinations(items.filter((item) => item.count > 0));
+        if (cancelled) return;
+        setDestinationsState({
+          status: "ready",
+          items: items.filter((item) => item.count > 0),
+        });
       })
-      .catch(() => {
-        if (!cancelled) setDestinations([]);
+      .catch((err) => {
+        if (cancelled) return;
+        setDestinationsState({
+          status: "error",
+          message: err instanceof Error ? err.message : "Nepodařilo se načíst destinace.",
+        });
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const cleanup = loadDestinations();
+    return cleanup;
+  }, [loadDestinations]);
+
+  // Abort any in-flight offer-group fetches when the page unmounts.
+  useEffect(() => {
+    const controllers = offerGroupControllers.current;
+    return () => {
+      controllers.forEach((controller) => controller.abort());
+      controllers.clear();
+    };
+  }, []);
+
+  // Scroll to results section after pagination has rendered the new page.
+  useEffect(() => {
+    if (previousPageRef.current === page) return;
+    previousPageRef.current = page;
+    if (resultsLoading) return;
+    requestAnimationFrame(() => {
+      resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [page, result, resultsLoading]);
 
   useEffect(() => {
     setQuery(searchParams.get("q") ?? "");
@@ -332,6 +397,27 @@ export default function SearchPage() {
 
   const searchFilters = useMemo(() => buildFilters(), [buildFilters]);
   const searchFilterKey = useMemo(() => stableFilterKey(searchFilters), [searchFilters]);
+  // Key that ignores `page` — used to reset the mobile load-more accumulator
+  // whenever any other filter changes.
+  const filterKeyWithoutPage = useMemo(() => {
+    const { page: _page, ...rest } = searchFilters as UnifiedFilters & { page?: number };
+    void _page;
+    return stableFilterKey(rest as UnifiedFilters);
+  }, [searchFilters]);
+
+  useEffect(() => {
+    setAccumulatedItems([]);
+  }, [filterKeyWithoutPage]);
+
+  useEffect(() => {
+    if (!result) return;
+    setAccumulatedItems((prev) => {
+      if (page <= 1) return result.items;
+      const seen = new Set(prev.map((tour) => `${tour.source}-${tour.externalId}`));
+      const additions = result.items.filter((tour) => !seen.has(`${tour.source}-${tour.externalId}`));
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }, [result, page]);
   useEffect(() => {
     if (!hasActiveSearch) {
       setResult(null);
@@ -366,10 +452,45 @@ export default function SearchPage() {
     };
     }, [searchFilterKey, hasActiveSearch]);
 
+  useEffect(() => () => {
+    if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share({ url, title: document.title });
+        return;
+      }
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareConfirmation("copied");
+      } else {
+        setShareConfirmation("failed");
+      }
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
+      setShareConfirmation("failed");
+      // eslint-disable-next-line no-console
+      console.warn("share failed", err);
+    } finally {
+      if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
+      shareTimeoutRef.current = window.setTimeout(() => setShareConfirmation(null), 2500);
+    }
+  }, []);
+
   const openTourDetail = useCallback((tour: UnifiedTour) => {
     const key = tour.offerGroupKey;
     setDetailTour(tour);
-    if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key] || offerGroupLoading[key]) return;
+    if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key]) return;
+
+    // Cancel any previous in-flight fetch for the same offer group so a late
+    // response cannot overwrite the latest state.
+    const previous = offerGroupControllers.current.get(key);
+    previous?.abort();
+    const controller = new AbortController();
+    offerGroupControllers.current.set(key, controller);
 
     setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
     setOfferGroupErrors((prev) => {
@@ -378,23 +499,28 @@ export default function SearchPage() {
       return next;
     });
 
-    fetchPublicProviderOfferGroup(tour.source, key, buildFilters({ includePaging: false }))
+    fetchPublicProviderOfferGroup(tour.source, key, buildFilters({ includePaging: false }), controller.signal)
       .then((items) => {
+        if (offerGroupControllers.current.get(key) !== controller) return;
         setOfferGroupItems((prev) => ({
           ...prev,
           [key]: items,
         }));
       })
       .catch((err) => {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        if (offerGroupControllers.current.get(key) !== controller) return;
         setOfferGroupErrors((prev) => ({
           ...prev,
           [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
         }));
       })
       .finally(() => {
+        if (offerGroupControllers.current.get(key) !== controller) return;
+        offerGroupControllers.current.delete(key);
         setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
       });
-  }, [buildFilters, offerGroupItems, offerGroupLoading]);
+  }, [buildFilters, offerGroupItems]);
 
   function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
     setValidationError(null);
@@ -406,10 +532,14 @@ export default function SearchPage() {
     setSearchParams(next, { replace });
   }
 
+  const dateError = dateStart && dateEnd && dateStart > dateEnd
+    ? t("sValidationDateOrder")
+    : null;
+
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
-    if (dateStart && dateEnd && dateStart > dateEnd) {
-      setValidationError("Datum odjezdu nesmí být po datu návratu.");
+    if (dateError) {
+      setValidationError(dateError);
       return;
     }
     setValidationError(null);
@@ -433,6 +563,9 @@ export default function SearchPage() {
     const next = new URLSearchParams();
     setSearchParams(next);
     setValidationError(null);
+    setShowFavoritesOnly(false);
+    setDetailTour(null);
+    setMobileFiltersOpen(false);
   }
 
   function toggleSort(nextSortBy: "price" | "date") {
@@ -443,38 +576,37 @@ export default function SearchPage() {
   function pageTo(nextPage: number) {
     if (nextPage < 1 || nextPage > (result?.totalPages || 1)) return;
     updateParams({ page: nextPage });
-    window.setTimeout(() => {
-      document.querySelector(".search-results-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
   }
 
   const visibleFrom = result && result.filtered > 0 ? (result.page - 1) * result.limit + 1 : 0;
   const visibleTo = result ? Math.min(result.page * result.limit, result.filtered) : 0;
-  const totalText = result
-    ? `Zobrazeno ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} z ${result.filtered.toLocaleString("cs-CZ")} hotelů${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} termínů)` : ""}`
-    : resultsLoading
-      ? "Hledám zájezdy…"
-      : hasActiveSearch
-        ? "Žádné nabídky"
-        : "Zadejte destinaci a spusťte vyhledávání";
+  const totalText = showFavoritesOnly
+    ? `${displayedTours.length.toLocaleString("cs-CZ")} ${t("sStateSavedHotels")}`
+    : result
+      ? `${t("sStateShown")} ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} ${t("sStateOf")} ${result.filtered.toLocaleString("cs-CZ")} ${t("sStateHotels")}${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} ${t("sStateTerms")})` : ""}`
+      : resultsLoading
+        ? t("sStateLoading")
+        : hasActiveSearch
+          ? t("sStateNoOffers")
+          : t("sStateEmptyPrompt");
 
   return (
     <div>
       <div className={`sticky-search-bar${pastHero ? " is-visible" : ""}`}>
         <div className="container sticky-search-bar__inner">
           <span className="sticky-search-bar__query">
-            {activeQuery || "Vyhledávání"}{activeDateStart && ` · ${fmtDate(activeDateStart)}`}
+            {activeQuery || t("sStickyDefault")}{activeDateStart && ` · ${fmtDate(activeDateStart)}`}
           </span>
           <button
             type="button"
             className="sticky-search-bar__edit"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
-            Upravit ✎
+            {t("sStickyEdit")}
           </button>
           {result && (
             <span className="sticky-search-bar__count">
-              {result.filtered.toLocaleString("cs-CZ")} nabídek
+              {result.filtered.toLocaleString("cs-CZ")} {t("sStickyOffers")}
             </span>
           )}
         </div>
@@ -496,7 +628,7 @@ export default function SearchPage() {
               }}
               placeholder={t("searchPlaceholder")}
             />
-            <button type="submit" aria-label="Vyhledat">GO</button>
+            <button type="submit" aria-label={t("sFormSearch")}>GO</button>
           </form>
 
           <div className="header-contact-wrap desktop-only">
@@ -567,13 +699,13 @@ export default function SearchPage() {
           <div className="container search-hero-grid">
             <div>
               <p className="search-eyebrow">SkyTravel search</p>
-              <h1>Najděte zájezd podle sebe</h1>
-              <p>Vyhledávání pracuje s aktuálně synchronizovanými nabídkami partnerských cestovních kanceláří.</p>
+              <h1>{t("sHeroTitle")}</h1>
+              <p>{t("sHeroSubtitle")}</p>
             </div>
 
             <form className="public-search-panel" onSubmit={submitSearch}>
               <label>
-                <span>Kam pojedeme</span>
+                <span>{t("sFormWhere")}</span>
                 <div className="public-search-input">
                   <MapPin size={18} aria-hidden="true" />
                   <input
@@ -582,19 +714,21 @@ export default function SearchPage() {
                       setValidationError(null);
                       setQuery(event.target.value);
                     }}
-                    placeholder="Místo nebo hotel"
+                    placeholder={t("sFormPlaceholder")}
                   />
                 </div>
               </label>
               <div className={`search-panel-extra${heroExpanded ? " is-open" : ""}`}>
               <label>
-                <span>Odjezd od</span>
+                <span>{t("sFormDeparture")}</span>
                 <div className="public-search-input">
                   <CalendarDays size={18} aria-hidden="true" />
                   <input
                     type="date"
                     max={dateEnd || undefined}
                     value={dateStart}
+                    aria-invalid={!!dateError}
+                    aria-describedby={dateError ? "search-date-error" : undefined}
                     onChange={(event) => {
                       setDateStart(event.target.value);
                       setValidationError(null);
@@ -603,13 +737,15 @@ export default function SearchPage() {
                 </div>
               </label>
               <label>
-                <span>Návrat do</span>
+                <span>{t("sFormReturn")}</span>
                 <div className="public-search-input">
                   <CalendarDays size={18} aria-hidden="true" />
                   <input
                     type="date"
                     min={dateStart || undefined}
                     value={dateEnd}
+                    aria-invalid={!!dateError}
+                    aria-describedby={dateError ? "search-date-error" : undefined}
                     onChange={(event) => {
                       setDateEnd(event.target.value);
                       setValidationError(null);
@@ -618,7 +754,7 @@ export default function SearchPage() {
                 </div>
               </label>
               <label>
-                <span>Doprava</span>
+                <span>{t("sFormTransport")}</span>
                 <div className="public-search-input">
                   <Plane size={18} aria-hidden="true" />
                   <select
@@ -628,7 +764,7 @@ export default function SearchPage() {
                       setTransport(event.target.value);
                     }}
                   >
-                    <option value="">Nerozhoduje</option>
+                    <option value="">{t("sFormTransportAny")}</option>
                     {TRANSPORT_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
@@ -636,11 +772,11 @@ export default function SearchPage() {
                 </div>
               </label>
               <label>
-                <span>Cestující</span>
+                <span>{t("sFormPeople")}</span>
                 <div className="public-search-input guests-picker">
                   <div className="guests-stepper">
                     <div className="guests-stepper__row">
-                      <span>Dospělí</span>
+                      <span>{t("sFormAdults")}</span>
                       <div className="stepper">
                         <button type="button" onClick={() => setAdults((a) => Math.max(1, a - 1))}>−</button>
                         <span>{adults}</span>
@@ -648,7 +784,7 @@ export default function SearchPage() {
                       </div>
                     </div>
                     <div className="guests-stepper__row">
-                      <span>Děti</span>
+                      <span>{t("sFormChildren")}</span>
                       <div className="stepper">
                         <button type="button" onClick={() => setChildren((c) => Math.max(0, c - 1))}>−</button>
                         <span>{children}</span>
@@ -664,14 +800,22 @@ export default function SearchPage() {
                 className="search-panel-toggle mobile-only"
                 onClick={() => setHeroExpanded((v) => !v)}
               >
-                {heroExpanded ? "Méně možností ▲" : "Termín a doprava ▼"}
+                {heroExpanded ? t("sFormLess") : t("sFormMore")}
               </button>
-              <button className="public-search-submit" type="submit">
+              <button className="public-search-submit" type="submit" disabled={!!dateError} aria-disabled={!!dateError}>
                 <Search size={18} aria-hidden="true" />
-                Vyhledat
+                {t("sFormSearch")}
               </button>
             </form>
-            {validationError && <p className="search-validation">{validationError}</p>}
+            {(dateError || validationError) && (
+              <p
+                id="search-date-error"
+                role="alert"
+                className="search-validation"
+              >
+                {dateError ?? validationError}
+              </p>
+            )}
           </div>
         </section>
 
@@ -679,19 +823,19 @@ export default function SearchPage() {
           <div className="container trust-bar__inner">
             <div className="trust-item">
               <span className="trust-icon">✓</span>
-              <span>Ověřený partner cestovních kanceláří</span>
+              <span>{t("sTrustVerified")}</span>
             </div>
             <div className="trust-item">
               <span className="trust-icon">✓</span>
-              <span>Pojištění vkladu zákazníka</span>
+              <span>{t("sTrustInsured")}</span>
             </div>
             <div className="trust-item">
               <span className="trust-icon">✓</span>
-              <span>Bez poplatků za poptávku</span>
+              <span>{t("sTrustNoFees")}</span>
             </div>
             <div className="trust-item">
               <span className="trust-icon">✓</span>
-              <span>Osobní přístup &amp; okamžitá odezva</span>
+              <span>{t("sTrustPersonal")}</span>
             </div>
           </div>
         </div>
@@ -699,7 +843,7 @@ export default function SearchPage() {
         {!hasActiveSearch && popularDestinations.length > 0 && (
           <section className="popular-destinations">
             <div className="container">
-              <h2 className="popular-destinations__title">Oblíbené destinace</h2>
+              <h2 className="popular-destinations__title">{t("sPopularTitle")}</h2>
               <div className="popular-destinations__scroll">
                 {popularDestinations.map((dest) => (
                   <button
@@ -726,36 +870,56 @@ export default function SearchPage() {
           </section>
         )}
 
-        <section className="search-results-section">
+        <section className="search-results-section" ref={resultsSectionRef}>
           <div className="container search-results-layout">
             <aside className="search-sidebar">
               <div className="search-filter-block">
-                <h2>Destinace</h2>
-                <div className="search-region-list">
-                  <button
-                    type="button"
-                    className={!activeDestinationSlug ? "is-active" : ""}
-                    onClick={() => updateParams({ destinationSlug: null, page: 1 })}
-                  >
-                    Všechny destinace
-                  </button>
-                  {destinations.map((destination) => (
-                    <button
-                      key={destination.slug}
-                      type="button"
-                      className={activeDestinationSlug === destination.slug ? "is-active" : ""}
-                      onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}
-                    >
-                      {destination.czechName}
-                      {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+                <h2>{t("sFilterDestinations")}</h2>
+                {destinationsState.status === "loading" && (
+                  <div className="search-region-list search-region-list--loading" aria-busy="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="skeleton-line" style={{ height: 24, margin: "6px 0" }} />
+                    ))}
+                  </div>
+                )}
+                {destinationsState.status === "error" && (
+                  <div role="alert" className="search-error" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <span>{destinationsState.message}</span>
+                    <button type="button" onClick={loadDestinations} style={{ alignSelf: "flex-start", textDecoration: "underline", background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}>
+                      {t("sFilterRetry")}
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
+                {destinationsState.status === "ready" && destinationsState.items.length === 0 && (
+                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>{t("sFilterNoDestinations")}</p>
+                )}
+                {destinationsState.status === "ready" && destinationsState.items.length > 0 && (
+                  <div className="search-region-list">
+                    <button
+                      type="button"
+                      className={!activeDestinationSlug ? "is-active" : ""}
+                      onClick={() => updateParams({ destinationSlug: null, page: 1 })}
+                    >
+                      {t("sFilterAllDestinations")}
+                    </button>
+                    {destinationsState.items.map((destination) => (
+                      <button
+                        key={destination.slug}
+                        type="button"
+                        className={activeDestinationSlug === destination.slug ? "is-active" : ""}
+                        onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}
+                      >
+                        {destination.czechName}
+                        {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {result && (
                 <div className="search-filter-block">
-                  <h2>Cena</h2>
+                  <h2>{t("sFilterPrice")}</h2>
                   <PriceRangeSlider
                     min={priceRange.min}
                     max={priceRange.max}
@@ -767,7 +931,7 @@ export default function SearchPage() {
               )}
 
               <div className="search-filter-block">
-                <h2>Délka pobytu</h2>
+                <h2>{t("sFilterNights")}</h2>
                 <select
                   className="filter-select"
                   value={activeNights}
@@ -780,7 +944,7 @@ export default function SearchPage() {
               </div>
 
               <div className="search-filter-block">
-                <h2>Hodnocení hotelu</h2>
+                <h2>{t("sFilterStars")}</h2>
                 <div className="filter-btn-list">
                   {(["" , "3", "4", "5"] as const).map((v) => (
                     <button
@@ -789,20 +953,20 @@ export default function SearchPage() {
                       className={activeStars === v ? "is-active" : ""}
                       onClick={() => updateParams({ stars: v, page: 1 })}
                     >
-                      {v === "" ? "Vše" : "★".repeat(Number(v))}
+                      {v === "" ? t("sFilterAll") : "★".repeat(Number(v))}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="search-filter-block">
-                <h2>Strava</h2>
+                <h2>{t("sFilterBoard")}</h2>
                 <div className="filter-btn-list">
                   <button
                     type="button"
                     className={!activeBoard ? "is-active" : ""}
                     onClick={() => updateParams({ board: null, page: 1 })}
-                  >Vše</button>
+                  >{t("sFilterAll")}</button>
                   {BOARD_OPTIONS.map((o) => (
                     <button
                       key={o.value}
@@ -818,28 +982,34 @@ export default function SearchPage() {
 
               {favorites.length > 0 && (
                 <div className="search-filter-block">
-                  <h2>Uložené</h2>
+                  <h2>{t("sFilterSaved")}</h2>
                   <button
                     type="button"
                     className={`filter-btn-list__btn${showFavoritesOnly ? " is-active" : ""}`}
-                    onClick={() => setShowFavoritesOnly((v) => !v)}
+                    onClick={() => {
+                      setShowFavoritesOnly((v) => {
+                        const next = !v;
+                        if (next) updateParams({ page: 1 });
+                        return next;
+                      });
+                    }}
                   >
                     <Heart size={14} aria-hidden="true" />
-                    {favorites.length} uložených
+                    {favorites.length} {t("sFilterSavedCount")}
                   </button>
                 </div>
               )}
 
               <button className="search-reset" type="button" onClick={resetFilters}>
                 <RotateCcw size={16} aria-hidden="true" />
-                Reset filtrů
+                {t("sFilterReset")}
               </button>
 
               <div className="sidebar-contact-cta">
-                <p>Nenašli jste co hledáte?</p>
+                <p>{t("sSidebarContactPrompt")}</p>
                 <a href="tel:+420721163860" className="sidebar-contact-phone">📞 +420 721 163 860</a>
                 <a href="mailto:info@skytravel.cz" className="sidebar-contact-email">✉ info@skytravel.cz</a>
-                <p className="sidebar-contact-note">Poradíme vám osobně — zdarma.</p>
+                <p className="sidebar-contact-note">{t("sSidebarContactNote")}</p>
               </div>
             </aside>
 
@@ -847,34 +1017,52 @@ export default function SearchPage() {
               <div className="search-results-toolbar">
                 <div>
                   <h2>{totalText}</h2>
-                  <p>Všichni partneři</p>
+                  <p>{t("sAllPartners")}</p>
                   {result && result.filtered !== result.total && (
                     <p className="results-sub">
-                      Zobrazeno {displayedTours.length.toLocaleString("cs-CZ")} z {result.total.toLocaleString("cs-CZ")} celkem
+                      {t("sStateShown")} {displayedTours.length.toLocaleString("cs-CZ")} {t("sStateOf")} {result.total.toLocaleString("cs-CZ")} {t("sTotalSuffix")}
                     </p>
                   )}
                 </div>
                 <div className="search-sort-actions">
                   <button type="button" className={sortBy === "price" ? "is-active" : ""} onClick={() => toggleSort("price")}>
-                    Cena {sortBy === "price" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
+                    {t("sSortPrice")} {sortBy === "price" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
                   </button>
                   <button type="button" className={sortBy === "date" ? "is-active" : ""} onClick={() => toggleSort("date")}>
-                    Datum {sortBy === "date" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
+                    {t("sSortDate")} {sortBy === "date" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
                   </button>
                   <div className="view-toggle">
-                    <button type="button" aria-label="Mřížka" className={viewMode === "grid" ? "is-active" : ""} onClick={() => setView("grid")}>
+                    <button type="button" aria-label={t("sViewGrid")} className={viewMode === "grid" ? "is-active" : ""} onClick={() => setView("grid")}>
                       <LayoutGrid size={16} aria-hidden="true" />
                     </button>
-                    <button type="button" aria-label="Seznam" className={viewMode === "list" ? "is-active" : ""} onClick={() => setView("list")}>
+                    <button type="button" aria-label={t("sViewList")} className={viewMode === "list" ? "is-active" : ""} onClick={() => setView("list")}>
                       <LayoutList size={16} aria-hidden="true" />
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    className="search-share-btn"
+                    onClick={handleShare}
+                    aria-label={t("sShareLabel")}
+                    title={t("sShareLabel")}
+                  >
+                    <Share2 size={16} aria-hidden="true" />
+                  </button>
+                  {shareConfirmation && (
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      className={`search-share-pill search-share-pill--${shareConfirmation}`}
+                    >
+                      {shareConfirmation === "copied" ? t("sShareCopied") : t("sShareFailed")}
+                    </span>
+                  )}
 
                 </div>
               </div>
 
               {error && <div className="search-error">{error}</div>}
-              {resultsLoading && (
+              {resultsLoading && !result && (
                 <div className="public-tour-grid">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="skeleton-card">
@@ -891,23 +1079,23 @@ export default function SearchPage() {
               )}
               {!resultsLoading && !error && !hasActiveSearch && (
                 <div className="search-empty">
-                  <h3>Začněte vyhledáváním</h3>
-                  <p>Zadejte destinaci, termín nebo vyberte oblast a potom spusťte vyhledávání.</p>
+                  <h3>{t("sStartTitle")}</h3>
+                  <p>{t("sStartBody")}</p>
                 </div>
               )}
               {!resultsLoading && !error && result?.items.length === 0 && (
                 <div className="search-empty search-empty--results">
                   <div className="search-empty__icon">🔍</div>
-                  <h3>Žádné nabídky nenalezeny</h3>
-                  <p>Pro zadané filtry jsme nic nenašli. Zkuste:</p>
+                  <h3>{t("sNoResultsTitle")}</h3>
+                  <p>{t("sNoResultsBody")}</p>
                   <ul className="search-empty__tips">
                     <li>
-                      <button type="button" onClick={resetFilters}>Zrušit všechny filtry</button>
+                      <button type="button" onClick={resetFilters}>{t("sNoResultsTipReset")}</button>
                     </li>
-                    <li>Rozšířit datum odjezdu o ±1–2 týdny</li>
-                    <li>Vybrat jiný cílový region v záložce Oblast</li>
+                    <li>{t("sNoResultsTipDates")}</li>
+                    <li>{t("sNoResultsTipRegion")}</li>
                     <li>
-                      Nebo nás <a href="tel:+420721163860">zavolejte</a> — poradíme osobně
+                      {t("sNoResultsTipCallPre")} <a href="tel:+420721163860">{t("sNoResultsTipCallLink")}</a> {t("sNoResultsTipCallPost")}
                     </li>
                   </ul>
                 </div>
@@ -920,7 +1108,7 @@ export default function SearchPage() {
                       key={chip.label}
                       type="button"
                       className="active-chip"
-                      onClick={() => updateParams({ ...chip.clear, page: 1 })}
+                      onClick={chip.onClear}
                     >
                       {chip.label} ✕
                     </button>
@@ -928,24 +1116,30 @@ export default function SearchPage() {
                 </div>
               )}
 
-              <div className="preset-pills">
-                {PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    className="preset-pill"
-                    onClick={() => updateParams({ ...preset.params, page: 1 })}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
+              {!hasActiveSearch && (
+                <div className="preset-pills">
+                  {PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="preset-pill"
+                      onClick={() => updateParams({ ...preset.params, page: 1 })}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <div className={viewMode === "grid" ? "public-tour-grid" : "public-tour-list"}>
-                {displayedTours.map((tour) => {
+              <div
+                className={viewMode === "grid" ? "public-tour-grid" : "public-tour-list"}
+                aria-busy={resultsLoading}
+                style={resultsLoading && result ? { opacity: 0.6, pointerEvents: "none", position: "relative" } : undefined}
+              >
+                {(isMobile && !showFavoritesOnly ? applyLocalTourFilters(accumulatedItems, true) : displayedTours).map((tour) => {
                   const tourId = `${tour.source}-${tour.externalId}`;
                   return (
-                    <PublicTourCard
+                    <PublicTourCard t={t}
                       key={tourId}
                       tour={tour}
                       viewMode={viewMode}
@@ -956,21 +1150,39 @@ export default function SearchPage() {
                   );
                 })}
               </div>
+              {resultsLoading && result && (
+                <p style={{ textAlign: "center", color: "#475569", marginTop: 12 }} aria-live="polite">
+                  {t("sStateUpdating")}
+                </p>
+              )}
 
-              {result && result.totalPages > 1 && (
-                <div className="search-pagination">
-                  <button type="button" onClick={() => pageTo(page - 1)} disabled={page <= 1}>
-                    <ArrowLeft size={16} aria-hidden="true" />
-                    Předchozí
+              {isMobile && !showFavoritesOnly && result && page < result.totalPages && (
+                <div className="mobile-load-more">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => updateParams({ page: page + 1 })}
+                    disabled={resultsLoading}
+                  >
+                    {resultsLoading ? t("sLoadingMore") : t("sLoadMore")}
                   </button>
-                  <span>Strana {page} z {result.totalPages}</span>
-                  <button type="button" onClick={() => pageTo(page + 1)} disabled={page >= result.totalPages}>
-                    Další
+                </div>
+              )}
+
+              {!isMobile && !showFavoritesOnly && result && result.totalPages > 1 && (
+                <div className="search-pagination">
+                  <button type="button" onClick={() => pageTo(page - 1)} disabled={page <= 1 || resultsLoading}>
+                    <ArrowLeft size={16} aria-hidden="true" />
+                    {t("sPagePrev")}
+                  </button>
+                  <span>{t("sPageLabel")} {page} {t("sPageOf")} {result.totalPages}</span>
+                  <button type="button" onClick={() => pageTo(page + 1)} disabled={page >= result.totalPages || resultsLoading}>
+                    {t("sPageNext")}
                     <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               )}
-              {result && result.totalPages > 1 && result.totalPages <= 10 && (
+              {!isMobile && !showFavoritesOnly && result && result.totalPages > 1 && result.totalPages <= 10 && (
                 <div className="pagination-pills">
                   {Array.from({ length: result.totalPages }, (_, i) => i + 1).map((p) => (
                     <button
@@ -978,6 +1190,7 @@ export default function SearchPage() {
                       type="button"
                       className={p === page ? "is-active" : ""}
                       onClick={() => pageTo(p)}
+                      disabled={resultsLoading}
                     >
                       {p}
                     </button>
@@ -990,7 +1203,7 @@ export default function SearchPage() {
 
         <div className="mobile-filter-fab mobile-only">
           <button type="button" onClick={() => setMobileFiltersOpen(true)}>
-            ⚙ Filtrovat
+            {t("sFilterFab")}
             {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length > 0 && (
               <span className="mobile-filter-fab__count">
                 {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length}
@@ -1002,50 +1215,67 @@ export default function SearchPage() {
 
       {mobileFiltersOpen && (
         <>
-          <div className="mobile-filter-drawer" role="dialog" aria-modal="true" aria-label="Filtry">
+          <div className="mobile-filter-drawer" role="dialog" aria-modal="true" aria-label={t("sDrawerTitle")}>
             <div className="mobile-filter-drawer__header">
-              <h2>Filtry</h2>
-              <button type="button" onClick={() => setMobileFiltersOpen(false)} aria-label="Zavřít">✕</button>
+              <h2>{t("sDrawerTitle")}</h2>
+              <button type="button" onClick={() => setMobileFiltersOpen(false)} aria-label={t("sDrawerClose")}>✕</button>
             </div>
             <div className="mobile-filter-drawer__body">
               <div className="search-filter-block">
-                <h2>Destinace</h2>
-                <div className="search-region-list">
-                  <button type="button" className={!activeDestinationSlug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: null, page: 1 })}>Všechny destinace</button>
-                  {destinations.map((destination) => (
-                    <button key={destination.slug} type="button" className={activeDestinationSlug === destination.slug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}>
-                      {destination.czechName}
-                      {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+                <h2>{t("sFilterDestinations")}</h2>
+                {destinationsState.status === "loading" && (
+                  <div className="search-region-list search-region-list--loading" aria-busy="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="skeleton-line" style={{ height: 24, margin: "6px 0" }} />
+                    ))}
+                  </div>
+                )}
+                {destinationsState.status === "error" && (
+                  <div role="alert" className="search-error" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <span>{destinationsState.message}</span>
+                    <button type="button" onClick={loadDestinations} style={{ alignSelf: "flex-start", textDecoration: "underline", background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}>
+                      {t("sFilterRetry")}
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
+                {destinationsState.status === "ready" && destinationsState.items.length > 0 && (
+                  <div className="search-region-list">
+                    <button type="button" className={!activeDestinationSlug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: null, page: 1 })}>{t("sFilterAllDestinations")}</button>
+                    {destinationsState.items.map((destination) => (
+                      <button key={destination.slug} type="button" className={activeDestinationSlug === destination.slug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}>
+                        {destination.czechName}
+                        {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {result && (
                 <div className="search-filter-block">
-                  <h2>Cena</h2>
+                  <h2>{t("sFilterPrice")}</h2>
                   <PriceRangeSlider min={priceRange.min} max={priceRange.max} valueMin={priceMin} valueMax={priceMax} onChange={(min, max) => updateParams({ priceMin: min, priceMax: max, page: 1 })} />
                 </div>
               )}
               <div className="search-filter-block">
-                <h2>Délka pobytu</h2>
+                <h2>{t("sFilterNights")}</h2>
                 <select className="filter-select" value={activeNights} onChange={(e) => updateParams({ nights: e.target.value, page: 1 })}>
                   {NIGHTS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div className="search-filter-block">
-                <h2>Hodnocení hotelu</h2>
+                <h2>{t("sFilterStars")}</h2>
                 <div className="filter-btn-list">
                   {(["", "3", "4", "5"] as const).map((v) => (
                     <button key={v} type="button" className={activeStars === v ? "is-active" : ""} onClick={() => updateParams({ stars: v, page: 1 })}>
-                      {v === "" ? "Vše" : "★".repeat(Number(v))}
+                      {v === "" ? t("sFilterAll") : "★".repeat(Number(v))}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="search-filter-block">
-                <h2>Strava</h2>
+                <h2>{t("sFilterBoard")}</h2>
                 <div className="filter-btn-list">
-                  <button type="button" className={!activeBoard ? "is-active" : ""} onClick={() => updateParams({ board: null, page: 1 })}>Vše</button>
+                  <button type="button" className={!activeBoard ? "is-active" : ""} onClick={() => updateParams({ board: null, page: 1 })}>{t("sFilterAll")}</button>
                   {BOARD_OPTIONS.map((o) => (
                     <button key={o.value} type="button" className={activeBoard === o.value ? "is-active" : ""} onClick={() => updateParams({ board: o.value, page: 1 })}>{o.label}</button>
                   ))}
@@ -1053,21 +1283,27 @@ export default function SearchPage() {
               </div>
               {favorites.length > 0 && (
                 <div className="search-filter-block">
-                  <h2>Uložené</h2>
-                  <button type="button" className={`filter-btn-list__btn${showFavoritesOnly ? " is-active" : ""}`} onClick={() => setShowFavoritesOnly((v) => !v)}>
+                  <h2>{t("sFilterSaved")}</h2>
+                  <button type="button" className={`filter-btn-list__btn${showFavoritesOnly ? " is-active" : ""}`} onClick={() => {
+                    setShowFavoritesOnly((v) => {
+                      const next = !v;
+                      if (next) updateParams({ page: 1 });
+                      return next;
+                    });
+                  }}>
                     <Heart size={14} aria-hidden="true" />
-                    {favorites.length} uložených
+                    {favorites.length} {t("sFilterSavedCount")}
                   </button>
                 </div>
               )}
               <button className="search-reset" type="button" onClick={() => { resetFilters(); setMobileFiltersOpen(false); }}>
                 <RotateCcw size={16} aria-hidden="true" />
-                Reset filtrů
+                {t("sFilterReset")}
               </button>
             </div>
             <div className="mobile-filter-drawer__footer">
               <button type="button" className="btn-primary" onClick={() => setMobileFiltersOpen(false)}>
-                Zobrazit {result?.filtered != null ? result.filtered.toLocaleString("cs-CZ") : ""} nabídek
+                {t("sDrawerApplyPrefix")} {result?.filtered != null ? result.filtered.toLocaleString("cs-CZ") : ""} {t("sStickyOffers")}
               </button>
             </div>
           </div>
@@ -1077,7 +1313,7 @@ export default function SearchPage() {
 
       <LeadPopup {...leadPopup} prefilledQuery={activeQuery || undefined} prefilledDateStart={activeDateStart || undefined} />
       {detailTour && (
-        <ProviderTourModal
+        <TourDetailModal
           tour={detailTour}
           providerLabel={providerLabels[detailTour.source] ?? detailTour.source}
           offers={detailTour.offerGroupKey && offerGroupItems[detailTour.offerGroupKey] ? offerGroupItems[detailTour.offerGroupKey] : [detailTour]}
@@ -1091,12 +1327,14 @@ export default function SearchPage() {
 }
 
 function PublicTourCard({
+  t,
   tour,
   viewMode,
   isFavorite,
   onToggleFavorite,
   onOpenDetail,
 }: {
+  t: (key: TranslationKey) => string;
   tour: UnifiedTour;
   viewMode: "grid" | "list";
   isFavorite: boolean;
@@ -1114,12 +1352,20 @@ function PublicTourCard({
     onOpenDetail();
   }
 
+  const imageSrc = tour.image || getTourFallbackImage(tour.destination);
+  const srcSet = buildSrcSet(imageSrc);
+
   const imageEl = (
     <div className="public-tour-card__image">
       <img
-        src={tour.image || getTourFallbackImage(tour.destination)}
+        src={imageSrc}
+        srcSet={srcSet}
+        sizes={srcSet ? "(max-width: 768px) 100vw, 33vw" : undefined}
         alt={tour.title}
         loading="lazy"
+        decoding="async"
+        width={640}
+        height={400}
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
         }}
@@ -1127,7 +1373,7 @@ function PublicTourCard({
       <button
         type="button"
         className={`card-heart${isFavorite ? " is-saved" : ""}`}
-        aria-label={isFavorite ? "Odebrat ze záložek" : "Přidat do záložek"}
+        aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
         onClick={(event) => stopCardAction(event, onToggleFavorite)}
       >
         <Heart size={16} aria-hidden="true" />
@@ -1140,10 +1386,10 @@ function PublicTourCard({
       <h3>{tour.title}</h3>
       <p>{tour.destination}</p>
       <div className="public-tour-card__footer">
-        <strong>od {formatPrice(tour.price)}</strong>
+        <strong>{t("from")} {formatPrice(tour.price)}</strong>
         <button type="button" className="btn-detail" onClick={(event) => stopCardAction(event, onOpenDetail)}>
           <Search size={16} aria-hidden="true" />
-          Detail
+          {t("sCardDetail")}
         </button>
       </div>
     </div>
@@ -1156,7 +1402,7 @@ function PublicTourCard({
         {bodyEl}
         <button type="button" className="btn-detail btn-detail--list" onClick={(event) => stopCardAction(event, onOpenDetail)}>
           <Search size={16} aria-hidden="true" />
-          Detail
+          {t("sCardDetail")}
         </button>
       </article>
     );
@@ -1167,217 +1413,5 @@ function PublicTourCard({
       {imageEl}
       {bodyEl}
     </article>
-  );
-}
-
-function ProviderTourModal({
-  tour,
-  providerLabel,
-  offers,
-  loading,
-  error,
-  onClose,
-}: {
-  tour: UnifiedTour;
-  providerLabel: string;
-  offers: UnifiedTour[];
-  loading: boolean;
-  error?: string;
-  onClose: () => void;
-}) {
-  const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [inquiryEmail, setInquiryEmail] = useState("");
-  const [inquiryConsent, setInquiryConsent] = useState(false);
-  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [inquiryError, setInquiryError] = useState("");
-
-  useEffect(() => {
-    setSelectedOfferId(`${tour.source}-${tour.externalId}`);
-    setPhotoIndex(0);
-    setInquiryStatus("idle");
-    setInquiryError("");
-  }, [tour]);
-
-  const sortedOffers = useMemo(
-    () => [...offers].sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime() || left.price - right.price),
-    [offers],
-  );
-  const selectedOffer = sortedOffers.find((offer) => `${offer.source}-${offer.externalId}` === selectedOfferId) ?? sortedOffers[0] ?? tour;
-  const photos = selectedOffer.photos?.length
-    ? selectedOffer.photos
-    : [selectedOffer.image || getTourFallbackImage(selectedOffer.destination)];
-  const nights = selectedOffer.nights ?? Math.round(
-    (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) / 86_400_000,
-  );
-  const stars = starsDisplay(selectedOffer.stars);
-  const hasMultiplePhotos = photos.length > 1;
-
-  function showPreviousPhoto() {
-    if (!hasMultiplePhotos) return;
-    setPhotoIndex((current) => (current - 1 + photos.length) % photos.length);
-  }
-
-  function showNextPhoto() {
-    if (!hasMultiplePhotos) return;
-    setPhotoIndex((current) => (current + 1) % photos.length);
-  }
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-      if (event.key === "ArrowLeft") showPreviousPhoto();
-      if (event.key === "ArrowRight") showNextPhoto();
-    }
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [hasMultiplePhotos, onClose, photos.length]);
-
-  async function submitInquiry(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setInquiryError("");
-    if (!inquiryConsent) {
-      setInquiryError("Potvrďte prosím souhlas se zpracováním údajů.");
-      return;
-    }
-    setInquiryStatus("sending");
-    try {
-      await createInquiry({
-        email: inquiryEmail,
-        destination: `${providerLabel}: ${selectedOffer.title}, ${selectedOffer.destination}, ${fmtDate(selectedOffer.startDate)} - ${fmtDate(selectedOffer.endDate)}, ${formatPrice(selectedOffer.price)}`,
-        gdprConsent: true,
-        source: "provider-tour-modal",
-      });
-      setInquiryStatus("sent");
-    } catch {
-      setInquiryStatus("error");
-      setInquiryError("Poptávku se nepodařilo odeslat. Zkontrolujte e-mail a zkuste to znovu.");
-    }
-  }
-
-  return (
-    <div className="provider-tour-modal" role="dialog" aria-modal="true" aria-label={selectedOffer.title}>
-      <div className="provider-tour-modal__backdrop" onClick={onClose} />
-      <div className="provider-tour-modal__content">
-        <button type="button" className="provider-tour-modal__close" onClick={onClose} aria-label="Zavřít">✕</button>
-        <div className="provider-tour-modal__media">
-          {photos.map((photo, index) => (
-            <img
-              key={`${photo}-${index}`}
-              className={index === photoIndex ? "is-active" : ""}
-              src={photo}
-              alt=""
-              loading="lazy"
-              onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg"; }}
-            />
-          ))}
-          {hasMultiplePhotos && (
-            <>
-              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--prev" onClick={showPreviousPhoto} aria-label="Předchozí fotka">
-                <ArrowLeft size={18} aria-hidden="true" />
-              </button>
-              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--next" onClick={showNextPhoto} aria-label="Další fotka">
-                <ArrowRight size={18} aria-hidden="true" />
-              </button>
-            </>
-          )}
-          {hasMultiplePhotos && (
-            <div className="provider-tour-modal__dots">
-              {photos.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={index === photoIndex ? "is-active" : ""}
-                  aria-label={`Fotka ${index + 1}`}
-                  onClick={() => setPhotoIndex(index)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="provider-tour-modal__body">
-          <div className="provider-tour-modal__heading">
-            <span>{providerLabel}</span>
-            <h2>{selectedOffer.title}</h2>
-            <p>{selectedOffer.destination}</p>
-          </div>
-
-          <div className="provider-tour-modal__facts">
-            <div><span>Termín</span><strong>{fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}</strong></div>
-            <div><span>Délka</span><strong>{Number.isFinite(nights) && nights > 0 ? `${nights} nocí` : "Dle nabídky"}</strong></div>
-            <div><span>Doprava</span><strong>{transportLabel[selectedOffer.transport] ?? (selectedOffer.transport || "Dle nabídky")}</strong></div>
-            <div><span>Strava</span><strong>{boardLabel[selectedOffer.board] ?? (selectedOffer.board || "Dle nabídky")}</strong></div>
-            {stars && <div><span>Hotel</span><strong>{stars}</strong></div>}
-            {selectedOffer.roomType && <div><span>Pokoj</span><strong>{selectedOffer.roomType}</strong></div>}
-            <div className="provider-tour-modal__price"><span>Cena od</span><strong>{formatPrice(selectedOffer.price)}</strong></div>
-          </div>
-
-          {selectedOffer.description && (
-            <p className="provider-tour-modal__description">{selectedOffer.description}</p>
-          )}
-
-          <section className="provider-tour-modal__offers" aria-live="polite">
-            <h3>Dostupné termíny</h3>
-            {loading ? (
-              <p>Načítám termíny…</p>
-            ) : error ? (
-              <p>{error}</p>
-            ) : sortedOffers.length > 0 ? (
-              <label className="provider-tour-modal__date-select">
-                <span className="provider-tour-modal__field-label">Vyberte termín</span>
-                <select value={`${selectedOffer.source}-${selectedOffer.externalId}`} onChange={(event) => setSelectedOfferId(event.target.value)}>
-                  {sortedOffers.map((offer) => {
-                    const offerId = `${offer.source}-${offer.externalId}`;
-                    const offerNights = offer.nights ?? Math.round(
-                      (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
-                    );
-                    return (
-                      <option key={offerId} value={offerId}>
-                        {fmtDate(offer.startDate)} - {fmtDate(offer.endDate)} · {Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} nocí` : "délka dle nabídky"} · {formatPrice(offer.price)}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-            ) : (
-              <p>Žádné termíny pro zadané filtry.</p>
-            )}
-          </section>
-
-          <form className="provider-tour-modal__inquiry" onSubmit={submitInquiry}>
-            <label>
-              <span className="provider-tour-modal__field-label">E-mail pro poptávku</span>
-              <input
-                type="email"
-                value={inquiryEmail}
-                onChange={(event) => setInquiryEmail(event.target.value)}
-                placeholder="vas@email.cz"
-                required
-              />
-            </label>
-            <label className="provider-tour-modal__consent">
-              <input
-                type="checkbox"
-                checked={inquiryConsent}
-                onChange={(event) => setInquiryConsent(event.target.checked)}
-                required
-              />
-              <span className="provider-tour-modal__consent-text">
-                Souhlasím se zpracováním údajů podle <Link to="/gdpr">GDPR</Link>.
-              </span>
-            </label>
-            {inquiryError && <p className="provider-tour-modal__form-error">{inquiryError}</p>}
-            {inquiryStatus === "sent" && <p className="provider-tour-modal__form-success">Poptávka byla odeslána. Ozveme se vám co nejdříve.</p>}
-            <button type="submit" disabled={inquiryStatus === "sending"}>
-              {inquiryStatus === "sending" ? "Odesílám…" : "Poptat zájezd"}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
   );
 }

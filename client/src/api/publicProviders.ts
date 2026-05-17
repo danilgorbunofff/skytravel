@@ -91,11 +91,13 @@ export async function fetchPublicProviderOfferGroup(
   providerId: string,
   offerGroupKey: string,
   filters: UnifiedFilters,
+  signal?: AbortSignal,
 ): Promise<UnifiedTour[]> {
   const params = filtersToParams(filters);
   params.set("offerGroupKey", offerGroupKey);
   const res = await fetch(
     `${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/offer-group?${params}`,
+    { signal },
   );
   await throwIfNotOk(res);
   const data = await res.json();

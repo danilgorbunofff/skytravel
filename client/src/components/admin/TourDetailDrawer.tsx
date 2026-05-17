@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { UnifiedTour } from "../../types/providers";
 import { formatPrice } from "../../utils";
+import { fmtDate, starsDisplay } from "../../lib/formatters";
 
 // ── Labels ────────────────────────────────────────────────────────────────
 const boardLabel: Record<string, string> = {
@@ -19,17 +20,6 @@ const transportLabel: Record<string, string> = {
   train: "🚆 Vlakem",
   car: "🚗 Vlastní",
   boat: "🚢 Lodí",
-};
-
-function starsDisplay(stars: string | undefined): string {
-  const n = parseInt(stars ?? "", 10);
-  if (!n || n < 1 || n > 5) return "";
-  return "★".repeat(n) + "☆".repeat(5 - n);
-}
-
-const fmtDate = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("cs-CZ");
 };
 
 const SOURCE_COLORS: Record<string, string> = {
