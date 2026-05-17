@@ -65,8 +65,8 @@ rm -rf node_modules server/node_modules client/node_modules 2>/dev/null || true
 find . -maxdepth 3 -name "node_modules" -type d -exec rm -rf {} + 2>/dev/null || true
 npm cache clean --force 2>/dev/null || true
 sleep 3
-# Clean install without force (should work now that everything is gone)
-npm ci --legacy-peer-deps 2>&1
+# Use npm install (not ci) for more flexible dependency resolution
+npm install --legacy-peer-deps 2>&1
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
