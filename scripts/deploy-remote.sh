@@ -2,14 +2,6 @@
 set -euo pipefail
 
 # ── Remote deploy script for SkyTravel ────────────────────────────────
-# Connects to the production server via SSH, pulls latest code, builds
-# both server and client, runs DB migrations, and restarts PM2 apps.
-#
-# Usage:
-#   ./scripts/deploy-remote.sh                # uses defaults from env or fallback
-#   SSH_HOST=1.2.3.4 ./scripts/deploy-remote.sh  # override host
-# ──────────────────────────────────────────────────────────────────────
-
 SSH_USER="${SSH_USER:-ubuntu}"
 SSH_HOST="${SSH_HOST:-141.147.40.156}"
 SSH_PORT="${SSH_PORT:-22}"
@@ -41,65 +33,49 @@ echo "╚═══════════════════════�
 echo ""
 
 # shellcheck disable=SC2029
-"${SSH_CMD[@]}" "${SSH_USER}@${SSH_HOST}" bash -s <<REMOTE_SCRIPT
+"${SSH_CMD[@]}" "${SSH_USER}@${SSH_HOST}" bash -s <<'REMOTE_SCRIPT'
 set -euo pipefail
 
+REMOTE_PATH="/home/ubuntu/skytravel"
+cd "$REMOTE_PATH"
+
 echo "▸ Pulling latest code …"
-cd "${REMOTE_PATH}"
 git fetch origin main
 git reset --hard origin/main
 
-# Kill PM2 and all node/esbuild processes to release file locks
 echo "▸ Stopping running services …"
 pm2 kill 2>/dev/null || true
-pkill -9 node 2>/dev/null || true
-pkill -9 esbuild 2>/dev/null || true
+pkill -9 -f "node|esbuild" 2>/dev/null || true
 sleep 5
+
+echo "▸ Cleaning node_modules …"
+rm -rf node_modules client/node_modules server/node_modules
+npm cache clean --force 2>/dev/null || true
 
 echo "▸ Installing dependencies …"
-# Maximum aggressive cleanup for corrupted node_modules
-pkill -9 -f "npm|node|esbuild|yarn" 2>/dev/null || true
-sleep 15
-# Multiple passes of removal to ensure everything is gone
-for i in {1..3}; do
-  rm -rf node_modules server/node_modules client/node_modules 2>/dev/null || true
-  find . -maxdepth 3 -type d -name "node_modules" -exec rm -rf {} + 2>/dev/null || true
-  find . -maxdepth 4 -type f -path "*/node_modules/*" -delete 2>/dev/null || true
-done
-# Clear npm cache multiple times
-npm cache clean --force 2>/dev/null || true
-npm cache verify 2>/dev/null || true
-sleep 5
-# Install with minimal flags to avoid corruption issues
-npm install 2>&1 | grep -E "(added|up to date|packages)" | head -5
-# Explicitly reinstall each workspace to ensure devDependencies
-cd client && npm install 2>&1 | grep -E "(added|up to date|packages)" | head -2 && cd ..
-cd server && npm install 2>&1 | grep -E "(added|up to date|packages)" | head -2 && cd ..
-# Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
-export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
+# Root npm install covers all workspaces. vite is now a root devDep so
+# @vitejs/plugin-react can resolve it from root node_modules.
+npm install --legacy-peer-deps
+export PATH="$REMOTE_PATH/node_modules/.bin:$PATH"
 
 echo "▸ Building server …"
-# Limit tsc heap to avoid OOM kill on low-memory VMs (tsc is very memory-hungry).
-(cd server && ../node_modules/.bin/prisma generate && NODE_OPTIONS="--max-old-space-size=512" ../node_modules/.bin/tsc -p tsconfig.json)
+cd server
+../node_modules/.bin/prisma generate
+NODE_OPTIONS="--max-old-space-size=512" ../node_modules/.bin/tsc -p tsconfig.json
+cd ..
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
-# Ensure vite is available in root node_modules for @vitejs/plugin-react to find it
-npm install vite@8.0.8 --save-dev --legacy-peer-deps 2>&1 | tail -2
-export NODE_PATH="$(pwd)/node_modules:\${NODE_PATH:-}"
-echo "  Running build from client directory…"
-(cd client && npm run build)
+npm --workspace client run build
 
 echo "▸ Restarting PM2 apps …"
 pm2 start ecosystem.config.cjs
 pm2 save
 
-echo "▸ Running Alexandria feed refresh …"
-cd server
-npx tsx scripts/refresh-alexandria.ts || echo "  ⚠ Alexandria refresh failed (non-critical)"
-cd ..
+echo "▸ Refreshing Alexandria feed …"
+(cd server && npx tsx scripts/refresh-alexandria.ts) || echo "  ⚠ Alexandria refresh failed (non-critical)"
 
 echo ""
 echo "✅ Deploy complete!"
