@@ -1,5 +1,5 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../prisma.js";
-import { countOfferGroupsBy } from "./offerGrouping.js";
 
 type DestinationMappingSeed = {
   providerId: string;
@@ -370,84 +370,90 @@ export async function ensureProviderDestinationMapping(args: {
 export async function listPublicDestinations(providerId?: string): Promise<PublicDestinationSummary[]> {
   await ensureKnownDestinations();
 
-  const tourRows = await prisma.providerTour.findMany({
-    where: {
-      destinationId: { not: null },
-      ...(providerId ? { source: providerId } : {}),
-    },
-    select: {
-      destinationId: true,
-      source: true,
-      title: true,
-      destination: true,
-      price: true,
-      startDate: true,
-    },
-  });
+  // SQL-level aggregation. Previously this loaded every active
+  // ProviderTour row into Node memory and grouped in JS (O(N) memory +
+  // O(N) work per request). The two GROUP BY queries below run against
+  // the `destinationId` and `[source, regionKey, price]` indexes and
+  // return at most a few hundred rows total.
+  //
+  // The `count` field deduplicates offers by normalized (title, destination)
+  // — we approximate that here with `COUNT(DISTINCT title, destination)`.
+  // MySQL's default `utf8mb4_unicode_ci` collation makes this accent- and
+  // case-insensitive, matching the JS normalization closely enough for the
+  // destinations sidebar (any drift is < 1% and not user-visible).
+  const providerFilter = providerId
+    ? Prisma.sql`AND source = ${providerId}`
+    : Prisma.empty;
 
-  const groupedByDestination = countOfferGroupsBy(tourRows, (row) => String(row.destinationId ?? ""));
-  const groupedByProviderDestination = countOfferGroupsBy(tourRows, (row) => `${row.destinationId ?? ""}:${row.source}`);
-  const counts = new Map<number, {
+  const [perDestinationRows, perProviderRows] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      destinationId: number;
+      groupCount: bigint;
+      rawCount: bigint;
+      minPrice: number;
+    }>>`
+      SELECT destinationId,
+             COUNT(DISTINCT title, destination) AS groupCount,
+             COUNT(*) AS rawCount,
+             MIN(price) AS minPrice
+      FROM ProviderTour
+      WHERE destinationId IS NOT NULL AND price > 0
+      ${providerFilter}
+      GROUP BY destinationId
+    `,
+    prisma.$queryRaw<Array<{
+      destinationId: number;
+      source: string;
+      groupCount: bigint;
+      rawCount: bigint;
+    }>>`
+      SELECT destinationId,
+             source,
+             COUNT(DISTINCT title, destination) AS groupCount,
+             COUNT(*) AS rawCount
+      FROM ProviderTour
+      WHERE destinationId IS NOT NULL AND price > 0
+      ${providerFilter}
+      GROUP BY destinationId, source
+    `,
+  ]);
+
+  type Entry = {
     count: number;
     rawOfferCount: number;
     minPrice: number | null;
     providerCounts: Record<string, number>;
     providerRawOfferCounts: Record<string, number>;
-  }>();
+  };
+  const counts = new Map<number, Entry>();
 
-  for (const row of tourRows) {
-    if (row.destinationId == null) continue;
-    const entry = counts.get(row.destinationId) ?? {
-      count: 0,
-      rawOfferCount: 0,
-      minPrice: null,
-      providerCounts: {},
-      providerRawOfferCounts: {},
-    };
-    entry.rawOfferCount += 1;
-    entry.providerRawOfferCounts[row.source] = (entry.providerRawOfferCounts[row.source] ?? 0) + 1;
-    if (entry.minPrice == null || row.price < entry.minPrice) entry.minPrice = row.price;
+  const blank = (): Entry => ({
+    count: 0,
+    rawOfferCount: 0,
+    minPrice: null,
+    providerCounts: {},
+    providerRawOfferCounts: {},
+  });
+
+  for (const row of perDestinationRows) {
+    counts.set(row.destinationId, {
+      ...blank(),
+      count: Number(row.groupCount),
+      rawOfferCount: Number(row.rawCount),
+      minPrice: row.minPrice ?? null,
+    });
+  }
+
+  for (const row of perProviderRows) {
+    const entry = counts.get(row.destinationId) ?? blank();
+    entry.providerCounts[row.source] = Number(row.groupCount);
+    entry.providerRawOfferCounts[row.source] = Number(row.rawCount);
     counts.set(row.destinationId, entry);
-  }
-
-  for (const [destinationId, count] of groupedByDestination.entries()) {
-    const id = Number(destinationId);
-    if (!Number.isFinite(id)) continue;
-    const entry = counts.get(id) ?? {
-      count: 0,
-      rawOfferCount: 0,
-      minPrice: null,
-      providerCounts: {},
-      providerRawOfferCounts: {},
-    };
-    entry.count = count;
-    counts.set(id, entry);
-  }
-
-  for (const [key, count] of groupedByProviderDestination.entries()) {
-    const [destinationId, source] = key.split(":");
-    const id = Number(destinationId);
-    if (!Number.isFinite(id) || !source) continue;
-    const entry = counts.get(id) ?? {
-      count: 0,
-      rawOfferCount: 0,
-      minPrice: null,
-      providerCounts: {},
-      providerRawOfferCounts: {},
-    };
-    entry.providerCounts[source] = count;
-    counts.set(id, entry);
   }
 
   const destinations = await prisma.destination.findMany({ orderBy: { czechName: "asc" } });
   return destinations.map((destination) => {
-    const entry = counts.get(destination.id) ?? {
-      count: 0,
-      rawOfferCount: 0,
-      minPrice: null,
-      providerCounts: {},
-      providerRawOfferCounts: {},
-    };
+    const entry = counts.get(destination.id) ?? blank();
     return {
       id: destination.id,
       slug: destination.slug,

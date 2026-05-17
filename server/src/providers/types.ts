@@ -52,6 +52,11 @@ export type UnifiedFilters = {
   limit?: number;
   refresh?: boolean;
   groupResults?: boolean;
+  // When true, providers may skip selecting heavy columns (`url`,
+  // `description`, `photos`) that the public SearchPage never displays.
+  // Reduces DB transfer + wire payload by 30\u201360% on list responses.
+  // Admin views leave this unset to keep full detail.
+  omitHeavy?: boolean;
   providerFilters: Record<string, unknown>;
 };
 

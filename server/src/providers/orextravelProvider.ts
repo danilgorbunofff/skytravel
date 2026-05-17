@@ -57,6 +57,23 @@ function photosFromJson(value: unknown, image: string): string[] {
   return photos.length > 0 ? photos : image ? [image] : [];
 }
 
+// Prisma `select` for ProviderTour list/grouped queries. When `omitHeavy`
+// is true, skips the large columns (`url`, `description`, `photos`) that
+// the public SearchPage never displays. Saves DB read time and wire bytes.
+function buildTourSelect(omitHeavy: boolean) {
+  return {
+    id: true, externalId: true, source: true, regionKey: true,
+    destination: true, title: true, price: true, originalPrice: true,
+    startDate: true, endDate: true, transport: true, image: true,
+    stars: true, board: true, nights: true, adults: true,
+    children: true, roomType: true, currency: true, offersCount: true,
+    syncedAt: true, createdAt: true,
+    ...(omitHeavy
+      ? {}
+      : { url: true, description: true, photos: true }),
+  } as const;
+}
+
 export class OrextravelProvider implements TourProvider {
   readonly id = "orextravel";
   readonly label = "Orextravel";
@@ -217,10 +234,11 @@ export class OrextravelProvider implements TourProvider {
     const limit = Math.min(1_000, Math.max(1, filters.limit ?? 50));
     const board = typeof filters.board === "string" ? filters.board : typeof pf.board === "string" ? pf.board : "";
     const stars = typeof filters.stars === "string" ? filters.stars : typeof pf.stars === "string" ? pf.stars : "";
+    const transport = typeof pf.transport === "string" ? pf.transport : "";
     const nightsRange = parseNightsRange(filters.nights);
 
     // Build Prisma where clause
-    const where: any = { source: this.id };
+    const where: any = { source: this.id, price: { gt: 0 } };
 
     // Region filtering: if specific route selected, use exact key;
     // otherwise match any region for this provider
@@ -243,6 +261,7 @@ export class OrextravelProvider implements TourProvider {
     }
 
     if (board) where.board = board;
+    if (transport) where.transport = transport;
     if (stars) {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {
@@ -286,9 +305,10 @@ export class OrextravelProvider implements TourProvider {
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
     const { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange } = this.buildTourQuery(filters);
+    const omitHeavy = filters.omitHeavy === true;
 
     if (filters.groupResults) {
-      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange);
+      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange, omitHeavy);
     }
 
     const orderBy: any =
@@ -309,14 +329,7 @@ export class OrextravelProvider implements TourProvider {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        select: {
-          id: true, externalId: true, source: true, regionKey: true,
-          destination: true, title: true, price: true, originalPrice: true,
-          startDate: true, endDate: true, transport: true, image: true,
-          url: true, stars: true, board: true, nights: true, adults: true,
-          children: true, roomType: true, currency: true, offersCount: true,
-          syncedAt: true, createdAt: true,
-        },
+        select: buildTourSelect(omitHeavy),
       }),
       prisma.providerTour.count({ where }),
       needsSeparateTotal
@@ -373,7 +386,7 @@ export class OrextravelProvider implements TourProvider {
       image: row.image,
       description: row.description ?? null,
       photos: photosFromJson(row.photos, row.image),
-      url: row.url,
+      url: row.url ?? "",
       stars: row.stars,
       board: row.board,
       source: this.id,
@@ -392,12 +405,14 @@ export class OrextravelProvider implements TourProvider {
     page: number,
     limit: number,
     nightsRange: NightsRange,
+    omitHeavy = false,
   ): Promise<ToursResult> {
     const [allFiltered, rawFilteredDb] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy: { price: "asc" },
         take: MAX_GROUPED_TOUR_ROWS,
+        select: buildTourSelect(omitHeavy),
       }),
       prisma.providerTour.count({ where }),
     ]);

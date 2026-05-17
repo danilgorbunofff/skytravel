@@ -105,6 +105,10 @@ model ProviderTour {
   @@index([source, destination(100)])
   @@index([destinationId])
   @@index([source, stateId])
+  @@index([source, transport])
+  @@index([source, board])
+  @@index([source, startDate])
+  @@index([source, stateId, price])
 }
 
 model Destination {

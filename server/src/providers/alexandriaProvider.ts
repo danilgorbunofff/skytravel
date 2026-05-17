@@ -63,6 +63,24 @@ function photosFromJson(value: unknown, image: string): string[] {
   return photos.length > 0 ? photos : image ? [image] : [];
 }
 
+// Prisma `select` for ProviderTour list/grouped queries. When `omitHeavy`
+// is true, skips the large columns (`url` @db.Text, `description` @db.Text,
+// `photos` Json) that the public SearchPage never displays. Saves both DB
+// read time and wire payload.
+function buildTourSelect(omitHeavy: boolean) {
+  return {
+    id: true, externalId: true, source: true, regionKey: true,
+    destination: true, title: true, price: true, originalPrice: true,
+    startDate: true, endDate: true, transport: true, image: true,
+    stars: true, board: true, nights: true, adults: true,
+    children: true, roomType: true, currency: true, offersCount: true,
+    syncedAt: true, createdAt: true,
+    ...(omitHeavy
+      ? {}
+      : { url: true, description: true, photos: true }),
+  } as const;
+}
+
 export class AlexandriaProvider implements TourProvider {
   readonly id = "alexandria";
   readonly label = "Alexandria";
@@ -264,14 +282,15 @@ export class AlexandriaProvider implements TourProvider {
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
     const { where, sortBy, sortDir, page, limit, groupBy, nightsRange } = this.buildTourQuery(filters);
+    const omitHeavy = filters.omitHeavy === true;
 
     if (filters.groupResults) {
-      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange);
+      return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange, omitHeavy);
     }
 
     // Destination grouping — uses in-memory aggregation of DB results
     if (groupBy === "destination") {
-      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit);
+      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit, omitHeavy);
     }
 
     const orderBy: any =
@@ -292,14 +311,7 @@ export class AlexandriaProvider implements TourProvider {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        select: {
-          id: true, externalId: true, source: true, regionKey: true,
-          destination: true, title: true, price: true, originalPrice: true,
-          startDate: true, endDate: true, transport: true, image: true,
-          url: true, stars: true, board: true, nights: true, adults: true,
-          children: true, roomType: true, currency: true, offersCount: true,
-          syncedAt: true, createdAt: true,
-        },
+        select: buildTourSelect(omitHeavy),
       }),
       prisma.providerTour.count({ where }),
       needsSeparateTotal
@@ -335,12 +347,14 @@ export class AlexandriaProvider implements TourProvider {
     sortDir: string,
     page: number,
     limit: number,
+    omitHeavy = false,
   ): Promise<ToursResult> {
     // Get grouped counts + cheapest per destination
     const allFiltered = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
       take: 5_000,   // hard cap — Alexandria rarely exceeds this
+      select: buildTourSelect(omitHeavy),
     });
 
     const counts = new Map<string, number>();
@@ -400,7 +414,7 @@ export class AlexandriaProvider implements TourProvider {
       image: row.image,
       description: row.description ?? null,
       photos: photosFromJson(row.photos, row.image),
-      url: row.url,
+      url: row.url ?? "",
       stars: row.stars,
       board: row.board,
       source: this.id,
@@ -416,12 +430,14 @@ export class AlexandriaProvider implements TourProvider {
     page: number,
     limit: number,
     nightsRange: NightsRange,
+    omitHeavy = false,
   ): Promise<ToursResult> {
     const [allFiltered, rawFilteredDb] = await Promise.all([
       prisma.providerTour.findMany({
         where,
         orderBy: { price: "asc" },
         take: MAX_GROUPED_TOUR_ROWS,
+        select: buildTourSelect(omitHeavy),
       }),
       prisma.providerTour.count({ where }),
     ]);

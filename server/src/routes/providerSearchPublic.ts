@@ -1,7 +1,9 @@
 import { Router, Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { getAllProviders, getProvider } from "../providers/index.js";
-import { getCachedPublicSearchResult, setCachedPublicSearchResult } from "../providers/publicSearchCache.js";
+import {
+  getOrFetchPublicSearchResult,
+} from "../providers/publicSearchCache.js";
 import { getDestinationSearchContext, listPublicDestinations } from "../providers/destinationStore.js";
 import type { FilterFieldDescriptor, ToursResult, UnifiedFilters, UnifiedTour } from "../providers/types.js";
 
@@ -276,74 +278,76 @@ router.get(
     const limit = Math.min(MAX_PUBLIC_LIMIT, Math.max(1, filters.limit ?? 24));
     const perProviderLimit = Math.min(1_000, page * limit);
     const providers = getAllProviders();
-    const cacheKey = `all:tours:${req.url}`;
-    const cached = getCachedPublicSearchResult(cacheKey);
-    if (cached) {
-      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-      res.setHeader("X-Cache", "HIT");
-      res.json(cached);
-      return;
-    }
+    // Normalize key: sort params alphabetically so different orderings of the
+    // same filters share one cache slot (and one single-flight refresh).
+    const sortedParams = new URLSearchParams(req.query as Record<string, string>);
+    sortedParams.sort();
+    const cacheKey = `all:tours:${sortedParams.toString()}`;
 
-    const settled = await Promise.allSettled(
-      providers.map(async (meta) => {
-        const provider = getProvider(meta.id);
-        const providerFilters: Record<string, unknown> = {};
-        if (transport) providerFilters.transport = transport;
+    const { data: result, cache: cacheStatus } = await getOrFetchPublicSearchResult(
+      cacheKey,
+      async () => {
+        const settled = await Promise.allSettled(
+          providers.map(async (meta) => {
+            const provider = getProvider(meta.id);
+            const providerFilters: Record<string, unknown> = {};
+            if (transport) providerFilters.transport = transport;
 
-        const mapping = destinationContext?.mappings.find((item) => item.providerId === meta.id);
-        if (mapping) providerFilters[mapping.providerKey] = mapping.providerValue;
+            const mapping = destinationContext?.mappings.find((item) => item.providerId === meta.id);
+            if (mapping) providerFilters[mapping.providerKey] = mapping.providerValue;
 
-        const providerQuery: UnifiedFilters = {
-          ...filters,
-          q: mapping ? filters.q : (filters.q ?? destinationContext?.destination.czechName),
-          page: 1,
-          limit: perProviderLimit,
-          providerFilters,
-          groupResults: true,
+            const providerQuery: UnifiedFilters = {
+              ...filters,
+              q: mapping ? filters.q : (filters.q ?? destinationContext?.destination.czechName),
+              page: 1,
+              limit: perProviderLimit,
+              providerFilters,
+              groupResults: true,
+              omitHeavy: true,
+            };
+            const result = await provider.fetchTours(providerQuery);
+            return { meta, result };
+          }),
+        );
+
+        const providerErrors: Array<{ providerId: string; message: string }> = [];
+        const successful: Array<{ meta: { id: string; label: string }; result: ToursResult }> = [];
+        for (let index = 0; index < settled.length; index += 1) {
+          const item = settled[index];
+          const meta = providers[index];
+          if (item.status === "fulfilled") {
+            successful.push(item.value);
+          } else {
+            const message = item.reason instanceof Error ? item.reason.message : String(item.reason);
+            providerErrors.push({ providerId: meta.id, message });
+            console.warn(`[PublicSearch] all-provider search failed for ${meta.id}:`, item.reason);
+          }
+        }
+
+        const mergedItems = sortTours(successful.flatMap(({ result }) => result.items), filters.sortBy, filters.sortDir);
+        const filtered = successful.reduce((sum, { result }) => sum + result.filtered, 0);
+        const total = successful.reduce((sum, { result }) => sum + result.total, 0);
+        const start = (page - 1) * limit;
+        const items = mergedItems.slice(start, start + limit);
+        return {
+          total,
+          filtered,
+          rawTotalOffers: sumOptional(successful.map(({ result }) => result.rawTotalOffers)),
+          rawFilteredOffers: sumOptional(successful.map(({ result }) => result.rawFilteredOffers)),
+          uniqueDestinations: new Set(mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ"))).size,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(filtered / limit)),
+          items,
+          degraded: providerErrors.length > 0,
+          providerErrors,
+          providers: successful.map(({ meta, result }) => ({ id: meta.id, label: meta.label, filtered: result.filtered })),
         };
-        const result = await provider.fetchTours(providerQuery);
-        return { meta, result };
-      }),
+      },
     );
 
-    const providerErrors: Array<{ providerId: string; message: string }> = [];
-    const successful: Array<{ meta: { id: string; label: string }; result: ToursResult }> = [];
-    for (let index = 0; index < settled.length; index += 1) {
-      const item = settled[index];
-      const meta = providers[index];
-      if (item.status === "fulfilled") {
-        successful.push(item.value);
-      } else {
-        const message = item.reason instanceof Error ? item.reason.message : String(item.reason);
-        providerErrors.push({ providerId: meta.id, message });
-        console.warn(`[PublicSearch] all-provider search failed for ${meta.id}:`, item.reason);
-      }
-    }
-
-    const mergedItems = sortTours(successful.flatMap(({ result }) => result.items), filters.sortBy, filters.sortDir);
-    const filtered = successful.reduce((sum, { result }) => sum + result.filtered, 0);
-    const total = successful.reduce((sum, { result }) => sum + result.total, 0);
-    const start = (page - 1) * limit;
-    const items = mergedItems.slice(start, start + limit);
-    const result = {
-      total,
-      filtered,
-      rawTotalOffers: sumOptional(successful.map(({ result }) => result.rawTotalOffers)),
-      rawFilteredOffers: sumOptional(successful.map(({ result }) => result.rawFilteredOffers)),
-      uniqueDestinations: new Set(mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ"))).size,
-      page,
-      limit,
-      totalPages: Math.max(1, Math.ceil(filtered / limit)),
-      items,
-      degraded: providerErrors.length > 0,
-      providerErrors,
-      providers: successful.map(({ meta, result }) => ({ id: meta.id, label: meta.label, filtered: result.filtered })),
-    };
-
-    setCachedPublicSearchResult(cacheKey, result);
     res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-    res.setHeader("X-Cache", "MISS");
+    res.setHeader("X-Cache", cacheStatus.toUpperCase());
     res.json(result);
   }),
 );
@@ -398,19 +402,29 @@ router.get(
       return;
     }
 
-    const cacheKey = `destinations:${providerId ?? "all"}`;
-    const cached = getCachedPublicSearchResult(cacheKey);
-    if (cached) {
+    // ETag derived from the latest sync timestamp(s) — browser/SWR clients
+    // can issue If-None-Match and skip the JSON body until data changes.
+    const versionParts = getAllProviders()
+      .filter((p) => !providerId || p.id === providerId)
+      .map((p) => `${p.id}:${p.cacheStatus?.lastRefresh ?? 0}`)
+      .join("|");
+    const etag = `W/"destinations-${Buffer.from(versionParts).toString("base64").slice(0, 24)}"`;
+
+    if (req.headers["if-none-match"] === etag) {
+      res.setHeader("ETag", etag);
       res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-      res.setHeader("X-Cache", "HIT");
-      res.json(cached);
+      res.status(304).end();
       return;
     }
 
-    const result = { items: await listPublicDestinations(providerId) };
-    setCachedPublicSearchResult(cacheKey, result);
+    const cacheKey = `destinations:${providerId ?? "all"}`;
+    const { data: result, cache: cacheStatus } = await getOrFetchPublicSearchResult(
+      cacheKey,
+      async () => ({ items: await listPublicDestinations(providerId) }),
+    );
+    res.setHeader("ETag", etag);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-    res.setHeader("X-Cache", "MISS");
+    res.setHeader("X-Cache", cacheStatus.toUpperCase());
     res.json(result);
   }),
 );
@@ -471,19 +485,15 @@ router.get(
       const filters = buildFilters(req, res, provider.getProviderFilters());
       if (!filters) return;
 
-      const cacheKey = `${req.params.id}:offer-group:${req.url}`;
-      const cached = getCachedPublicSearchResult(cacheKey);
-      if (cached) {
-        res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-        res.setHeader("X-Cache", "HIT");
-        res.json(cached);
-        return;
-      }
-
-      const result = { items: await provider.fetchOfferGroup(filters, offerGroupKey) };
-      setCachedPublicSearchResult(cacheKey, result);
+      const sortedParams = new URLSearchParams(req.query as Record<string, string>);
+      sortedParams.sort();
+      const cacheKey = `${req.params.id}:offer-group:${offerGroupKey}:${sortedParams.toString()}`;
+      const { data: result, cache: cacheStatus } = await getOrFetchPublicSearchResult(
+        cacheKey,
+        async () => ({ items: await provider.fetchOfferGroup(filters, offerGroupKey) }),
+      );
       res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-      res.setHeader("X-Cache", "MISS");
+      res.setHeader("X-Cache", cacheStatus.toUpperCase());
       res.json(result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
@@ -503,19 +513,15 @@ router.get(
       const filters = buildFilters(req, res, provider.getProviderFilters());
       if (!filters) return;
 
-      const cacheKey = `${req.params.id}:${req.url}`;
-      const cached = getCachedPublicSearchResult(cacheKey);
-      if (cached) {
-        res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-        res.setHeader("X-Cache", "HIT");
-        res.json(cached);
-        return;
-      }
-
-      const result = await provider.fetchTours({ ...filters, groupResults: true });
-      setCachedPublicSearchResult(cacheKey, result);
+      const sortedParams = new URLSearchParams(req.query as Record<string, string>);
+      sortedParams.sort();
+      const cacheKey = `${req.params.id}:tours:${sortedParams.toString()}`;
+      const { data: result, cache: cacheStatus } = await getOrFetchPublicSearchResult(
+        cacheKey,
+        async () => provider.fetchTours({ ...filters, groupResults: true, omitHeavy: true }),
+      );
       res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
-      res.setHeader("X-Cache", "MISS");
+      res.setHeader("X-Cache", cacheStatus.toUpperCase());
       res.json(result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {

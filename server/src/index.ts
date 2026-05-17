@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import compression from "compression";
 import rateLimit from "express-rate-limit";
 import session from "express-session";
 import path from "node:path";
@@ -13,6 +14,7 @@ import providerSearchPublicRoutes from "./routes/providerSearchPublic.js";
 import adminRoutes from "./routes/admin/index.js";
 import alertsRouter from "./routes/alerts.js";
 import prisma from "./prisma.js";
+import { searchTimingMiddleware } from "./middleware/searchTiming.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -20,13 +22,24 @@ app.set("trust proxy", 1);
 // ── Security headers ──────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
+// ── Response compression ──────────────────────────────────────────────
+// Cuts JSON wire size for /api/search/* (often 60–80%). Defaults skip
+// already-compressed mime types and small bodies (<1 KB).
+app.use(compression());
+
 // ── CORS ──────────────────────────────────────────────────────────────
 app.use(
   cors({
     origin: config.isProd ? config.allowedOrigins : true,
     credentials: true,
+    // Expose Server-Timing so browser DevTools / our own tooling can read
+    // server-side phase durations on cross-origin responses.
+    exposedHeaders: ["Server-Timing", "X-Cache", "ETag"],
   })
 );
+
+// ── Per-route timing/logging for the public search endpoints ─────────
+app.use(searchTimingMiddleware);
 
 // ── Body parsing ──────────────────────────────────────────────────────
 app.use(express.json({ limit: "1mb" }));

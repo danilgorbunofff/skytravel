@@ -16,10 +16,10 @@ import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
 import {
   fetchPublicAllProviderTours,
-  fetchPublicDestinations,
   fetchPublicProviderOfferGroup,
 } from "../api/publicProviders";
 import { loadBootstrap } from "../api/bootstrapCache";
+import { loadDestinations as loadDestinationsCache } from "../api/destinationsCache";
 import type { ProviderMeta, PublicDestinationSummary, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
 import type { TranslationKey } from "../hooks/useLanguage";
@@ -145,6 +145,7 @@ export default function SearchPage() {
   const leadPopup = useLeadPopup();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [heroExpanded, setHeroExpanded] = useState(() => !searchParams.get("q"));
+  const [destinationsExpanded, setDestinationsExpanded] = useState(false);
   const [pastHero, setPastHero] = useState(false);
   const [shareConfirmation, setShareConfirmation] = useState<"copied" | "failed" | null>(null);
   const shareTimeoutRef = useRef<number | null>(null);
@@ -177,7 +178,7 @@ export default function SearchPage() {
   const activePriceMin = searchParams.get("priceMin") ?? "";
   const activePriceMax = searchParams.get("priceMax") ?? "";
   const hasPriceFilter = Boolean(activePriceMin || activePriceMax);
-  const hasActiveSearch = Boolean(
+  const hasUserFilters = Boolean(
     activeQuery || activeDateStart || activeDateEnd || activeTransport || activeDestinationSlug || activeNights || activeStars || activeBoard || hasPriceFilter,
   );
 
@@ -204,6 +205,25 @@ export default function SearchPage() {
   const displayedTours = useMemo(
     () => applyLocalTourFilters(result?.items ?? [], true),
     [result, applyLocalTourFilters],
+  );
+
+  const prioritizedDestinations = useMemo(() => {
+    return [...destinations].sort((left, right) => {
+      if (left.slug === activeDestinationSlug) return -1;
+      if (right.slug === activeDestinationSlug) return 1;
+      if (left.count !== right.count) return right.count - left.count;
+      if (left.minPrice !== right.minPrice) {
+        if (left.minPrice == null) return 1;
+        if (right.minPrice == null) return -1;
+        return left.minPrice - right.minPrice;
+      }
+      return left.czechName.localeCompare(right.czechName, "cs-CZ");
+    });
+  }, [activeDestinationSlug, destinations]);
+
+  const visibleDestinations = useMemo(
+    () => destinationsExpanded ? prioritizedDestinations : prioritizedDestinations.slice(0, 5),
+    [destinationsExpanded, prioritizedDestinations],
   );
 
   const activeChips = useMemo(() => {
@@ -289,21 +309,34 @@ export default function SearchPage() {
 
   const loadDestinations = useCallback(() => {
     let cancelled = false;
-    setDestinationsState({ status: "loading" });
-    fetchPublicDestinations()
-      .then((items) => {
+    const { cached, fresh } = loadDestinationsCache();
+
+    if (cached) {
+      setDestinationsState({
+        status: "ready",
+        items: cached.items.filter((item) => item.count > 0),
+      });
+    } else {
+      setDestinationsState({ status: "loading" });
+    }
+
+    fresh
+      .then((data) => {
         if (cancelled) return;
         setDestinationsState({
           status: "ready",
-          items: items.filter((item) => item.count > 0),
+          items: data.items.filter((item) => item.count > 0),
         });
       })
       .catch((err) => {
         if (cancelled) return;
-        setDestinationsState({
-          status: "error",
-          message: err instanceof Error ? err.message : "Nepodařilo se načíst destinace.",
-        });
+        if (!cached) {
+          setDestinationsState({
+            status: "error",
+            message: err instanceof Error ? err.message : "Nepodařilo se načíst destinace.",
+          });
+        }
+        // If we already rendered from cache, swallow the revalidation error.
       });
     return () => {
       cancelled = true;
@@ -419,12 +452,6 @@ export default function SearchPage() {
     });
   }, [result, page]);
   useEffect(() => {
-    if (!hasActiveSearch) {
-      setResult(null);
-      setError(null);
-      setResultsLoading(false);
-      return;
-    }
     let cancelled = false;
     setResultsLoading(true);
     setError(null);
@@ -450,7 +477,7 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-    }, [searchFilterKey, hasActiveSearch]);
+    }, [searchFilterKey]);
 
   useEffect(() => () => {
     if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
@@ -578,17 +605,59 @@ export default function SearchPage() {
     updateParams({ page: nextPage });
   }
 
+  function renderDestinationList() {
+    const hiddenDestinationCount = Math.max(prioritizedDestinations.length - 5, 0);
+    return (
+      <div className="search-region-list">
+        <button
+          type="button"
+          className={!activeDestinationSlug ? "is-active" : ""}
+          onClick={() => updateParams({ destinationSlug: null, page: 1 })}
+        >
+          {t("sFilterAllDestinations")}
+        </button>
+        {visibleDestinations.map((destination) => (
+          <button
+            key={destination.slug}
+            type="button"
+            className={activeDestinationSlug === destination.slug ? "is-active" : ""}
+            onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}
+          >
+            {destination.czechName}
+            {destination.count > 0 && <span className="region-count">({destination.count})</span>}
+          </button>
+        ))}
+        {hiddenDestinationCount > 0 && (
+          <button
+            type="button"
+            className="search-region-toggle"
+            aria-expanded={destinationsExpanded}
+            onClick={() => setDestinationsExpanded((value) => !value)}
+          >
+            {destinationsExpanded
+              ? t("sFilterShowLessDestinations")
+              : `${t("sFilterShowAllDestinations")} (${hiddenDestinationCount})`}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const visibleFrom = result && result.filtered > 0 ? (result.page - 1) * result.limit + 1 : 0;
   const visibleTo = result ? Math.min(result.page * result.limit, result.filtered) : 0;
   const totalText = showFavoritesOnly
     ? `${displayedTours.length.toLocaleString("cs-CZ")} ${t("sStateSavedHotels")}`
     : result
-      ? `${t("sStateShown")} ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} ${t("sStateOf")} ${result.filtered.toLocaleString("cs-CZ")} ${t("sStateHotels")}${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} ${t("sStateTerms")})` : ""}`
+      ? !hasUserFilters
+        ? t("sBestDealsTitle")
+        : `${t("sStateShown")} ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} ${t("sStateOf")} ${result.filtered.toLocaleString("cs-CZ")} ${t("sStateHotels")}${result.rawFilteredOffers && result.rawFilteredOffers > result.filtered ? ` (${result.rawFilteredOffers.toLocaleString("cs-CZ")} ${t("sStateTerms")})` : ""}`
       : resultsLoading
         ? t("sStateLoading")
-        : hasActiveSearch
+        : hasUserFilters
           ? t("sStateNoOffers")
-          : t("sStateEmptyPrompt");
+          : t("sBestDealsTitle");
+
+  const toolbarDescription = !hasUserFilters ? t("sBestDealsBody") : t("sAllPartners");
 
   return (
     <div>
@@ -840,7 +909,7 @@ export default function SearchPage() {
           </div>
         </div>
 
-        {!hasActiveSearch && popularDestinations.length > 0 && (
+        {!hasUserFilters && popularDestinations.length > 0 && (
           <section className="popular-destinations">
             <div className="container">
               <h2 className="popular-destinations__title">{t("sPopularTitle")}</h2>
@@ -893,28 +962,7 @@ export default function SearchPage() {
                 {destinationsState.status === "ready" && destinationsState.items.length === 0 && (
                   <p style={{ fontSize: ".875rem", color: "#64748b" }}>{t("sFilterNoDestinations")}</p>
                 )}
-                {destinationsState.status === "ready" && destinationsState.items.length > 0 && (
-                  <div className="search-region-list">
-                    <button
-                      type="button"
-                      className={!activeDestinationSlug ? "is-active" : ""}
-                      onClick={() => updateParams({ destinationSlug: null, page: 1 })}
-                    >
-                      {t("sFilterAllDestinations")}
-                    </button>
-                    {destinationsState.items.map((destination) => (
-                      <button
-                        key={destination.slug}
-                        type="button"
-                        className={activeDestinationSlug === destination.slug ? "is-active" : ""}
-                        onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}
-                      >
-                        {destination.czechName}
-                        {destination.count > 0 && <span className="region-count">({destination.count})</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {destinationsState.status === "ready" && destinationsState.items.length > 0 && renderDestinationList()}
               </div>
 
               {result && (
@@ -1017,7 +1065,7 @@ export default function SearchPage() {
               <div className="search-results-toolbar">
                 <div>
                   <h2>{totalText}</h2>
-                  <p>{t("sAllPartners")}</p>
+                  <p>{toolbarDescription}</p>
                   {result && result.filtered !== result.total && (
                     <p className="results-sub">
                       {t("sStateShown")} {displayedTours.length.toLocaleString("cs-CZ")} {t("sStateOf")} {result.total.toLocaleString("cs-CZ")} {t("sTotalSuffix")}
@@ -1077,12 +1125,6 @@ export default function SearchPage() {
                   ))}
                 </div>
               )}
-              {!resultsLoading && !error && !hasActiveSearch && (
-                <div className="search-empty">
-                  <h3>{t("sStartTitle")}</h3>
-                  <p>{t("sStartBody")}</p>
-                </div>
-              )}
               {!resultsLoading && !error && result?.items.length === 0 && (
                 <div className="search-empty search-empty--results">
                   <div className="search-empty__icon">🔍</div>
@@ -1116,7 +1158,7 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {!hasActiveSearch && (
+              {!hasUserFilters && (
                 <div className="preset-pills">
                   {PRESETS.map((preset) => (
                     <button
@@ -1238,17 +1280,10 @@ export default function SearchPage() {
                     </button>
                   </div>
                 )}
-                {destinationsState.status === "ready" && destinationsState.items.length > 0 && (
-                  <div className="search-region-list">
-                    <button type="button" className={!activeDestinationSlug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: null, page: 1 })}>{t("sFilterAllDestinations")}</button>
-                    {destinationsState.items.map((destination) => (
-                      <button key={destination.slug} type="button" className={activeDestinationSlug === destination.slug ? "is-active" : ""} onClick={() => updateParams({ destinationSlug: destination.slug, q: null, page: 1 })}>
-                        {destination.czechName}
-                        {destination.count > 0 && <span className="region-count">({destination.count})</span>}
-                      </button>
-                    ))}
-                  </div>
+                {destinationsState.status === "ready" && destinationsState.items.length === 0 && (
+                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>{t("sFilterNoDestinations")}</p>
                 )}
+                {destinationsState.status === "ready" && destinationsState.items.length > 0 && renderDestinationList()}
               </div>
               {result && (
                 <div className="search-filter-block">
