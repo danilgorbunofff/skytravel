@@ -81,20 +81,11 @@ echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building client …"
-# Try building from within client directory with explicit vite command
+# Ensure vite is available in root node_modules for @vitejs/plugin-react to find it
+cd ..
+npm install vite@8.0.8 --save-dev 2>&1 | grep -E "(added|up to date|warn)" | head -3
+export NODE_PATH="${REMOTE_PATH}/node_modules:\${NODE_PATH}"
 cd client
-echo "  Current directory: \$(pwd)"
-echo "  Node version: \$(node --version)"
-echo "  npm version: \$(npm --version)"
-echo "  Checking for vite..."
-ls -la node_modules/.bin/vite 2>/dev/null || echo "  ✗ vite not in ./node_modules/.bin"
-ls -la ../node_modules/.bin/vite 2>/dev/null || echo "  ✗ vite not in ../node_modules/.bin"
-echo "  Checking for vite package..."
-ls -la node_modules/vite 2>/dev/null | head -5 || echo "  ✗ vite not in ./node_modules"
-ls -la ../node_modules/vite 2>/dev/null | head -5 || echo "  ✗ vite not in ../node_modules"
-echo "  Attempting npm list vite..."
-npm list vite 2>&1 | head -5
-echo "  Attempting build…"
 npm run build
 cd ..
 
