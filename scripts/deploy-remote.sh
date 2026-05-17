@@ -82,12 +82,9 @@ echo "▸ Running database migrations …"
 
 echo "▸ Building client …"
 # Ensure vite is available in root node_modules for @vitejs/plugin-react to find it
-cd ..
 npm install vite@8.0.8 --save-dev 2>&1 | grep -E "(added|up to date|warn)" | head -3
 export NODE_PATH="$(pwd)/node_modules:\${NODE_PATH:-}"
-cd client
-npm run build
-cd ..
+npm --workspace client run build
 
 echo "▸ Restarting PM2 apps …"
 pm2 start ecosystem.config.cjs
