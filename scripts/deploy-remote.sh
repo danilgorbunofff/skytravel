@@ -58,8 +58,7 @@ sleep 5
 
 echo "▸ Installing dependencies …"
 # Use npm ci with --force to overwrite problematic installations
-# and --no-optional to skip optional deps that cause locking issues
-npm ci --force --no-optional 2>&1
+npm ci --force 2>&1
 # Ensure root node_modules/.bin is on PATH for prisma, tsc, etc.
 export PATH="${REMOTE_PATH}/node_modules/.bin:\$PATH"
 
