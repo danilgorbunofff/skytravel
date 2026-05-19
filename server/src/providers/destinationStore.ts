@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../prisma.js";
+import { MIN_PROVIDER_TOUR_PRICE_CZK } from "../lib/providerPrice.js";
 
 type DestinationMappingSeed = {
   providerId: string;
@@ -397,7 +398,7 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
              COUNT(*) AS rawCount,
              MIN(price) AS minPrice
       FROM ProviderTour
-      WHERE destinationId IS NOT NULL AND price > 0
+      WHERE destinationId IS NOT NULL AND price >= ${MIN_PROVIDER_TOUR_PRICE_CZK}
       ${providerFilter}
       GROUP BY destinationId
     `,
@@ -412,7 +413,7 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
              COUNT(DISTINCT title, destination) AS groupCount,
              COUNT(*) AS rawCount
       FROM ProviderTour
-      WHERE destinationId IS NOT NULL AND price > 0
+      WHERE destinationId IS NOT NULL AND price >= ${MIN_PROVIDER_TOUR_PRICE_CZK}
       ${providerFilter}
       GROUP BY destinationId, source
     `,

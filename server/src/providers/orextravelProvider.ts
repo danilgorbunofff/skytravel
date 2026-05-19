@@ -35,6 +35,7 @@ import {
 } from "./offerGrouping.js";
 import { invalidatePublicSearchCache } from "./publicSearchCache.js";
 import { ensureProviderDestinationMapping } from "./destinationStore.js";
+import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
 
 type NightsRange = { min: number; max: number } | null;
 
@@ -238,7 +239,7 @@ export class OrextravelProvider implements TourProvider {
     const nightsRange = parseNightsRange(filters.nights);
 
     // Build Prisma where clause
-    const where: any = { source: this.id, price: { gt: 0 } };
+    const where: any = { source: this.id, price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK } };
 
     // Region filtering: if specific route selected, use exact key;
     // otherwise match any region for this provider
@@ -270,7 +271,7 @@ export class OrextravelProvider implements TourProvider {
     }
 
     if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
-      where.price = { ...where.price, gte: filters.priceMin };
+      where.price = { ...where.price, gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK) };
     }
     if (filters.priceMax !== undefined && Number.isFinite(filters.priceMax)) {
       where.price = { ...where.price, lte: filters.priceMax };
@@ -621,8 +622,9 @@ export class OrextravelProvider implements TourProvider {
 
         const BATCH = 100;
         const seenIds = new Set<string>();
-        for (let i = 0; i < items.length; i += BATCH) {
-          const batch = items.slice(i, i + BATCH);
+        const validItems = items.filter((item) => isPlausibleProviderPriceCzk(item.price));
+        for (let i = 0; i < validItems.length; i += BATCH) {
+          const batch = validItems.slice(i, i + BATCH);
           for (const item of batch) {
             seenIds.add(item.externalId);
             await prisma.providerTour.upsert({

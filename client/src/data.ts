@@ -618,6 +618,7 @@ export const translations = {
     sLoadMore: "Načíst další",
     sLoadingMore: "Načítám…",
     sCardDetail: "Detail",
+    sPriceOnRequest: "Cena na vyžádání",
   },
   en: {
     navExclusive: "Exclusive offers",
@@ -913,6 +914,7 @@ export const translations = {
     sLoadMore: "Load more",
     sLoadingMore: "Loading…",
     sCardDetail: "Detail",
+    sPriceOnRequest: "Price on request",
   },
   uk: {
     navExclusive: "Ексклюзивні пропозиції",
@@ -1208,6 +1210,7 @@ export const translations = {
     sLoadMore: "Завантажити більше",
     sLoadingMore: "Завантаження…",
     sCardDetail: "Деталі",
+    sPriceOnRequest: "Ціна за запитом",
   },
   ru: {
     navExclusive: "Эксклюзивные предложения",
@@ -1503,5 +1506,6 @@ export const translations = {
     sLoadMore: "Загрузить еще",
     sLoadingMore: "Загрузка…",
     sCardDetail: "Подробнее",
+    sPriceOnRequest: "Цена по запросу",
   },
 };

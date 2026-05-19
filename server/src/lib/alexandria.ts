@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { isPlausibleProviderPriceCzk } from "./providerPrice.js";
 
 const ALEXANDRIA_URL =
   process.env.ALEXANDRIA_API_URL || "https://export.alexandria.cz/export";
@@ -115,22 +116,50 @@ function mapTransport(raw: string): string {
   return "bus";
 }
 
-/** Extract the adult per-person price from the first cena element.
- *  The first <cena> node is always the main adult double-room price.
- *  Supplements, child prices, and extras come in later nodes. */
-function extractPrice(termin: Record<string, unknown>): number {
+function normalizeCenaLabel(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const record = node as Record<string, unknown>;
+  return ["typ", "druh", "varianta", "osoba", "nazev", "popis", "kategorie"]
+    .map((key) => String(record[`@_${key}`] ?? ""))
+    .join(" ")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function cenaScore(node: unknown): number {
+  const label = normalizeCenaLabel(node);
+  let score = 0;
+  if (/dosp|adult/.test(label)) score += 8;
+  if (/zaklad|base|hlavni|main/.test(label)) score += 4;
+  if (/dite|child|infant|senior/.test(label)) score -= 10;
+  if (/pripl|sleva|tax|poplat|pojist|paliv|storno|servis|letist/.test(label)) score -= 8;
+  return score;
+}
+
+function selectCenaPrice(termin: Record<string, unknown>, priceAttr: "cena" | "cena_katalog"): number {
   const cenaNodes = ensureArray(termin.cena);
   if (cenaNodes.length === 0) return 0;
-  const p = Number(attr(cenaNodes[0], "cena"));
-  return p > 0 ? p : 0;
+  const candidates = cenaNodes
+    .map((node, index) => ({
+      index,
+      price: Number(attr(node, priceAttr)),
+      score: cenaScore(node),
+    }))
+    .filter((candidate) => Number.isFinite(candidate.price) && candidate.price > 0)
+    .sort((left, right) => right.score - left.score || left.price - right.price || left.index - right.index);
+  return candidates[0]?.price ?? 0;
+}
+
+export function extractPrice(termin: Record<string, unknown>): number {
+  const price = selectCenaPrice(termin, "cena");
+  return isPlausibleProviderPriceCzk(price) ? price : 0;
 }
 
 /** Extract the original catalog price (before discounts) */
-function extractOriginalPrice(termin: Record<string, unknown>): number {
-  const cenaNodes = ensureArray(termin.cena);
-  if (cenaNodes.length === 0) return 0;
-  const p = Number(attr(cenaNodes[0], "cena_katalog"));
-  return p > 0 ? p : 0;
+export function extractOriginalPrice(termin: Record<string, unknown>): number {
+  const price = selectCenaPrice(termin, "cena_katalog");
+  return isPlausibleProviderPriceCzk(price) ? price : 0;
 }
 
 // ──────────────────────────────────────────────

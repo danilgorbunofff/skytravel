@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown, ChevronUp, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -30,6 +30,7 @@ import { PriceRangeSlider } from "../components/PriceRangeSlider";
 import { TourDetailModal } from "../components/TourDetailModal";
 import { buildSrcSet } from "../lib/images";
 import { fmtDate } from "../lib/formatters";
+import { MIN_PUBLIC_TOUR_PRICE_CZK, isPlausibleTourPrice } from "../lib/prices";
 import "../site.css";
 
 const fallbackDestinationAliases: Record<string, string> = {
@@ -46,6 +47,12 @@ function normalizeFallbackText(value: string): string {
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .trim();
+}
+
+function parsePriceParam(value: string): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function getTourFallbackImage(destination: string): string {
@@ -151,6 +158,7 @@ export default function SearchPage() {
   const shareTimeoutRef = useRef<number | null>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [accumulatedItems, setAccumulatedItems] = useState<UnifiedTour[]>([]);
+  const [naturalPriceRange, setNaturalPriceRange] = useState({ min: MIN_PUBLIC_TOUR_PRICE_CZK, max: 200_000 });
 
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [dateStart, setDateStart] = useState(searchParams.get("dateStart") ?? "");
@@ -183,16 +191,46 @@ export default function SearchPage() {
   );
 
   const priceRange = useMemo(() => {
-    if (!result?.items.length) return { min: 0, max: 200000 };
-    const prices = result.items.map((t) => t.price);
+    if (!result?.items.length) return naturalPriceRange;
+    const prices = result.items.map((t) => t.price).filter(isPlausibleTourPrice);
+    if (prices.length === 0) return naturalPriceRange;
     return {
       min: Math.floor(Math.min(...prices) / 500) * 500,
       max: Math.ceil(Math.max(...prices) / 500) * 500,
     };
-  }, [result]);
+  }, [result, naturalPriceRange]);
 
-  const priceMin = Number(searchParams.get("priceMin")) || priceRange.min;
-  const priceMax = Number(searchParams.get("priceMax")) || priceRange.max;
+  useEffect(() => {
+    if (!activePriceMin && !activePriceMax && result?.items.length) {
+      const prices = result.items.map((t) => t.price).filter(isPlausibleTourPrice);
+      if (prices.length === 0) return;
+      const newMin = Math.floor(Math.min(...prices) / 500) * 500;
+      const newMax = Math.ceil(Math.max(...prices) / 500) * 500;
+      setNaturalPriceRange((prev) =>
+        prev.min === newMin && prev.max === newMax ? prev : { min: newMin, max: newMax },
+      );
+    }
+  }, [result, activePriceMin, activePriceMax]);
+
+  useEffect(() => {
+    const requestedPriceMax = parsePriceParam(activePriceMax);
+    if (requestedPriceMax !== null && requestedPriceMax < naturalPriceRange.min) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("priceMin");
+      next.delete("priceMax");
+      next.set("page", "1");
+      setSearchParams(next, { replace: true });
+    }
+  }, [activePriceMax, naturalPriceRange.min, searchParams, setSearchParams]);
+
+  const requestedPriceMin = parsePriceParam(activePriceMin);
+  const requestedPriceMax = parsePriceParam(activePriceMax);
+  const priceMin = requestedPriceMin === null
+    ? naturalPriceRange.min
+    : Math.min(Math.max(requestedPriceMin, naturalPriceRange.min), naturalPriceRange.max);
+  const priceMax = requestedPriceMax === null
+    ? naturalPriceRange.max
+    : Math.min(Math.max(requestedPriceMax, naturalPriceRange.min), naturalPriceRange.max);
 
   const applyLocalTourFilters = useCallback((sourceItems: UnifiedTour[], includeFavorites: boolean) => {
     let items = sourceItems;
@@ -247,7 +285,7 @@ export default function SearchPage() {
     }
     if (activePriceMin || activePriceMax) {
       chips.push({
-        label: `${t("sChipPrice")}: ${(Number(activePriceMin) || priceRange.min).toLocaleString("cs-CZ")} – ${(Number(activePriceMax) || priceRange.max).toLocaleString("cs-CZ")} Kč`,
+        label: `${t("sChipPrice")}: ${priceMin.toLocaleString("cs-CZ")} – ${priceMax.toLocaleString("cs-CZ")} Kč`,
         onClear: () => updateParams({ priceMin: null, priceMax: null, page: 1 }),
       });
     }
@@ -270,6 +308,8 @@ export default function SearchPage() {
     activeBoard,
     activePriceMin,
     activePriceMax,
+    priceMin,
+    priceMax,
     priceRange,
     showFavoritesOnly,
     t,
@@ -634,9 +674,11 @@ export default function SearchPage() {
             aria-expanded={destinationsExpanded}
             onClick={() => setDestinationsExpanded((value) => !value)}
           >
-            {destinationsExpanded
-              ? t("sFilterShowLessDestinations")
-              : `${t("sFilterShowAllDestinations")} (${hiddenDestinationCount})`}
+            {destinationsExpanded ? (
+              <><ChevronUp size={13} />{t("sFilterShowLessDestinations")}</>
+            ) : (
+              <><ChevronDown size={13} />{t("sFilterShowAllDestinations")} ({hiddenDestinationCount})</>
+            )}
           </button>
         )}
       </div>
@@ -930,7 +972,7 @@ export default function SearchPage() {
                     />
                     <div className="dest-thumb__label">
                       <strong>{dest.destination}</strong>
-                      {dest.price && <span>od {formatPrice(dest.price)}</span>}
+                      {isPlausibleTourPrice(dest.price) && <span>od {formatPrice(dest.price)}</span>}
                     </div>
                   </button>
                 ))}
@@ -1288,7 +1330,7 @@ export default function SearchPage() {
               {result && (
                 <div className="search-filter-block">
                   <h2>{t("sFilterPrice")}</h2>
-                  <PriceRangeSlider min={priceRange.min} max={priceRange.max} valueMin={priceMin} valueMax={priceMax} onChange={(min, max) => updateParams({ priceMin: min, priceMax: max, page: 1 })} />
+                  <PriceRangeSlider min={naturalPriceRange.min} max={naturalPriceRange.max} valueMin={priceMin} valueMax={priceMax} onChange={(min, max) => updateParams({ priceMin: min, priceMax: max, page: 1 })} />
                 </div>
               )}
               <div className="search-filter-block">
@@ -1421,7 +1463,7 @@ function PublicTourCard({
       <h3>{tour.title}</h3>
       <p>{tour.destination}</p>
       <div className="public-tour-card__footer">
-        <strong>{t("from")} {formatPrice(tour.price)}</strong>
+        <strong>{isPlausibleTourPrice(tour.price) ? `${t("from")} ${formatPrice(tour.price)}` : t("sPriceOnRequest")}</strong>
         <button type="button" className="btn-detail" onClick={(event) => stopCardAction(event, onOpenDetail)}>
           <Search size={16} aria-hidden="true" />
           {t("sCardDetail")}

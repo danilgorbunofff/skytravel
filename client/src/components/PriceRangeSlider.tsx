@@ -8,14 +8,18 @@ interface Props {
   onChange: (min: number, max: number) => void;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Props) {
-  const [localMin, setLocalMin] = useState(valueMin);
-  const [localMax, setLocalMax] = useState(valueMax);
+  const [localMin, setLocalMin] = useState(() => clamp(valueMin, min, max));
+  const [localMax, setLocalMax] = useState(() => clamp(valueMax, min, max));
   const [pending, setPending] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setLocalMin(valueMin); }, [valueMin]);
-  useEffect(() => { setLocalMax(valueMax); }, [valueMax]);
+  useEffect(() => { setLocalMin(clamp(valueMin, min, max)); }, [valueMin, min, max]);
+  useEffect(() => { setLocalMax(clamp(valueMax, min, max)); }, [valueMax, min, max]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   function commit(nextMin: number, nextMax: number) {
@@ -60,9 +64,10 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
           aria-valuemax={max}
           aria-valuenow={localMin}
           onChange={(e) => {
-            const v = Math.min(Number(e.target.value), localMax - 500);
-            setLocalMin(v);
-            commit(v, localMax);
+            const upperBound = Math.max(min, localMax - 500);
+            const nextMin = clamp(Math.min(Number(e.target.value), upperBound), min, upperBound);
+            setLocalMin(nextMin);
+            commit(nextMin, localMax);
           }}
         />
         <input
@@ -76,9 +81,10 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
           aria-valuemax={max}
           aria-valuenow={localMax}
           onChange={(e) => {
-            const v = Math.max(Number(e.target.value), localMin + 500);
-            setLocalMax(v);
-            commit(localMin, v);
+            const lowerBound = Math.min(max, localMin + 500);
+            const nextMax = clamp(Math.max(Number(e.target.value), lowerBound), lowerBound, max);
+            setLocalMax(nextMax);
+            commit(localMin, nextMax);
           }}
         />
       </div>

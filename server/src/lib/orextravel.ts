@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { config } from "../config.js";
+import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "./providerPrice.js";
 
 // ──────────────────────────────────────────────
 // Config
@@ -71,7 +72,7 @@ function parseSamoXml(xml: string): Record<string, unknown> {
  *   - If dots form a pure thousands pattern (\d{1,3}(\.\d{3})+) → Czech thousands.
  *   - Otherwise → standard decimal (parseFloat directly).
  */
-function parseSamoPrice(raw: string | number | undefined | null): number {
+export function parseSamoPrice(raw: string | number | undefined | null): number {
   if (raw == null) return 0;
   if (typeof raw === "number") return raw;
   const s = String(raw).trim();
@@ -95,18 +96,81 @@ function parseSamoPrice(raw: string | number | undefined | null): number {
 }
 
 function isEuroCurrency(value: string): boolean {
-  const normalized = value
+  const normalized = normalizeCurrencyLabel(value);
+  return normalized === "eur" || normalized === "euro" || normalized.includes("euro") || normalized.includes("eur");
+}
+
+function normalizeCurrencyLabel(value: string): string {
+  return value
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .trim();
-  return normalized === "eur" || normalized === "euro" || normalized.includes("euro") || normalized.includes("eur");
 }
 
-function normalizeOrexPrice(price: number, peopleCount: number, currencyName: string): number {
-  const perPersonPrice = price / Math.max(peopleCount, 1);
-  const amountInCzk = isEuroCurrency(currencyName) ? perPersonPrice * OREX_EUR_TO_CZK : perPersonPrice;
-  return Math.max(0, Math.round(amountInCzk));
+function isCzkCurrency(value: string, currencyId?: number): boolean {
+  if (currencyId === 203) return true;
+  const normalized = normalizeCurrencyLabel(value);
+  return normalized === "czk" || normalized === "kc" || normalized === "kcs" || normalized.includes("koruna");
+}
+
+function isExplicitEuroCurrency(value: string, currencyId?: number): boolean {
+  return currencyId === 978 || isEuroCurrency(value);
+}
+
+function resolveSanePeopleCount(peopleCount: number, adults?: number, children?: number): number {
+  const passengerCount = Math.max(0, adults ?? 0) + Math.max(0, children ?? 0);
+  if (Number.isFinite(passengerCount) && passengerCount >= 1 && passengerCount <= 10) {
+    return passengerCount;
+  }
+  if (Number.isFinite(peopleCount) && peopleCount >= 1 && peopleCount <= 10) {
+    return peopleCount;
+  }
+  return 1;
+}
+
+function shouldConvertOrexPriceToCzk(perPersonPrice: number, currencyName: string, currencyId?: number): boolean {
+  if (isExplicitEuroCurrency(currencyName, currencyId)) return true;
+  if (isCzkCurrency(currencyName, currencyId)) {
+    return perPersonPrice < MIN_PROVIDER_TOUR_PRICE_CZK;
+  }
+  return true;
+}
+
+function convertOrexAmountToCzk(amount: number, currencyName: string, currencyId?: number): number {
+  return shouldConvertOrexPriceToCzk(amount, currencyName, currencyId)
+    ? amount * OREX_EUR_TO_CZK
+    : amount;
+}
+
+export function normalizeOrexPrice(
+  price: number,
+  peopleCount: number,
+  currencyName: string,
+  options: { currencyId?: number; adults?: number; children?: number } = {},
+): number {
+  const sanePeopleCount = resolveSanePeopleCount(peopleCount, options.adults, options.children);
+  const perPersonPrice = price / sanePeopleCount;
+  const dividedPriceCzk = Math.max(0, Math.round(convertOrexAmountToCzk(perPersonPrice, currencyName, options.currencyId)));
+  const undividedPriceCzk = Math.max(0, Math.round(convertOrexAmountToCzk(price, currencyName, options.currencyId)));
+  const normalizedPrice = sanePeopleCount > 1 && dividedPriceCzk < MIN_PROVIDER_TOUR_PRICE_CZK && isPlausibleProviderPriceCzk(undividedPriceCzk)
+    ? undividedPriceCzk
+    : dividedPriceCzk;
+
+  if (process.env.OREX_DEBUG_PRICE === "1" && normalizedPrice < MIN_PROVIDER_TOUR_PRICE_CZK) {
+    console.warn("[Orextravel] Suspicious normalized price", {
+      rawPrice: price,
+      peopleCount,
+      sanePeopleCount,
+      currencyId: options.currencyId,
+      currencyName,
+      dividedPriceCzk,
+      undividedPriceCzk,
+      normalizedPrice,
+    });
+  }
+
+  return normalizedPrice;
 }
 
 // ──────────────────────────────────────────────
@@ -597,11 +661,11 @@ async function fetchPrices(
     hotel: Number(item["@_Hotel"] ?? item["@_hotel"] ?? 0),
     htplace: Number(item["@_HtPlace"] ?? item["@_htplace"] ?? 0),
     meal: Number(item["@_Meal"] ?? item["@_meal"] ?? 0),
-    room: Number(item["@_room"] ?? 0),
-    adult: Number(item["@_adult"] ?? 0),
-    child: Number(item["@_child"] ?? 0),
-    packetType: Number(item["@_packet_type"] ?? 0),
-    hnights: Number(item["@_hnights"] ?? nights),
+    room: Number(item["@_Room"] ?? item["@_room"] ?? 0),
+    adult: Number(item["@_Adult"] ?? item["@_adult"] ?? 0),
+    child: Number(item["@_Child"] ?? item["@_child"] ?? 0),
+    packetType: Number(item["@_Packet_type"] ?? item["@_packet_type"] ?? 0),
+    hnights: Number(item["@_Hnights"] ?? item["@_hnights"] ?? nights),
     checkin,
     dateOut: String(item["@_DateOut"] ?? item["@_dateout"] ?? ""),
     nights,
@@ -635,7 +699,11 @@ function mapClaimToTour(
   const starsLabel = resolveLabel(refCache.stars, claim.hotel, "");
   const currencyName = resolveLabel(refCache.currencies, claim.currency, "");
   const hotelDesc = refCache.hotelDescriptions.get(claim.hotel) || null;
-  const price = normalizeOrexPrice(claim.price, claim.peopleCount, currencyName);
+  const price = normalizeOrexPrice(claim.price, claim.peopleCount, currencyName, {
+    currencyId: claim.currency,
+    adults: claim.adult,
+    children: claim.child,
+  });
 
   const checkinDate = new Date(claim.checkin);
   const checkoutDate = claim.dateOut
@@ -667,7 +735,7 @@ function mapClaimToTour(
     children: claim.child,
     roomType: htplaceName || roomName,
     hotelId: claim.hotel,
-    currency: isEuroCurrency(currencyName) ? "CZK" : currencyName,
+    currency: "CZK",
   };
 }
 
@@ -742,16 +810,17 @@ export async function fetchOrextravelTours(
 
               for (const claim of prices) {
                 if (claim.price <= 0) continue;
-                spoTours.push(
-                  mapClaimToTour(
-                    claim,
-                    route.stateName,
-                    route.townName,
-                    spo.name,
-                    route.town,
-                    route.state,
-                  ),
+                const tour = mapClaimToTour(
+                  claim,
+                  route.stateName,
+                  route.townName,
+                  spo.name,
+                  route.town,
+                  route.state,
                 );
+                if (isPlausibleProviderPriceCzk(tour.price)) {
+                  spoTours.push(tour);
+                }
               }
             } catch (err) {
               console.warn(
