@@ -24,7 +24,7 @@ export default function AdminTourOrderList({
   onMoveOrder,
   onEdit,
   onDelete,
-  t,
+  t: _t,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -32,7 +32,8 @@ export default function AdminTourOrderList({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            {ordering.length} {ordering.length === 1 ? "nabídka" : ordering.length < 5 ? "nabídky" : "nabídek"}
+            {ordering.length}{" "}
+            {ordering.length === 1 ? "nabídka" : ordering.length < 5 ? "nabídky" : "nabídek"}
           </span>
         </div>
         <Button

@@ -10,7 +10,6 @@ import {
 } from "../api/providers";
 import { useSearchStore } from "../stores/searchStore";
 import type {
-  CacheStatus,
   ImportResult,
   ProviderMeta,
   ProviderRegion,
@@ -41,8 +40,16 @@ const transportLabel: Record<string, string> = {
 };
 
 const PLACEHOLDER_COLORS = [
-  "#e74c3c", "#3498db", "#2ecc71", "#e67e22", "#9b59b6",
-  "#1abc9c", "#f39c12", "#d35400", "#2980b9", "#c0392b",
+  "#e74c3c",
+  "#3498db",
+  "#2ecc71",
+  "#e67e22",
+  "#9b59b6",
+  "#1abc9c",
+  "#f39c12",
+  "#d35400",
+  "#2980b9",
+  "#c0392b",
 ];
 const placeholderColor = (dest: string) =>
   PLACEHOLDER_COLORS[dest.charCodeAt(0) % PLACEHOLDER_COLORS.length];
@@ -86,11 +93,9 @@ export default function AdminSearchPage() {
   const tours = useSearchStore((s) => s.tours);
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
-  const totalCount = useSearchStore((s) => s.totalCount);
   const filteredCount = useSearchStore((s) => s.filteredCount);
   const page = useSearchStore((s) => s.page);
   const totalPages = useSearchStore((s) => s.totalPages);
-  const uniqueDestinations = useSearchStore((s) => s.uniqueDestinations);
 
   // ── Store actions (stable refs — zustand actions never change) ──
   const {
@@ -110,7 +115,6 @@ export default function AdminSearchPage() {
     setSelectedRegion: storeSetSelectedRegion,
     setSelectedSubRegion: storeSetSelectedSubRegion,
     loadTours,
-    resetTours,
   } = useSearchStore.getState();
 
   // ── Local-only state (doesn't need persistence across navigation) ──
@@ -189,7 +193,11 @@ export default function AdminSearchPage() {
       } else if (isTwoLevel) {
         // Two-level: departure→destination
         if (selectedRegion) {
-          const depField = selectedProvider?.filterFields.find((ff) => !ff.dependsOn && (ff.key === "townFrom" || ff.key.includes("town") || ff.key.includes("departure")));
+          const depField = selectedProvider?.filterFields.find(
+            (ff) =>
+              !ff.dependsOn &&
+              (ff.key === "townFrom" || ff.key.includes("town") || ff.key.includes("departure")),
+          );
           if (depField) f[depField.key] = selectedRegion.id;
           else f.townFrom = selectedRegion.id;
         }
@@ -203,9 +211,20 @@ export default function AdminSearchPage() {
       return f;
     },
     [
-      search, priceMin, priceMax, dateStart, dateEnd, page, limit,
-      sortBy, sortDir, providerFilters, selectedProvider, selectedRegion,
-      selectedSubRegion, isTwoLevel,
+      search,
+      priceMin,
+      priceMax,
+      dateStart,
+      dateEnd,
+      page,
+      limit,
+      sortBy,
+      sortDir,
+      providerFilters,
+      selectedProvider,
+      selectedRegion,
+      selectedSubRegion,
+      isTwoLevel,
     ],
   );
 
@@ -315,16 +334,19 @@ export default function AdminSearchPage() {
     // use stale state (React batches the setX calls above into the next render).
     if (!selectedProviderId) return;
     const filters = buildFilters(1);
-    delete filters.q;
-    delete filters.priceMin;
-    delete filters.priceMax;
-    delete filters.dateStart;
-    delete filters.dateEnd;
-    // Remove every provider-specific key that was just cleared
-    for (const ff of selectedProvider?.filterFields ?? []) {
-      delete filters[ff.key];
-    }
-    loadTours(selectedProviderId, filters);
+    const providerKeys = (selectedProvider?.filterFields ?? []).map((ff) => ff.key);
+    const keysToRemove = new Set<string>([
+      "q",
+      "priceMin",
+      "priceMax",
+      "dateStart",
+      "dateEnd",
+      ...providerKeys,
+    ]);
+    const cleaned = Object.fromEntries(
+      Object.entries(filters).filter(([k]) => !keysToRemove.has(k)),
+    ) as UnifiedFilters;
+    loadTours(selectedProviderId, cleaned);
   }
 
   async function handleRefresh() {
@@ -428,11 +450,7 @@ export default function AdminSearchPage() {
           regionCtx[destField?.key ?? "stateId"] = selectedSubRegion.id;
         }
       }
-      const result = await importProviderTours(
-        selectedProviderId,
-        ids ?? [...selected],
-        regionCtx,
-      );
+      const result = await importProviderTours(selectedProviderId, ids ?? [...selected], regionCtx);
       setImportResult(result);
       if (result.ok) setSelected(new Set());
     } catch (err) {
@@ -468,7 +486,7 @@ export default function AdminSearchPage() {
     if (visibleColumns.board) c.push("110px");
     if (visibleColumns.stars) c.push("50px");
     c.push("110px"); // transport (always)
-    c.push("44px");  // link (always)
+    c.push("44px"); // link (always)
     return c.join(" ");
   }, [visibleColumns]);
 
@@ -479,27 +497,42 @@ export default function AdminSearchPage() {
       search && {
         key: "q",
         label: `Hledám: „${search}"`,
-        clear: () => { storeSetSearch(""); doLoadTours(1); },
+        clear: () => {
+          storeSetSearch("");
+          doLoadTours(1);
+        },
       },
       priceMin && {
         key: "priceMin",
         label: `Cena od: ${formatPrice(Number(priceMin))}`,
-        clear: () => { storeSetPriceMin(""); doLoadTours(1); },
+        clear: () => {
+          storeSetPriceMin("");
+          doLoadTours(1);
+        },
       },
       priceMax && {
         key: "priceMax",
         label: `Cena do: ${formatPrice(Number(priceMax))}`,
-        clear: () => { storeSetPriceMax(""); doLoadTours(1); },
+        clear: () => {
+          storeSetPriceMax("");
+          doLoadTours(1);
+        },
       },
       dateStart && {
         key: "dateStart",
         label: `Od: ${fmtDate(dateStart)}`,
-        clear: () => { storeSetDateStart(""); doLoadTours(1); },
+        clear: () => {
+          storeSetDateStart("");
+          doLoadTours(1);
+        },
       },
       dateEnd && {
         key: "dateEnd",
         label: `Do: ${fmtDate(dateEnd)}`,
-        clear: () => { storeSetDateEnd(""); doLoadTours(1); },
+        clear: () => {
+          storeSetDateEnd("");
+          doLoadTours(1);
+        },
       },
     ] as (FilterChip | false)[]
   ).filter(Boolean) as FilterChip[];
@@ -525,7 +558,7 @@ export default function AdminSearchPage() {
   const importMessage = importResult
     ? importResult.ok
       ? `Import dokončen: ${importResult.created} nových, ${importResult.updated} aktualizovaných (celkem ${importResult.total}).`
-      : importResult.message ?? "Import se nezdařil."
+      : (importResult.message ?? "Import se nezdařil.")
     : null;
 
   return (
@@ -533,7 +566,9 @@ export default function AdminSearchPage() {
       {/* ── Provider selector ───────────────────────── */}
       <section className="admin-card">
         <div className="alex-country-bar">
-          <label><strong>Zdroj:</strong></label>
+          <label>
+            <strong>Zdroj:</strong>
+          </label>
           <div className="alex-country-tabs">
             {providers.map((p) => (
               <button
@@ -557,7 +592,9 @@ export default function AdminSearchPage() {
           {!isTwoLevel ? (
             /* Single-level: flat country tabs */
             <div className="alex-country-bar">
-              <label><strong>Země:</strong></label>
+              <label>
+                <strong>Země:</strong>
+              </label>
               <div className="alex-country-tabs">
                 {regions.map((r) => (
                   <button
@@ -578,36 +615,46 @@ export default function AdminSearchPage() {
             /* Two-level: departure → destination dropdowns */
             <div className="orex-route-selects">
               <div className="orex-route-select-group">
-                <label htmlFor="orexDeparture"><strong>Odletové město:</strong></label>
+                <label htmlFor="orexDeparture">
+                  <strong>Odletové město:</strong>
+                </label>
                 <select
                   id="orexDeparture"
                   value={selectedRegion?.id ?? ""}
                   onChange={(e) => {
                     const id = e.target.value ? Number(e.target.value) : null;
-                    const city = id != null ? departureCities.find((c) => c.id === id) ?? null : null;
+                    const city =
+                      id != null ? (departureCities.find((c) => c.id === id) ?? null) : null;
                     handleRegionChange(city ? { id: city.id, name: city.name } : null);
                   }}
                 >
                   <option value="">Vše</option>
                   {departureCities.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="orex-route-select-group">
-                <label htmlFor="orexDestination"><strong>Destinace:</strong></label>
+                <label htmlFor="orexDestination">
+                  <strong>Destinace:</strong>
+                </label>
                 <select
                   id="orexDestination"
                   value={selectedSubRegion?.id ?? ""}
                   onChange={(e) => {
                     const id = e.target.value ? Number(e.target.value) : null;
-                    const dest = id != null ? destinationCountries.find((c) => c.id === id) ?? null : null;
+                    const dest =
+                      id != null ? (destinationCountries.find((c) => c.id === id) ?? null) : null;
                     handleSubRegionChange(dest ? { id: dest.id, name: dest.name } : null);
                   }}
                 >
                   <option value="">Vše</option>
                   {destinationCountries.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -626,7 +673,6 @@ export default function AdminSearchPage() {
       <section className="admin-card">
         <h2>Filtrovat nabídky</h2>
         <form className="alex-filters" onSubmit={handleSearch}>
-
           {/* ─ Full-width search ─ */}
           <div className="alex-filter-field">
             <label htmlFor="searchQ">Hledat</label>
@@ -715,7 +761,12 @@ export default function AdminSearchPage() {
             <button type="button" className="ghost" onClick={handleReset}>
               Reset
             </button>
-            <button type="button" className="ghost refresh" onClick={handleRefresh} disabled={loading}>
+            <button
+              type="button"
+              className="ghost refresh"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
               ↻ Obnovit feed
             </button>
           </div>
@@ -803,7 +854,10 @@ export default function AdminSearchPage() {
 
         {/* Tour table */}
         {!loading && tours.length > 0 && (
-          <div className="alex-table-wrap" style={{ "--alex-grid-cols": gridCols } as React.CSSProperties}>
+          <div
+            className="alex-table-wrap"
+            style={{ "--alex-grid-cols": gridCols } as React.CSSProperties}
+          >
             <div className="alex-table-header">
               <span className="alex-col-check">
                 <input
@@ -907,9 +961,7 @@ export default function AdminSearchPage() {
                 <span className="alex-col-price">
                   <strong>{formatPrice(tour.price)}</strong>
                   {tour.originalPrice > tour.price && (
-                    <small className="alex-price-orig">
-                      {formatPrice(tour.originalPrice)}
-                    </small>
+                    <small className="alex-price-orig">{formatPrice(tour.originalPrice)}</small>
                   )}
                 </span>
                 <span className="alex-col-dates">
@@ -929,9 +981,7 @@ export default function AdminSearchPage() {
                   </span>
                 )}
                 {visibleColumns.stars && (
-                  <span className="alex-col-transport">
-                    {starsDisplay(tour.stars) || "–"}
-                  </span>
+                  <span className="alex-col-transport">{starsDisplay(tour.stars) || "–"}</span>
                 )}
                 <span className="alex-col-transport">
                   {transportLabel[tour.transport] ?? tour.transport}

@@ -65,7 +65,9 @@ body {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   font-weight: 600;
-  transition: transform 160ms ease, background-color 160ms ease;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
 }
 
 .admin-nav a.is-active,
@@ -139,7 +141,6 @@ body {
   font-size: 2.1rem;
 }
 
-
 .admin-content {
   width: 100%;
   max-width: 1200px;
@@ -198,7 +199,9 @@ body {
   padding: 0 0.8rem;
   font: inherit;
   background: #ffffff;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
   width: 100%;
 }
 
@@ -210,7 +213,9 @@ body {
   padding: 0.55rem 0.8rem;
   font: inherit;
   background: #ffffff;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
   width: 100%;
 }
 
@@ -415,7 +420,10 @@ body {
   font: inherit;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    filter 160ms ease;
 }
 
 .form-actions button[type="submit"] {
@@ -483,7 +491,9 @@ body {
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .own-item__actions .edit {
@@ -1131,7 +1141,9 @@ body {
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .table-actions button:hover {
@@ -1480,13 +1492,23 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ─── Alexandria Dashboard ──────────────────────────────────────────── */
@@ -1545,7 +1567,9 @@ body {
   font: inherit;
   font-size: 0.92rem;
   background: #fff;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .alex-filter-field input:focus,
@@ -1600,7 +1624,9 @@ body {
   font: inherit;
   font-size: 0.92rem;
   background: #fff;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .alex-filter-group-row input:focus {
@@ -1646,7 +1672,9 @@ body {
   background: var(--blue-700);
   color: #fff;
   box-shadow: 0 6px 14px rgba(39, 93, 174, 0.22);
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .alex-filter-actions button:hover:not(:disabled) {
@@ -1720,7 +1748,9 @@ body {
   background: var(--blue-700);
   color: #fff;
   box-shadow: 0 6px 14px rgba(39, 93, 174, 0.2);
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .alex-import-actions button:hover:not(:disabled) {
@@ -2036,8 +2066,13 @@ body {
 }
 
 @keyframes orex-stream-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Group-by toggle */
@@ -2214,7 +2249,9 @@ body {
   appearance: none;
   -webkit-appearance: none;
   min-width: 180px;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .orex-route-select-group select:focus {
@@ -2339,13 +2376,21 @@ body {
 }
 
 @keyframes alexSlideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes alexFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .alex-drawer-header {
@@ -2409,7 +2454,9 @@ body {
   cursor: pointer;
   flex-shrink: 0;
   border: 2px solid transparent;
-  transition: border-color 120ms ease, transform 120ms ease;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
 }
 
 .alex-drawer-gallery img:hover {
@@ -2499,7 +2546,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .alex-drawer-btn:hover {

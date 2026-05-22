@@ -2,11 +2,7 @@
 // Provider Registry — singleton Map store
 // ──────────────────────────────────────────────
 
-import type {
-  TourProvider,
-  FilterFieldDescriptor,
-  CacheStatus,
-} from "./types.js";
+import type { TourProvider, FilterFieldDescriptor, CacheStatus } from "./types.js";
 
 const providers = new Map<string, TourProvider>();
 

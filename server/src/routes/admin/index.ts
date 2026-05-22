@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/requireAuth.js";
+import { getPublicSearchCacheStats } from "../../providers/publicSearchCache.js";
+import { success } from "../../lib/response.js";
 import authRoutes from "./auth.js";
 import tourRoutes from "./tours.js";
 import uploadRoutes from "./uploads.js";
@@ -20,5 +22,9 @@ router.use("/tours", tourRoutes);
 router.use("/uploads", uploadRoutes);
 router.use("/leads", leadRoutes);
 router.use("/campaigns", campaignRoutes);
+
+router.get("/cache-stats", (_req, res) => {
+  success(res, getPublicSearchCacheStats());
+});
 
 export default router;

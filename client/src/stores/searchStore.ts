@@ -81,9 +81,10 @@ function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
 }
 
-function findOrextravelDefaults(
-  regionData: ProviderRegion[],
-): { region: ProviderRegion | null; subRegion: ProviderRegion | null } {
+function findOrextravelDefaults(regionData: ProviderRegion[]): {
+  region: ProviderRegion | null;
+  subRegion: ProviderRegion | null;
+} {
   const depMap = new Map<number, string>();
   for (const r of regionData) {
     const depId = r.meta?.departureId as number | undefined;
@@ -147,9 +148,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       // Single round-trip: fetch providers + all regions together.
       const { providers: providerList, regionsByProvider } = await fetchAdminBootstrap();
       const initialId =
-        providerList.find((p) => p.id === urlProvider)?.id ??
-        providerList[0]?.id ??
-        "";
+        providerList.find((p) => p.id === urlProvider)?.id ?? providerList[0]?.id ?? "";
       set({ providers: providerList, providersLoaded: true, selectedProviderId: initialId });
       if (initialId) {
         // Hydrate regions immediately from bootstrap (no extra HTTP call).
@@ -161,9 +160,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       try {
         const providerList = await fetchProviders();
         const initialId =
-          providerList.find((p) => p.id === urlProvider)?.id ??
-          providerList[0]?.id ??
-          "";
+          providerList.find((p) => p.id === urlProvider)?.id ?? providerList[0]?.id ?? "";
         set({ providers: providerList, providersLoaded: true, selectedProviderId: initialId });
         if (initialId) await get().loadRegions(initialId);
       } catch {
@@ -241,9 +238,12 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   setCacheStatus: (status) => set({ cacheStatus: status }),
   setProviderFilter: (key, value) =>
     set((s) => {
+      if (value === undefined) {
+        const { [key]: _, ...rest } = s.providerFilters;
+        return { providerFilters: rest };
+      }
       const next = { ...s.providerFilters };
-      if (value === undefined) delete next[key];
-      else next[key] = value;
+      next[key] = value;
       return { providerFilters: next };
     }),
 

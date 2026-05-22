@@ -41,7 +41,11 @@ function readCache(providerId?: string): Cached | null {
   }
 }
 
-function writeCache(providerId: string | undefined, items: PublicDestinationSummary[], etag: string | null): void {
+function writeCache(
+  providerId: string | undefined,
+  items: PublicDestinationSummary[],
+  etag: string | null,
+): void {
   try {
     const payload: Cached = { items, etag, cachedAt: Date.now() };
     sessionStorage.setItem(storageKey(providerId), JSON.stringify(payload));
@@ -80,22 +84,23 @@ export function loadDestinations(providerId?: string): {
     const headers: Record<string, string> = {};
     if (cached?.etag) headers["If-None-Match"] = cached.etag;
 
-    fresh = fetch(url, { headers })
-      .then(async (res) => {
-        if (res.status === 304 && cached) {
-          // Touch cache timestamp so the 5-min TTL is reset against fresh-from-server data.
-          writeCache(providerId, cached.items, cached.etag);
-          return { items: cached.items, fromCache: true };
-        }
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error((body as Record<string, string>)?.error || `Request failed with status ${res.status}`);
-        }
-        const etag = res.headers.get("ETag");
-        const data = (await res.json()) as { items: PublicDestinationSummary[] };
-        writeCache(providerId, data.items, etag);
-        return { items: data.items, fromCache: false };
-      });
+    fresh = fetch(url, { headers }).then(async (res) => {
+      if (res.status === 304 && cached) {
+        // Touch cache timestamp so the 5-min TTL is reset against fresh-from-server data.
+        writeCache(providerId, cached.items, cached.etag);
+        return { items: cached.items, fromCache: true };
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          (body as Record<string, string>)?.error || `Request failed with status ${res.status}`,
+        );
+      }
+      const etag = res.headers.get("ETag");
+      const data = (await res.json()) as { items: PublicDestinationSummary[] };
+      writeCache(providerId, data.items, etag);
+      return { items: data.items, fromCache: false };
+    });
   }
 
   return {

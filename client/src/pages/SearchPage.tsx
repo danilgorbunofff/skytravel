@@ -8,21 +8,39 @@
  *   `useProviderTours` hook (used by admin tables). Mixing them here would
  *   create duplicate sources of truth and cause filter/URL drift.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown, ChevronUp, Heart, LayoutGrid, LayoutList, MapPin, Plane, RotateCcw, Search, Share2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  LayoutGrid,
+  LayoutList,
+  MapPin,
+  Plane,
+  RotateCcw,
+  Search,
+  Share2,
+} from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
-import {
-  fetchPublicAllProviderTours,
-  fetchPublicProviderOfferGroup,
-} from "../api/publicProviders";
+import { fetchPublicAllProviderTours, fetchPublicProviderOfferGroup } from "../api/publicProviders";
 import { loadBootstrap } from "../api/bootstrapCache";
 import { loadDestinations as loadDestinationsCache } from "../api/destinationsCache";
-import type { ProviderMeta, PublicDestinationSummary, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
+import type {
+  ProviderMeta,
+  PublicDestinationSummary,
+  ToursResult,
+  UnifiedFilters,
+  UnifiedTour,
+} from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
 import type { TranslationKey } from "../hooks/useLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
@@ -59,10 +77,15 @@ function getTourFallbackImage(destination: string): string {
   const cached = fallbackImageCache.get(destination);
   if (cached !== undefined) return cached;
   const normalizedDestination = normalizeFallbackText(destination);
-  const alias = Object.entries(fallbackDestinationAliases).find(([key]) => normalizedDestination.includes(key))?.[1];
+  const alias = Object.entries(fallbackDestinationAliases).find(([key]) =>
+    normalizedDestination.includes(key),
+  )?.[1];
   const match = popularDestinations.find((item) => {
     const normalizedFavorite = normalizeFallbackText(item.destination);
-    return normalizedDestination.includes(normalizedFavorite) || (alias != null && normalizedFavorite.includes(alias));
+    return (
+      normalizedDestination.includes(normalizedFavorite) ||
+      (alias != null && normalizedFavorite.includes(alias))
+    );
   });
   const resolved = match?.image ?? "/placeholder-tour.svg";
   fallbackImageCache.set(destination, resolved);
@@ -88,6 +111,7 @@ function getParamNumber(searchParams: URLSearchParams, key: string, fallback: nu
 
 export default function SearchPage() {
   const { lang, setLang, t } = useLanguage();
+  usePageTitle("Vyhledávání zájezdů");
   const [searchParams, setSearchParams] = useSearchParams();
 
   const transportLabel: Record<string, string> = {
@@ -118,7 +142,13 @@ export default function SearchPage() {
     { value: "RO", label: t("sBoardRO") },
   ];
   const PRESETS = [
-    { label: t("sPresetLastMin"), params: { dateStart: new Date().toISOString().slice(0, 10), dateEnd: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) } },
+    {
+      label: t("sPresetLastMin"),
+      params: {
+        dateStart: new Date().toISOString().slice(0, 10),
+        dateEnd: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      },
+    },
     { label: t("sPresetAllInc"), params: { board: "AI" } },
     { label: t("sPresetFamily"), params: { board: "AI", nights: "7-13" } },
     { label: t("sPresetShort"), params: { nights: "1-6" } },
@@ -129,7 +159,9 @@ export default function SearchPage() {
     | { status: "loading" }
     | { status: "error"; message: string }
     | { status: "ready"; items: PublicDestinationSummary[] };
-  const [destinationsState, setDestinationsState] = useState<DestinationsState>({ status: "loading" });
+  const [destinationsState, setDestinationsState] = useState<DestinationsState>({
+    status: "loading",
+  });
   const destinations = destinationsState.status === "ready" ? destinationsState.items : [];
   const [resultsLoading, setResultsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +173,11 @@ export default function SearchPage() {
   const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
-    try { return (localStorage.getItem("skytravel:viewMode") as "grid" | "list") ?? "grid"; } catch { return "grid"; }
+    try {
+      return (localStorage.getItem("skytravel:viewMode") as "grid" | "list") ?? "grid";
+    } catch {
+      return "grid";
+    }
   });
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -158,7 +194,10 @@ export default function SearchPage() {
   const shareTimeoutRef = useRef<number | null>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [accumulatedItems, setAccumulatedItems] = useState<UnifiedTour[]>([]);
-  const [naturalPriceRange, setNaturalPriceRange] = useState({ min: MIN_PUBLIC_TOUR_PRICE_CZK, max: 200_000 });
+  const [naturalPriceRange, setNaturalPriceRange] = useState({
+    min: MIN_PUBLIC_TOUR_PRICE_CZK,
+    max: 200_000,
+  });
 
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [dateStart, setDateStart] = useState(searchParams.get("dateStart") ?? "");
@@ -187,7 +226,15 @@ export default function SearchPage() {
   const activePriceMax = searchParams.get("priceMax") ?? "";
   const hasPriceFilter = Boolean(activePriceMin || activePriceMax);
   const hasUserFilters = Boolean(
-    activeQuery || activeDateStart || activeDateEnd || activeTransport || activeDestinationSlug || activeNights || activeStars || activeBoard || hasPriceFilter,
+    activeQuery ||
+    activeDateStart ||
+    activeDateEnd ||
+    activeTransport ||
+    activeDestinationSlug ||
+    activeNights ||
+    activeStars ||
+    activeBoard ||
+    hasPriceFilter,
   );
 
   const priceRange = useMemo(() => {
@@ -225,20 +272,25 @@ export default function SearchPage() {
 
   const requestedPriceMin = parsePriceParam(activePriceMin);
   const requestedPriceMax = parsePriceParam(activePriceMax);
-  const priceMin = requestedPriceMin === null
-    ? naturalPriceRange.min
-    : Math.min(Math.max(requestedPriceMin, naturalPriceRange.min), naturalPriceRange.max);
-  const priceMax = requestedPriceMax === null
-    ? naturalPriceRange.max
-    : Math.min(Math.max(requestedPriceMax, naturalPriceRange.min), naturalPriceRange.max);
+  const priceMin =
+    requestedPriceMin === null
+      ? naturalPriceRange.min
+      : Math.min(Math.max(requestedPriceMin, naturalPriceRange.min), naturalPriceRange.max);
+  const priceMax =
+    requestedPriceMax === null
+      ? naturalPriceRange.max
+      : Math.min(Math.max(requestedPriceMax, naturalPriceRange.min), naturalPriceRange.max);
 
-  const applyLocalTourFilters = useCallback((sourceItems: UnifiedTour[], includeFavorites: boolean) => {
-    let items = sourceItems;
-    if (includeFavorites && showFavoritesOnly) {
-      items = items.filter((tour) => favorites.includes(`${tour.source}-${tour.externalId}`));
-    }
-    return items;
-  }, [showFavoritesOnly, favorites]);
+  const applyLocalTourFilters = useCallback(
+    (sourceItems: UnifiedTour[], includeFavorites: boolean) => {
+      let items = sourceItems;
+      if (includeFavorites && showFavoritesOnly) {
+        items = items.filter((tour) => favorites.includes(`${tour.source}-${tour.externalId}`));
+      }
+      return items;
+    },
+    [showFavoritesOnly, favorites],
+  );
 
   const displayedTours = useMemo(
     () => applyLocalTourFilters(result?.items ?? [], true),
@@ -260,28 +312,54 @@ export default function SearchPage() {
   }, [activeDestinationSlug, destinations]);
 
   const visibleDestinations = useMemo(
-    () => destinationsExpanded ? prioritizedDestinations : prioritizedDestinations.slice(0, 5),
+    () => (destinationsExpanded ? prioritizedDestinations : prioritizedDestinations.slice(0, 5)),
     [destinationsExpanded, prioritizedDestinations],
   );
 
   const activeChips = useMemo(() => {
     const chips: { label: string; onClear: () => void }[] = [];
-    if (activeQuery) chips.push({ label: `"${activeQuery}"`, onClear: () => updateParams({ q: null, page: 1 }) });
-    if (activeDateStart) chips.push({ label: `${t("sChipFrom")} ${fmtDate(activeDateStart)}`, onClear: () => updateParams({ dateStart: null, page: 1 }) });
-    if (activeDateEnd) chips.push({ label: `${t("sChipTo")} ${fmtDate(activeDateEnd)}`, onClear: () => updateParams({ dateEnd: null, page: 1 }) });
-    if (activeTransport) chips.push({ label: transportLabel[activeTransport] ?? activeTransport, onClear: () => updateParams({ transport: null, page: 1 }) });
+    if (activeQuery)
+      chips.push({ label: `"${activeQuery}"`, onClear: () => updateParams({ q: null, page: 1 }) });
+    if (activeDateStart)
+      chips.push({
+        label: `${t("sChipFrom")} ${fmtDate(activeDateStart)}`,
+        onClear: () => updateParams({ dateStart: null, page: 1 }),
+      });
+    if (activeDateEnd)
+      chips.push({
+        label: `${t("sChipTo")} ${fmtDate(activeDateEnd)}`,
+        onClear: () => updateParams({ dateEnd: null, page: 1 }),
+      });
+    if (activeTransport)
+      chips.push({
+        label: transportLabel[activeTransport] ?? activeTransport,
+        onClear: () => updateParams({ transport: null, page: 1 }),
+      });
     if (activeDestinationSlug) {
       const destination = destinations.find((item) => item.slug === activeDestinationSlug);
-      chips.push({ label: destination?.czechName ?? activeDestinationSlug, onClear: () => updateParams({ destinationSlug: null, page: 1 }) });
+      chips.push({
+        label: destination?.czechName ?? activeDestinationSlug,
+        onClear: () => updateParams({ destinationSlug: null, page: 1 }),
+      });
     }
     if (activeNights) {
       const opt = NIGHTS_OPTIONS.find((o) => o.value === activeNights);
-      chips.push({ label: opt?.label ?? activeNights, onClear: () => updateParams({ nights: null, page: 1 }) });
+      chips.push({
+        label: opt?.label ?? activeNights,
+        onClear: () => updateParams({ nights: null, page: 1 }),
+      });
     }
-    if (activeStars) chips.push({ label: `★${activeStars}+`, onClear: () => updateParams({ stars: null, page: 1 }) });
+    if (activeStars)
+      chips.push({
+        label: `★${activeStars}+`,
+        onClear: () => updateParams({ stars: null, page: 1 }),
+      });
     if (activeBoard) {
       const opt = BOARD_OPTIONS.find((o) => o.value === activeBoard);
-      chips.push({ label: opt?.label ?? activeBoard, onClear: () => updateParams({ board: null, page: 1 }) });
+      chips.push({
+        label: opt?.label ?? activeBoard,
+        onClear: () => updateParams({ board: null, page: 1 }),
+      });
     }
     if (activePriceMin || activePriceMax) {
       chips.push({
@@ -345,7 +423,7 @@ export default function SearchPage() {
     };
     // Bootstrap providers exactly once on mount. `loadBootstrap` is a stable
     // module-level helper and re-running on dep changes would refetch needlessly.
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadDestinations = useCallback(() => {
     let cancelled = false;
@@ -422,51 +500,58 @@ export default function SearchPage() {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [mobileFiltersOpen]);
 
   useEffect(() => {
-    function onScroll() { setPastHero(window.scrollY > 300); }
+    function onScroll() {
+      setPastHero(window.scrollY > 300);
+    }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const buildFilters = useCallback((options: { forRegions?: boolean; includePaging?: boolean } = {}): UnifiedFilters => {
-    const filters: UnifiedFilters = {
-      sortBy,
-      sortDir,
-    };
-    if (options.includePaging !== false) {
-      filters.page = page;
-      filters.limit = limit;
-    }
-    const q = searchParams.get("q")?.trim();
-    const start = searchParams.get("dateStart");
-    const end = searchParams.get("dateEnd");
-    const activeTransport = searchParams.get("transport");
-    const activeStarsFilter = searchParams.get("stars");
-    const activeBoardFilter = searchParams.get("board");
-    const activeNightsFilter = searchParams.get("nights");
-    const destinationSlug = searchParams.get("destinationSlug");
+  const buildFilters = useCallback(
+    (options: { forRegions?: boolean; includePaging?: boolean } = {}): UnifiedFilters => {
+      const filters: UnifiedFilters = {
+        sortBy,
+        sortDir,
+      };
+      if (options.includePaging !== false) {
+        filters.page = page;
+        filters.limit = limit;
+      }
+      const q = searchParams.get("q")?.trim();
+      const start = searchParams.get("dateStart");
+      const end = searchParams.get("dateEnd");
+      const activeTransport = searchParams.get("transport");
+      const activeStarsFilter = searchParams.get("stars");
+      const activeBoardFilter = searchParams.get("board");
+      const activeNightsFilter = searchParams.get("nights");
+      const destinationSlug = searchParams.get("destinationSlug");
 
-    if (q) filters.q = q;
-    if (destinationSlug) filters.destinationSlug = destinationSlug;
-    if (start) filters.dateStart = start;
-    if (end) filters.dateEnd = end;
-    if (activeTransport) filters.transport = activeTransport;
-    if (activeStarsFilter) filters.stars = activeStarsFilter;
-    if (activeBoardFilter) filters.board = activeBoardFilter;
-    if (activeNightsFilter) filters.nights = activeNightsFilter;
-    const pMin = searchParams.get("priceMin");
-    const pMax = searchParams.get("priceMax");
-    if (pMin) filters.priceMin = Number(pMin);
-    if (pMax) filters.priceMax = Number(pMax);
-    const adultCount = searchParams.get("adults");
-    const childCount = searchParams.get("children");
-    if (adultCount) filters.adults = Number(adultCount);
-    if (childCount) filters.children = Number(childCount);
-    return filters;
-  }, [searchParams, page, limit, sortBy, sortDir]);
+      if (q) filters.q = q;
+      if (destinationSlug) filters.destinationSlug = destinationSlug;
+      if (start) filters.dateStart = start;
+      if (end) filters.dateEnd = end;
+      if (activeTransport) filters.transport = activeTransport;
+      if (activeStarsFilter) filters.stars = activeStarsFilter;
+      if (activeBoardFilter) filters.board = activeBoardFilter;
+      if (activeNightsFilter) filters.nights = activeNightsFilter;
+      const pMin = searchParams.get("priceMin");
+      const pMax = searchParams.get("priceMax");
+      if (pMin) filters.priceMin = Number(pMin);
+      if (pMax) filters.priceMax = Number(pMax);
+      const adultCount = searchParams.get("adults");
+      const childCount = searchParams.get("children");
+      if (adultCount) filters.adults = Number(adultCount);
+      if (childCount) filters.children = Number(childCount);
+      return filters;
+    },
+    [searchParams, page, limit, sortBy, sortDir],
+  );
 
   const searchFilters = useMemo(() => buildFilters(), [buildFilters]);
   const searchFilterKey = useMemo(() => stableFilterKey(searchFilters), [searchFilters]);
@@ -487,7 +572,9 @@ export default function SearchPage() {
     setAccumulatedItems((prev) => {
       if (page <= 1) return result.items;
       const seen = new Set(prev.map((tour) => `${tour.source}-${tour.externalId}`));
-      const additions = result.items.filter((tour) => !seen.has(`${tour.source}-${tour.externalId}`));
+      const additions = result.items.filter(
+        (tour) => !seen.has(`${tour.source}-${tour.externalId}`),
+      );
       return additions.length ? [...prev, ...additions] : prev;
     });
   }, [result, page]);
@@ -517,11 +604,14 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-    }, [searchFilterKey]);
+  }, [searchFilterKey]);
 
-  useEffect(() => () => {
-    if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
+    },
+    [],
+  );
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
@@ -539,7 +629,7 @@ export default function SearchPage() {
     } catch (err) {
       if ((err as Error)?.name === "AbortError") return;
       setShareConfirmation("failed");
-      // eslint-disable-next-line no-console
+
       console.warn("share failed", err);
     } finally {
       if (shareTimeoutRef.current != null) window.clearTimeout(shareTimeoutRef.current);
@@ -547,49 +637,59 @@ export default function SearchPage() {
     }
   }, []);
 
-  const openTourDetail = useCallback((tour: UnifiedTour) => {
-    const key = tour.offerGroupKey;
-    setDetailTour(tour);
-    if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key]) return;
+  const openTourDetail = useCallback(
+    (tour: UnifiedTour) => {
+      const key = tour.offerGroupKey;
+      setDetailTour(tour);
+      if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key]) return;
 
-    // Cancel any previous in-flight fetch for the same offer group so a late
-    // response cannot overwrite the latest state.
-    const previous = offerGroupControllers.current.get(key);
-    previous?.abort();
-    const controller = new AbortController();
-    offerGroupControllers.current.set(key, controller);
+      // Cancel any previous in-flight fetch for the same offer group so a late
+      // response cannot overwrite the latest state.
+      const previous = offerGroupControllers.current.get(key);
+      previous?.abort();
+      const controller = new AbortController();
+      offerGroupControllers.current.set(key, controller);
 
-    setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
-    setOfferGroupErrors((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-
-    fetchPublicProviderOfferGroup(tour.source, key, buildFilters({ includePaging: false }), controller.signal)
-      .then((items) => {
-        if (offerGroupControllers.current.get(key) !== controller) return;
-        setOfferGroupItems((prev) => ({
-          ...prev,
-          [key]: items,
-        }));
-      })
-      .catch((err) => {
-        if ((err as { name?: string })?.name === "AbortError") return;
-        if (offerGroupControllers.current.get(key) !== controller) return;
-        setOfferGroupErrors((prev) => ({
-          ...prev,
-          [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
-        }));
-      })
-      .finally(() => {
-        if (offerGroupControllers.current.get(key) !== controller) return;
-        offerGroupControllers.current.delete(key);
-        setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
+      setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
+      setOfferGroupErrors((prev) => {
+        const { [key]: _, ...rest } = prev;
+        return rest;
       });
-  }, [buildFilters, offerGroupItems]);
 
-  function updateParams(patch: Record<string, string | number | null | undefined>, replace = false) {
+      fetchPublicProviderOfferGroup(
+        tour.source,
+        key,
+        buildFilters({ includePaging: false }),
+        controller.signal,
+      )
+        .then((items) => {
+          if (offerGroupControllers.current.get(key) !== controller) return;
+          setOfferGroupItems((prev) => ({
+            ...prev,
+            [key]: items,
+          }));
+        })
+        .catch((err) => {
+          if ((err as { name?: string })?.name === "AbortError") return;
+          if (offerGroupControllers.current.get(key) !== controller) return;
+          setOfferGroupErrors((prev) => ({
+            ...prev,
+            [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
+          }));
+        })
+        .finally(() => {
+          if (offerGroupControllers.current.get(key) !== controller) return;
+          offerGroupControllers.current.delete(key);
+          setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
+        });
+    },
+    [buildFilters, offerGroupItems],
+  );
+
+  function updateParams(
+    patch: Record<string, string | number | null | undefined>,
+    replace = false,
+  ) {
     setValidationError(null);
     const next = new URLSearchParams(searchParams);
     for (const [key, value] of Object.entries(patch)) {
@@ -599,9 +699,7 @@ export default function SearchPage() {
     setSearchParams(next, { replace });
   }
 
-  const dateError = dateStart && dateEnd && dateStart > dateEnd
-    ? t("sValidationDateOrder")
-    : null;
+  const dateError = dateStart && dateEnd && dateStart > dateEnd ? t("sValidationDateOrder") : null;
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -623,7 +721,11 @@ export default function SearchPage() {
 
   function setView(mode: "grid" | "list") {
     setViewMode(mode);
-    try { localStorage.setItem("skytravel:viewMode", mode); } catch {}
+    try {
+      localStorage.setItem("skytravel:viewMode", mode);
+    } catch {
+      // intentionally empty
+    }
   }
 
   function resetFilters() {
@@ -675,9 +777,15 @@ export default function SearchPage() {
             onClick={() => setDestinationsExpanded((value) => !value)}
           >
             {destinationsExpanded ? (
-              <><ChevronUp size={13} />{t("sFilterShowLessDestinations")}</>
+              <>
+                <ChevronUp size={13} />
+                {t("sFilterShowLessDestinations")}
+              </>
             ) : (
-              <><ChevronDown size={13} />{t("sFilterShowAllDestinations")} ({hiddenDestinationCount})</>
+              <>
+                <ChevronDown size={13} />
+                {t("sFilterShowAllDestinations")} ({hiddenDestinationCount})
+              </>
             )}
           </button>
         )}
@@ -706,7 +814,8 @@ export default function SearchPage() {
       <div className={`sticky-search-bar${pastHero ? " is-visible" : ""}`}>
         <div className="container sticky-search-bar__inner">
           <span className="sticky-search-bar__query">
-            {activeQuery || t("sStickyDefault")}{activeDateStart && ` · ${fmtDate(activeDateStart)}`}
+            {activeQuery || t("sStickyDefault")}
+            {activeDateStart && ` · ${fmtDate(activeDateStart)}`}
           </span>
           <button
             type="button"
@@ -739,7 +848,9 @@ export default function SearchPage() {
               }}
               placeholder={t("searchPlaceholder")}
             />
-            <button type="submit" aria-label={t("sFormSearch")}>GO</button>
+            <button type="submit" aria-label={t("sFormSearch")}>
+              GO
+            </button>
           </form>
 
           <div className="header-contact-wrap desktop-only">
@@ -748,12 +859,14 @@ export default function SearchPage() {
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </div>
             <div className="lang-toggle" aria-label="Language switcher">
-              {([
-                { code: "cs", flag: "🇨🇿" },
-                { code: "uk", flag: "🇺🇦" },
-                { code: "en", flag: "🇬🇧" },
-                { code: "ru", flag: "🇷🇺" },
-              ] as const).map((item) => (
+              {(
+                [
+                  { code: "cs", flag: "🇨🇿" },
+                  { code: "uk", flag: "🇺🇦" },
+                  { code: "en", flag: "🇬🇧" },
+                  { code: "ru", flag: "🇷🇺" },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.code}
                   type="button"
@@ -768,12 +881,14 @@ export default function SearchPage() {
 
           <div className="mobile-header-actions mobile-only">
             <div className="lang-toggle" aria-label="Language switcher">
-              {([
-                { code: "cs", flag: "🇨🇿" },
-                { code: "uk", flag: "🇺🇦" },
-                { code: "en", flag: "🇬🇧" },
-                { code: "ru", flag: "🇷🇺" },
-              ] as const).map((item) => (
+              {(
+                [
+                  { code: "cs", flag: "🇨🇿" },
+                  { code: "uk", flag: "🇺🇦" },
+                  { code: "en", flag: "🇬🇧" },
+                  { code: "ru", flag: "🇷🇺" },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.code}
                   type="button"
@@ -784,7 +899,11 @@ export default function SearchPage() {
                 </button>
               ))}
             </div>
-            <button className="hamburger" type="button" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <button
+              className="hamburger"
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
               {mobileMenuOpen ? "✕" : "☰"}
             </button>
           </div>
@@ -830,82 +949,105 @@ export default function SearchPage() {
                 </div>
               </label>
               <div className={`search-panel-extra${heroExpanded ? " is-open" : ""}`}>
-              <label>
-                <span>{t("sFormDeparture")}</span>
-                <div className="public-search-input">
-                  <CalendarDays size={18} aria-hidden="true" />
-                  <input
-                    type="date"
-                    max={dateEnd || undefined}
-                    value={dateStart}
-                    aria-invalid={!!dateError}
-                    aria-describedby={dateError ? "search-date-error" : undefined}
-                    onChange={(event) => {
-                      setDateStart(event.target.value);
-                      setValidationError(null);
-                    }}
-                  />
-                </div>
-              </label>
-              <label>
-                <span>{t("sFormReturn")}</span>
-                <div className="public-search-input">
-                  <CalendarDays size={18} aria-hidden="true" />
-                  <input
-                    type="date"
-                    min={dateStart || undefined}
-                    value={dateEnd}
-                    aria-invalid={!!dateError}
-                    aria-describedby={dateError ? "search-date-error" : undefined}
-                    onChange={(event) => {
-                      setDateEnd(event.target.value);
-                      setValidationError(null);
-                    }}
-                  />
-                </div>
-              </label>
-              <label>
-                <span>{t("sFormTransport")}</span>
-                <div className="public-search-input">
-                  <Plane size={18} aria-hidden="true" />
-                  <select
-                    value={transport}
-                    onChange={(event) => {
-                      setValidationError(null);
-                      setTransport(event.target.value);
-                    }}
-                  >
-                    <option value="">{t("sFormTransportAny")}</option>
-                    {TRANSPORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-              <label>
-                <span>{t("sFormPeople")}</span>
-                <div className="public-search-input guests-picker">
-                  <div className="guests-stepper">
-                    <div className="guests-stepper__row">
-                      <span>{t("sFormAdults")}</span>
-                      <div className="stepper">
-                        <button type="button" onClick={() => setAdults((a) => Math.max(1, a - 1))}>−</button>
-                        <span>{adults}</span>
-                        <button type="button" onClick={() => setAdults((a) => Math.min(9, a + 1))}>+</button>
+                <label>
+                  <span>{t("sFormDeparture")}</span>
+                  <div className="public-search-input">
+                    <CalendarDays size={18} aria-hidden="true" />
+                    <input
+                      type="date"
+                      max={dateEnd || undefined}
+                      value={dateStart}
+                      aria-invalid={!!dateError}
+                      aria-describedby={dateError ? "search-date-error" : undefined}
+                      onChange={(event) => {
+                        setDateStart(event.target.value);
+                        setValidationError(null);
+                      }}
+                    />
+                  </div>
+                </label>
+                <label>
+                  <span>{t("sFormReturn")}</span>
+                  <div className="public-search-input">
+                    <CalendarDays size={18} aria-hidden="true" />
+                    <input
+                      type="date"
+                      min={dateStart || undefined}
+                      value={dateEnd}
+                      aria-invalid={!!dateError}
+                      aria-describedby={dateError ? "search-date-error" : undefined}
+                      onChange={(event) => {
+                        setDateEnd(event.target.value);
+                        setValidationError(null);
+                      }}
+                    />
+                  </div>
+                </label>
+                <label>
+                  <span>{t("sFormTransport")}</span>
+                  <div className="public-search-input">
+                    <Plane size={18} aria-hidden="true" />
+                    <select
+                      value={transport}
+                      onChange={(event) => {
+                        setValidationError(null);
+                        setTransport(event.target.value);
+                      }}
+                    >
+                      <option value="">{t("sFormTransportAny")}</option>
+                      {TRANSPORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
+                <label>
+                  <span>{t("sFormPeople")}</span>
+                  <div className="public-search-input guests-picker">
+                    <div className="guests-stepper">
+                      <div className="guests-stepper__row">
+                        <span>{t("sFormAdults")}</span>
+                        <div className="stepper">
+                          <button
+                            type="button"
+                            onClick={() => setAdults((a) => Math.max(1, a - 1))}
+                          >
+                            −
+                          </button>
+                          <span>{adults}</span>
+                          <button
+                            type="button"
+                            onClick={() => setAdults((a) => Math.min(9, a + 1))}
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="guests-stepper__row">
-                      <span>{t("sFormChildren")}</span>
-                      <div className="stepper">
-                        <button type="button" onClick={() => setChildren((c) => Math.max(0, c - 1))}>−</button>
-                        <span>{children}</span>
-                        <button type="button" onClick={() => setChildren((c) => Math.min(6, c + 1))}>+</button>
+                      <div className="guests-stepper__row">
+                        <span>{t("sFormChildren")}</span>
+                        <div className="stepper">
+                          <button
+                            type="button"
+                            onClick={() => setChildren((c) => Math.max(0, c - 1))}
+                          >
+                            −
+                          </button>
+                          <span>{children}</span>
+                          <button
+                            type="button"
+                            onClick={() => setChildren((c) => Math.min(6, c + 1))}
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </label>
-              </div>{/* /search-panel-extra */}
+                </label>
+              </div>
+              {/* /search-panel-extra */}
               <button
                 type="button"
                 className="search-panel-toggle mobile-only"
@@ -913,17 +1055,18 @@ export default function SearchPage() {
               >
                 {heroExpanded ? t("sFormLess") : t("sFormMore")}
               </button>
-              <button className="public-search-submit" type="submit" disabled={!!dateError} aria-disabled={!!dateError}>
+              <button
+                className="public-search-submit"
+                type="submit"
+                disabled={!!dateError}
+                aria-disabled={!!dateError}
+              >
                 <Search size={18} aria-hidden="true" />
                 {t("sFormSearch")}
               </button>
             </form>
             {(dateError || validationError) && (
-              <p
-                id="search-date-error"
-                role="alert"
-                className="search-validation"
-              >
+              <p id="search-date-error" role="alert" className="search-validation">
                 {dateError ?? validationError}
               </p>
             )}
@@ -972,7 +1115,9 @@ export default function SearchPage() {
                     />
                     <div className="dest-thumb__label">
                       <strong>{dest.destination}</strong>
-                      {isPlausibleTourPrice(dest.price) && <span>od {formatPrice(dest.price)}</span>}
+                      {isPlausibleTourPrice(dest.price) && (
+                        <span>od {formatPrice(dest.price)}</span>
+                      )}
                     </div>
                   </button>
                 ))}
@@ -989,22 +1134,46 @@ export default function SearchPage() {
                 {destinationsState.status === "loading" && (
                   <div className="search-region-list search-region-list--loading" aria-busy="true">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="skeleton-line" style={{ height: 24, margin: "6px 0" }} />
+                      <div
+                        key={i}
+                        className="skeleton-line"
+                        style={{ height: 24, margin: "6px 0" }}
+                      />
                     ))}
                   </div>
                 )}
                 {destinationsState.status === "error" && (
-                  <div role="alert" className="search-error" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div
+                    role="alert"
+                    className="search-error"
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
                     <span>{destinationsState.message}</span>
-                    <button type="button" onClick={loadDestinations} style={{ alignSelf: "flex-start", textDecoration: "underline", background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}>
+                    <button
+                      type="button"
+                      onClick={loadDestinations}
+                      style={{
+                        alignSelf: "flex-start",
+                        textDecoration: "underline",
+                        background: "none",
+                        border: "none",
+                        color: "inherit",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
                       {t("sFilterRetry")}
                     </button>
                   </div>
                 )}
                 {destinationsState.status === "ready" && destinationsState.items.length === 0 && (
-                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>{t("sFilterNoDestinations")}</p>
+                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>
+                    {t("sFilterNoDestinations")}
+                  </p>
                 )}
-                {destinationsState.status === "ready" && destinationsState.items.length > 0 && renderDestinationList()}
+                {destinationsState.status === "ready" &&
+                  destinationsState.items.length > 0 &&
+                  renderDestinationList()}
               </div>
 
               {result && (
@@ -1028,7 +1197,9 @@ export default function SearchPage() {
                   onChange={(e) => updateParams({ nights: e.target.value, page: 1 })}
                 >
                   {NIGHTS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1036,7 +1207,7 @@ export default function SearchPage() {
               <div className="search-filter-block">
                 <h2>{t("sFilterStars")}</h2>
                 <div className="filter-btn-list">
-                  {(["" , "3", "4", "5"] as const).map((v) => (
+                  {(["", "3", "4", "5"] as const).map((v) => (
                     <button
                       key={v}
                       type="button"
@@ -1056,7 +1227,9 @@ export default function SearchPage() {
                     type="button"
                     className={!activeBoard ? "is-active" : ""}
                     onClick={() => updateParams({ board: null, page: 1 })}
-                  >{t("sFilterAll")}</button>
+                  >
+                    {t("sFilterAll")}
+                  </button>
                   {BOARD_OPTIONS.map((o) => (
                     <button
                       key={o.value}
@@ -1097,8 +1270,12 @@ export default function SearchPage() {
 
               <div className="sidebar-contact-cta">
                 <p>{t("sSidebarContactPrompt")}</p>
-                <a href="tel:+420721163860" className="sidebar-contact-phone">📞 +420 721 163 860</a>
-                <a href="mailto:info@skytravel.cz" className="sidebar-contact-email">✉ info@skytravel.cz</a>
+                <a href="tel:+420721163860" className="sidebar-contact-phone">
+                  📞 +420 721 163 860
+                </a>
+                <a href="mailto:info@skytravel.cz" className="sidebar-contact-email">
+                  ✉ info@skytravel.cz
+                </a>
                 <p className="sidebar-contact-note">{t("sSidebarContactNote")}</p>
               </div>
             </aside>
@@ -1110,22 +1287,47 @@ export default function SearchPage() {
                   <p>{toolbarDescription}</p>
                   {result && result.filtered !== result.total && (
                     <p className="results-sub">
-                      {t("sStateShown")} {displayedTours.length.toLocaleString("cs-CZ")} {t("sStateOf")} {result.total.toLocaleString("cs-CZ")} {t("sTotalSuffix")}
+                      {t("sStateShown")} {displayedTours.length.toLocaleString("cs-CZ")}{" "}
+                      {t("sStateOf")} {result.total.toLocaleString("cs-CZ")} {t("sTotalSuffix")}
                     </p>
                   )}
                 </div>
                 <div className="search-sort-actions">
-                  <button type="button" className={sortBy === "price" ? "is-active" : ""} onClick={() => toggleSort("price")}>
-                    {t("sSortPrice")} {sortBy === "price" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
+                  <button
+                    type="button"
+                    className={sortBy === "price" ? "is-active" : ""}
+                    onClick={() => toggleSort("price")}
+                  >
+                    {t("sSortPrice")}{" "}
+                    {sortBy === "price" && (
+                      <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>
+                    )}
                   </button>
-                  <button type="button" className={sortBy === "date" ? "is-active" : ""} onClick={() => toggleSort("date")}>
-                    {t("sSortDate")} {sortBy === "date" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
+                  <button
+                    type="button"
+                    className={sortBy === "date" ? "is-active" : ""}
+                    onClick={() => toggleSort("date")}
+                  >
+                    {t("sSortDate")}{" "}
+                    {sortBy === "date" && (
+                      <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>
+                    )}
                   </button>
                   <div className="view-toggle">
-                    <button type="button" aria-label={t("sViewGrid")} className={viewMode === "grid" ? "is-active" : ""} onClick={() => setView("grid")}>
+                    <button
+                      type="button"
+                      aria-label={t("sViewGrid")}
+                      className={viewMode === "grid" ? "is-active" : ""}
+                      onClick={() => setView("grid")}
+                    >
                       <LayoutGrid size={16} aria-hidden="true" />
                     </button>
-                    <button type="button" aria-label={t("sViewList")} className={viewMode === "list" ? "is-active" : ""} onClick={() => setView("list")}>
+                    <button
+                      type="button"
+                      aria-label={t("sViewList")}
+                      className={viewMode === "list" ? "is-active" : ""}
+                      onClick={() => setView("list")}
+                    >
                       <LayoutList size={16} aria-hidden="true" />
                     </button>
                   </div>
@@ -1147,7 +1349,6 @@ export default function SearchPage() {
                       {shareConfirmation === "copied" ? t("sShareCopied") : t("sShareFailed")}
                     </span>
                   )}
-
                 </div>
               </div>
 
@@ -1174,12 +1375,16 @@ export default function SearchPage() {
                   <p>{t("sNoResultsBody")}</p>
                   <ul className="search-empty__tips">
                     <li>
-                      <button type="button" onClick={resetFilters}>{t("sNoResultsTipReset")}</button>
+                      <button type="button" onClick={resetFilters}>
+                        {t("sNoResultsTipReset")}
+                      </button>
                     </li>
                     <li>{t("sNoResultsTipDates")}</li>
                     <li>{t("sNoResultsTipRegion")}</li>
                     <li>
-                      {t("sNoResultsTipCallPre")} <a href="tel:+420721163860">{t("sNoResultsTipCallLink")}</a> {t("sNoResultsTipCallPost")}
+                      {t("sNoResultsTipCallPre")}{" "}
+                      <a href="tel:+420721163860">{t("sNoResultsTipCallLink")}</a>{" "}
+                      {t("sNoResultsTipCallPost")}
                     </li>
                   </ul>
                 </div>
@@ -1218,12 +1423,20 @@ export default function SearchPage() {
               <div
                 className={viewMode === "grid" ? "public-tour-grid" : "public-tour-list"}
                 aria-busy={resultsLoading}
-                style={resultsLoading && result ? { opacity: 0.6, pointerEvents: "none", position: "relative" } : undefined}
+                style={
+                  resultsLoading && result
+                    ? { opacity: 0.6, pointerEvents: "none", position: "relative" }
+                    : undefined
+                }
               >
-                {(isMobile && !showFavoritesOnly ? applyLocalTourFilters(accumulatedItems, true) : displayedTours).map((tour) => {
+                {(isMobile && !showFavoritesOnly
+                  ? applyLocalTourFilters(accumulatedItems, true)
+                  : displayedTours
+                ).map((tour) => {
                   const tourId = `${tour.source}-${tour.externalId}`;
                   return (
-                    <PublicTourCard t={t}
+                    <PublicTourCard
+                      t={t}
                       key={tourId}
                       tour={tour}
                       viewMode={viewMode}
@@ -1235,7 +1448,10 @@ export default function SearchPage() {
                 })}
               </div>
               {resultsLoading && result && (
-                <p style={{ textAlign: "center", color: "#475569", marginTop: 12 }} aria-live="polite">
+                <p
+                  style={{ textAlign: "center", color: "#475569", marginTop: 12 }}
+                  aria-live="polite"
+                >
                   {t("sStateUpdating")}
                 </p>
               )}
@@ -1255,32 +1471,46 @@ export default function SearchPage() {
 
               {!isMobile && !showFavoritesOnly && result && result.totalPages > 1 && (
                 <div className="search-pagination">
-                  <button type="button" onClick={() => pageTo(page - 1)} disabled={page <= 1 || resultsLoading}>
+                  <button
+                    type="button"
+                    onClick={() => pageTo(page - 1)}
+                    disabled={page <= 1 || resultsLoading}
+                  >
                     <ArrowLeft size={16} aria-hidden="true" />
                     {t("sPagePrev")}
                   </button>
-                  <span>{t("sPageLabel")} {page} {t("sPageOf")} {result.totalPages}</span>
-                  <button type="button" onClick={() => pageTo(page + 1)} disabled={page >= result.totalPages || resultsLoading}>
+                  <span>
+                    {t("sPageLabel")} {page} {t("sPageOf")} {result.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => pageTo(page + 1)}
+                    disabled={page >= result.totalPages || resultsLoading}
+                  >
                     {t("sPageNext")}
                     <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               )}
-              {!isMobile && !showFavoritesOnly && result && result.totalPages > 1 && result.totalPages <= 10 && (
-                <div className="pagination-pills">
-                  {Array.from({ length: result.totalPages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className={p === page ? "is-active" : ""}
-                      onClick={() => pageTo(p)}
-                      disabled={resultsLoading}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {!isMobile &&
+                !showFavoritesOnly &&
+                result &&
+                result.totalPages > 1 &&
+                result.totalPages <= 10 && (
+                  <div className="pagination-pills">
+                    {Array.from({ length: result.totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={p === page ? "is-active" : ""}
+                        onClick={() => pageTo(p)}
+                        disabled={resultsLoading}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </section>
           </div>
         </section>
@@ -1288,9 +1518,23 @@ export default function SearchPage() {
         <div className="mobile-filter-fab mobile-only">
           <button type="button" onClick={() => setMobileFiltersOpen(true)}>
             {t("sFilterFab")}
-            {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length > 0 && (
+            {[
+              activeDestinationSlug,
+              activeTransport,
+              activeNights,
+              activeStars,
+              activeBoard,
+            ].filter(Boolean).length > 0 && (
               <span className="mobile-filter-fab__count">
-                {[activeDestinationSlug, activeTransport, activeNights, activeStars, activeBoard].filter(Boolean).length}
+                {
+                  [
+                    activeDestinationSlug,
+                    activeTransport,
+                    activeNights,
+                    activeStars,
+                    activeBoard,
+                  ].filter(Boolean).length
+                }
               </span>
             )}
           </button>
@@ -1299,10 +1543,21 @@ export default function SearchPage() {
 
       {mobileFiltersOpen && (
         <>
-          <div className="mobile-filter-drawer" role="dialog" aria-modal="true" aria-label={t("sDrawerTitle")}>
+          <div
+            className="mobile-filter-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("sDrawerTitle")}
+          >
             <div className="mobile-filter-drawer__header">
               <h2>{t("sDrawerTitle")}</h2>
-              <button type="button" onClick={() => setMobileFiltersOpen(false)} aria-label={t("sDrawerClose")}>✕</button>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label={t("sDrawerClose")}
+              >
+                ✕
+              </button>
             </div>
             <div className="mobile-filter-drawer__body">
               <div className="search-filter-block">
@@ -1310,40 +1565,83 @@ export default function SearchPage() {
                 {destinationsState.status === "loading" && (
                   <div className="search-region-list search-region-list--loading" aria-busy="true">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="skeleton-line" style={{ height: 24, margin: "6px 0" }} />
+                      <div
+                        key={i}
+                        className="skeleton-line"
+                        style={{ height: 24, margin: "6px 0" }}
+                      />
                     ))}
                   </div>
                 )}
                 {destinationsState.status === "error" && (
-                  <div role="alert" className="search-error" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div
+                    role="alert"
+                    className="search-error"
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
                     <span>{destinationsState.message}</span>
-                    <button type="button" onClick={loadDestinations} style={{ alignSelf: "flex-start", textDecoration: "underline", background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}>
+                    <button
+                      type="button"
+                      onClick={loadDestinations}
+                      style={{
+                        alignSelf: "flex-start",
+                        textDecoration: "underline",
+                        background: "none",
+                        border: "none",
+                        color: "inherit",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
                       {t("sFilterRetry")}
                     </button>
                   </div>
                 )}
                 {destinationsState.status === "ready" && destinationsState.items.length === 0 && (
-                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>{t("sFilterNoDestinations")}</p>
+                  <p style={{ fontSize: ".875rem", color: "#64748b" }}>
+                    {t("sFilterNoDestinations")}
+                  </p>
                 )}
-                {destinationsState.status === "ready" && destinationsState.items.length > 0 && renderDestinationList()}
+                {destinationsState.status === "ready" &&
+                  destinationsState.items.length > 0 &&
+                  renderDestinationList()}
               </div>
               {result && (
                 <div className="search-filter-block">
                   <h2>{t("sFilterPrice")}</h2>
-                  <PriceRangeSlider min={naturalPriceRange.min} max={naturalPriceRange.max} valueMin={priceMin} valueMax={priceMax} onChange={(min, max) => updateParams({ priceMin: min, priceMax: max, page: 1 })} />
+                  <PriceRangeSlider
+                    min={naturalPriceRange.min}
+                    max={naturalPriceRange.max}
+                    valueMin={priceMin}
+                    valueMax={priceMax}
+                    onChange={(min, max) => updateParams({ priceMin: min, priceMax: max, page: 1 })}
+                  />
                 </div>
               )}
               <div className="search-filter-block">
                 <h2>{t("sFilterNights")}</h2>
-                <select className="filter-select" value={activeNights} onChange={(e) => updateParams({ nights: e.target.value, page: 1 })}>
-                  {NIGHTS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                <select
+                  className="filter-select"
+                  value={activeNights}
+                  onChange={(e) => updateParams({ nights: e.target.value, page: 1 })}
+                >
+                  {NIGHTS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="search-filter-block">
                 <h2>{t("sFilterStars")}</h2>
                 <div className="filter-btn-list">
                   {(["", "3", "4", "5"] as const).map((v) => (
-                    <button key={v} type="button" className={activeStars === v ? "is-active" : ""} onClick={() => updateParams({ stars: v, page: 1 })}>
+                    <button
+                      key={v}
+                      type="button"
+                      className={activeStars === v ? "is-active" : ""}
+                      onClick={() => updateParams({ stars: v, page: 1 })}
+                    >
                       {v === "" ? t("sFilterAll") : "★".repeat(Number(v))}
                     </button>
                   ))}
@@ -1352,35 +1650,65 @@ export default function SearchPage() {
               <div className="search-filter-block">
                 <h2>{t("sFilterBoard")}</h2>
                 <div className="filter-btn-list">
-                  <button type="button" className={!activeBoard ? "is-active" : ""} onClick={() => updateParams({ board: null, page: 1 })}>{t("sFilterAll")}</button>
+                  <button
+                    type="button"
+                    className={!activeBoard ? "is-active" : ""}
+                    onClick={() => updateParams({ board: null, page: 1 })}
+                  >
+                    {t("sFilterAll")}
+                  </button>
                   {BOARD_OPTIONS.map((o) => (
-                    <button key={o.value} type="button" className={activeBoard === o.value ? "is-active" : ""} onClick={() => updateParams({ board: o.value, page: 1 })}>{o.label}</button>
+                    <button
+                      key={o.value}
+                      type="button"
+                      className={activeBoard === o.value ? "is-active" : ""}
+                      onClick={() => updateParams({ board: o.value, page: 1 })}
+                    >
+                      {o.label}
+                    </button>
                   ))}
                 </div>
               </div>
               {favorites.length > 0 && (
                 <div className="search-filter-block">
                   <h2>{t("sFilterSaved")}</h2>
-                  <button type="button" className={`filter-btn-list__btn${showFavoritesOnly ? " is-active" : ""}`} onClick={() => {
-                    setShowFavoritesOnly((v) => {
-                      const next = !v;
-                      if (next) updateParams({ page: 1 });
-                      return next;
-                    });
-                  }}>
+                  <button
+                    type="button"
+                    className={`filter-btn-list__btn${showFavoritesOnly ? " is-active" : ""}`}
+                    onClick={() => {
+                      setShowFavoritesOnly((v) => {
+                        const next = !v;
+                        if (next) updateParams({ page: 1 });
+                        return next;
+                      });
+                    }}
+                  >
                     <Heart size={14} aria-hidden="true" />
                     {favorites.length} {t("sFilterSavedCount")}
                   </button>
                 </div>
               )}
-              <button className="search-reset" type="button" onClick={() => { resetFilters(); setMobileFiltersOpen(false); }}>
+              <button
+                className="search-reset"
+                type="button"
+                onClick={() => {
+                  resetFilters();
+                  setMobileFiltersOpen(false);
+                }}
+              >
                 <RotateCcw size={16} aria-hidden="true" />
                 {t("sFilterReset")}
               </button>
             </div>
             <div className="mobile-filter-drawer__footer">
-              <button type="button" className="btn-primary" onClick={() => setMobileFiltersOpen(false)}>
-                {t("sDrawerApplyPrefix")} {result?.filtered != null ? result.filtered.toLocaleString("cs-CZ") : ""} {t("sStickyOffers")}
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setMobileFiltersOpen(false)}
+              >
+                {t("sDrawerApplyPrefix")}{" "}
+                {result?.filtered != null ? result.filtered.toLocaleString("cs-CZ") : ""}{" "}
+                {t("sStickyOffers")}
               </button>
             </div>
           </div>
@@ -1388,13 +1716,23 @@ export default function SearchPage() {
         </>
       )}
 
-      <LeadPopup {...leadPopup} prefilledQuery={activeQuery || undefined} prefilledDateStart={activeDateStart || undefined} />
+      <LeadPopup
+        {...leadPopup}
+        prefilledQuery={activeQuery || undefined}
+        prefilledDateStart={activeDateStart || undefined}
+      />
       {detailTour && (
         <TourDetailModal
           tour={detailTour}
           providerLabel={providerLabels[detailTour.source] ?? detailTour.source}
-          offers={detailTour.offerGroupKey && offerGroupItems[detailTour.offerGroupKey] ? offerGroupItems[detailTour.offerGroupKey] : [detailTour]}
-          loading={detailTour.offerGroupKey ? Boolean(offerGroupLoading[detailTour.offerGroupKey]) : false}
+          offers={
+            detailTour.offerGroupKey && offerGroupItems[detailTour.offerGroupKey]
+              ? offerGroupItems[detailTour.offerGroupKey]
+              : [detailTour]
+          }
+          loading={
+            detailTour.offerGroupKey ? Boolean(offerGroupLoading[detailTour.offerGroupKey]) : false
+          }
           error={detailTour.offerGroupKey ? offerGroupErrors[detailTour.offerGroupKey] : undefined}
           onClose={() => setDetailTour(null)}
         />
@@ -1403,7 +1741,7 @@ export default function SearchPage() {
   );
 }
 
-function PublicTourCard({
+const PublicTourCard = memo(function PublicTourCard({
   t,
   tour,
   viewMode,
@@ -1463,8 +1801,16 @@ function PublicTourCard({
       <h3>{tour.title}</h3>
       <p>{tour.destination}</p>
       <div className="public-tour-card__footer">
-        <strong>{isPlausibleTourPrice(tour.price) ? `${t("from")} ${formatPrice(tour.price)}` : t("sPriceOnRequest")}</strong>
-        <button type="button" className="btn-detail" onClick={(event) => stopCardAction(event, onOpenDetail)}>
+        <strong>
+          {isPlausibleTourPrice(tour.price)
+            ? `${t("from")} ${formatPrice(tour.price)}`
+            : t("sPriceOnRequest")}
+        </strong>
+        <button
+          type="button"
+          className="btn-detail"
+          onClick={(event) => stopCardAction(event, onOpenDetail)}
+        >
           <Search size={16} aria-hidden="true" />
           {t("sCardDetail")}
         </button>
@@ -1474,10 +1820,20 @@ function PublicTourCard({
 
   if (viewMode === "list") {
     return (
-      <article className="public-tour-list-item" role="button" tabIndex={0} onClick={onOpenDetail} onKeyDown={handleCardKeyDown}>
+      <article
+        className="public-tour-list-item"
+        role="button"
+        tabIndex={0}
+        onClick={onOpenDetail}
+        onKeyDown={handleCardKeyDown}
+      >
         {imageEl}
         {bodyEl}
-        <button type="button" className="btn-detail btn-detail--list" onClick={(event) => stopCardAction(event, onOpenDetail)}>
+        <button
+          type="button"
+          className="btn-detail btn-detail--list"
+          onClick={(event) => stopCardAction(event, onOpenDetail)}
+        >
           <Search size={16} aria-hidden="true" />
           {t("sCardDetail")}
         </button>
@@ -1486,9 +1842,15 @@ function PublicTourCard({
   }
 
   return (
-    <article className="public-tour-card" role="button" tabIndex={0} onClick={onOpenDetail} onKeyDown={handleCardKeyDown}>
+    <article
+      className="public-tour-card"
+      role="button"
+      tabIndex={0}
+      onClick={onOpenDetail}
+      onKeyDown={handleCardKeyDown}
+    >
       {imageEl}
       {bodyEl}
     </article>
   );
-}
+});

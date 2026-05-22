@@ -1,102 +1,100 @@
 import { Router } from "express";
 import prisma from "../../prisma.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
+import { validateBody } from "../../middleware/validate.js";
+import { sendCampaignSchema, testCampaignSchema } from "../../validators/campaigns.js";
 import { transporter, EMAIL_RE } from "../../lib/mail.js";
 import { config } from "../../config.js";
+import { success, fail } from "../../lib/response.js";
 
 const router = Router();
 
-router.post("/send", asyncHandler(async (req, res) => {
-  const { subject, preheader, fromEmail, html, segment } = req.body ?? {};
-  const subjectValue = String(subject ?? "").trim();
-  const htmlValue = String(html ?? "").trim();
-  const segmentValue = String(segment ?? "consented");
+router.post(
+  "/send",
+  validateBody(sendCampaignSchema),
+  asyncHandler(async (req, res) => {
+    const { subject, preheader, fromEmail, html, segment } = req.body;
+    const segmentValue = segment ?? "consented";
 
-  if (!subjectValue || !htmlValue) {
-    return res.status(400).json({ error: "Missing subject or html." });
-  }
+    const where =
+      segmentValue === "all"
+        ? {}
+        : segmentValue === "pending"
+          ? { marketingConsent: false }
+          : { marketingConsent: true };
 
-  const where =
-    segmentValue === "all"
-      ? {}
-      : segmentValue === "pending"
-        ? { marketingConsent: false }
-        : { marketingConsent: true };
+    const leads = await prisma.lead.findMany({ where, select: { email: true } });
+    if (leads.length === 0) {
+      fail("NO_RECIPIENTS", "No recipients.", 400);
+    }
 
-  const leads = await prisma.lead.findMany({ where });
-  if (leads.length === 0) {
-    return res.status(400).json({ error: "No recipients." });
-  }
+    if (!transporter) {
+      fail(
+        "SMTP_NOT_CONFIGURED",
+        "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in server/.env.",
+        400,
+      );
+    }
 
-  if (!transporter) {
-    return res.status(400).json({
-      error: "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in server/.env.",
+    const fromValue = String(fromEmail || config.smtp.from || config.smtp.user || "").trim();
+    if (!fromValue || !EMAIL_RE.test(fromValue)) {
+      fail("INVALID_FROM", "Missing or invalid from email.", 400);
+    }
+
+    await transporter.sendMail({
+      from: fromValue,
+      to: fromValue,
+      bcc: leads.map((lead) => lead.email),
+      subject,
+      html,
+      headers: preheader ? { "X-Preheader": String(preheader) } : undefined,
     });
-  }
 
-  const fromValue = String(fromEmail || config.smtp.from || config.smtp.user || "").trim();
-  if (!fromValue || !EMAIL_RE.test(fromValue)) {
-    return res.status(400).json({ error: "Missing or invalid from email." });
-  }
-
-  await transporter.sendMail({
-    from: fromValue,
-    to: fromValue,
-    bcc: leads.map((lead: { email: string }) => lead.email),
-    subject: subjectValue,
-    html: htmlValue,
-    headers: preheader ? { "X-Preheader": String(preheader) } : undefined,
-  });
-
-  const campaign = await prisma.emailCampaign.create({
-    data: {
-      subject: subjectValue,
-      preheader: preheader ? String(preheader) : null,
-      fromEmail: fromValue,
-      html: htmlValue,
-      segment: segmentValue,
-      recipientCount: leads.length,
-      sentAt: new Date(),
-    },
-  });
-
-  res.json({ ok: true, campaignId: campaign.id, recipients: leads.length });
-}));
-
-router.post("/test", asyncHandler(async (req, res) => {
-  const { subject, preheader, fromEmail, html, testEmail } = req.body ?? {};
-  const subjectValue = String(subject ?? "").trim();
-  const htmlValue = String(html ?? "").trim();
-  const testEmailValue = String(testEmail ?? "").trim();
-
-  if (!subjectValue || !htmlValue || !testEmailValue) {
-    return res.status(400).json({ error: "Missing subject, html or test email." });
-  }
-
-  if (!EMAIL_RE.test(testEmailValue)) {
-    return res.status(400).json({ error: "Invalid test email address." });
-  }
-
-  if (!transporter) {
-    return res.status(400).json({
-      error: "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in server/.env.",
+    const campaign = await prisma.emailCampaign.create({
+      data: {
+        subject,
+        preheader: preheader ?? null,
+        fromEmail: fromValue,
+        html,
+        segment: segmentValue,
+        recipientCount: leads.length,
+        sentAt: new Date(),
+      },
     });
-  }
 
-  const fromValue = String(fromEmail || config.smtp.from || config.smtp.user || "").trim();
-  if (!fromValue || !EMAIL_RE.test(fromValue)) {
-    return res.status(400).json({ error: "Missing or invalid from email." });
-  }
+    success(res, { campaignId: campaign.id, recipients: leads.length });
+  }),
+);
 
-  await transporter.sendMail({
-    from: fromValue,
-    to: testEmailValue,
-    subject: subjectValue,
-    html: htmlValue,
-    headers: preheader ? { "X-Preheader": String(preheader) } : undefined,
-  });
+router.post(
+  "/test",
+  validateBody(testCampaignSchema),
+  asyncHandler(async (req, res) => {
+    const { subject, preheader, html, testEmail } = req.body;
 
-  res.json({ ok: true });
-}));
+    if (!transporter) {
+      fail(
+        "SMTP_NOT_CONFIGURED",
+        "SMTP is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in server/.env.",
+        400,
+      );
+    }
+
+    const fromValue = String(config.smtp.from || config.smtp.user || "").trim();
+    if (!fromValue || !EMAIL_RE.test(fromValue)) {
+      fail("INVALID_FROM", "Missing or invalid from email.", 400);
+    }
+
+    await transporter.sendMail({
+      from: fromValue,
+      to: testEmail,
+      subject,
+      html,
+      headers: preheader ? { "X-Preheader": String(preheader) } : undefined,
+    });
+
+    success(res, null);
+  }),
+);
 
 export default router;

@@ -1,9 +1,10 @@
-import { Router, Request, Response } from "express";
+import type { Request, Response } from "express";
+import { Router } from "express";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
-import {
-  getProvider,
-  getAllProviders,
-} from "../../providers/index.js";
+import { validateBody } from "../../middleware/validate.js";
+import { importToursSchema } from "../../validators/providers.js";
+import { getProvider, getAllProviders } from "../../providers/index.js";
+import { success, fail } from "../../lib/response.js";
 import type { UnifiedFilters } from "../../providers/types.js";
 
 const router = Router();
@@ -26,7 +27,7 @@ router.get(
   "/",
   asyncHandler(async (_req: Request, res: Response) => {
     const providers = getAllProviders();
-    res.json({ providers });
+    success(res, { providers });
   }),
 );
 
@@ -49,7 +50,7 @@ router.get(
     );
     const regionsByProvider: Record<string, readonly unknown[]> = {};
     for (const [id, items] of entries) regionsByProvider[id] = items;
-    res.json({ providers, regionsByProvider });
+    success(res, { providers, regionsByProvider });
   }),
 );
 
@@ -60,11 +61,10 @@ router.get(
     try {
       const provider = getProvider(req.params.id);
       const items = await provider.getRegions();
-      res.json({ items });
+      success(res, { items });
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
-        res.status(404).json({ error: err.message });
-        return;
+        fail("NOT_FOUND", err.message, 404);
       }
       throw err;
     }
@@ -78,11 +78,10 @@ router.get(
     try {
       const provider = getProvider(req.params.id);
       const status = provider.getCacheStatus();
-      res.json(status);
+      success(res, status);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
-        res.status(404).json({ error: err.message });
-        return;
+        fail("NOT_FOUND", err.message, 404);
       }
       throw err;
     }
@@ -118,11 +117,10 @@ router.get(
       };
 
       const result = await provider.fetchTours(filters);
-      res.json(result);
+      success(res, result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
-        res.status(404).json({ error: err.message });
-        return;
+        fail("NOT_FOUND", err.message, 404);
       }
       throw err;
     }
@@ -132,22 +130,16 @@ router.get(
 // ── POST /:id/import ─────────────────────────────────────────────────
 router.post(
   "/:id/import",
+  validateBody(importToursSchema),
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const provider = getProvider(req.params.id);
-
       const { ids, regionCtx } = req.body;
-      if (!Array.isArray(ids) || ids.length === 0) {
-        res.status(400).json({ error: "body.ids must be a non-empty array of strings" });
-        return;
-      }
-
       const result = await provider.importTours(ids, regionCtx || {});
-      res.json(result);
+      success(res, result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
-        res.status(404).json({ error: err.message });
-        return;
+        fail("NOT_FOUND", err.message, 404);
       }
       throw err;
     }
@@ -162,11 +154,10 @@ router.post(
       const provider = getProvider(req.params.id);
       await provider.refreshCache();
       const status = provider.getCacheStatus();
-      res.json({ ok: true, ...status });
+      success(res, status);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.startsWith("Unknown provider:")) {
-        res.status(404).json({ error: err.message });
-        return;
+        fail("NOT_FOUND", err.message, 404);
       }
       throw err;
     }

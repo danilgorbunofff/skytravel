@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  favorites,
-  heroImages,
-  partnerTours,
-  type OwnTour,
-  type PartnerTour,
-} from "../data";
+import { favorites, heroImages, partnerTours, type OwnTour, type PartnerTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { fetchPublicDestinations } from "../api/publicProviders";
 import type { PublicDestinationSummary } from "../types/providers";
 import { useLanguage } from "../hooks/useLanguage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
@@ -31,10 +26,11 @@ function inBudgetRange(price: number, activeBudget: number) {
 export default function HomePage() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
+  usePageTitle();
   const ownTours = useTours();
   const leadPopup = useLeadPopup();
   const cookies = useCookieConsent();
-  
+
   const budgetOptions = [
     { value: 10000, label: t("budget1") },
     { value: 15000, label: t("budget2") },
@@ -59,7 +55,9 @@ export default function HomePage() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
   const [searchDateEnd, setSearchDateEnd] = useState("2026-04-21");
-  const [destinationCounts, setDestinationCounts] = useState<Record<string, PublicDestinationSummary>>({});
+  const [destinationCounts, setDestinationCounts] = useState<
+    Record<string, PublicDestinationSummary>
+  >({});
 
   const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
@@ -80,22 +78,20 @@ export default function HomePage() {
       try {
         const items = await fetchPublicDestinations();
         if (cancelled) return;
-        setDestinationCounts(
-          Object.fromEntries(items.map((item) => [item.czechName, item])),
-        );
+        setDestinationCounts(Object.fromEntries(items.map((item) => [item.czechName, item])));
       } catch {
         if (!cancelled) setDestinationCounts({});
       }
     }
     loadDestinations();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!budgetRef.current || !indicatorRef.current) return;
-    const activeButton = budgetRef.current.querySelector<HTMLButtonElement>(
-      "button.is-active"
-    );
+    const activeButton = budgetRef.current.querySelector<HTMLButtonElement>("button.is-active");
     if (!activeButton) return;
 
     const containerRect = budgetRef.current.getBoundingClientRect();
@@ -135,7 +131,9 @@ export default function HomePage() {
     // Auto-refresh every 5 minutes
     const interval = window.setInterval(load, 5 * 60 * 1000);
     // Also refresh on tab focus
-    function onFocus() { load(); }
+    function onFocus() {
+      load();
+    }
     window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
@@ -157,7 +155,7 @@ export default function HomePage() {
       term,
       meta: `${t("from")} ${formatPrice(item.price)}`,
       source: `${item.transport} | ${item.board}${starsNum > 0 ? " \u2022 " + "\u2605".repeat(starsNum) : ""}`,
-      photos: item.photos.length > 0 ? item.photos : (item.image ? [item.image] : []),
+      photos: item.photos.length > 0 ? item.photos : item.image ? [item.image] : [],
       isOwnTour: false,
     });
   }
@@ -189,7 +187,7 @@ export default function HomePage() {
     const i18n = tour.i18n?.[lang] || {};
     const photos = tour.photos && tour.photos.length > 0 ? tour.photos : [tour.image];
     const transportLabel = tour.transport
-      ? t(tour.transport as any) || tour.transport
+      ? t(tour.transport as never) || tour.transport
       : t("transportOffer");
     setModalDetail({
       type: t("modalTypeOwn"),
@@ -248,11 +246,18 @@ export default function HomePage() {
     <div>
       <header className="site-header">
         <div className="container header-top">
-          <a className="logo" href="#home" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+          <a
+            className="logo"
+            href="#home"
+            onClick={(e) => {
+              handleNavClick(e);
+              setMobileMenuOpen(false);
+            }}
+          >
             <span className="logo__sky">Sky</span>
             <span className="logo__travel">Travel</span>
           </a>
-          
+
           <form id="topSearch" className="top-search" onSubmit={handleTopSearchSubmit}>
             <input
               id="topSearchInput"
@@ -272,12 +277,14 @@ export default function HomePage() {
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </div>
             <div className="lang-toggle" aria-label="Language switcher">
-              {([
-                { code: "cs", flag: "🇨🇿" },
-                { code: "uk", flag: "🇺🇦" },
-                { code: "en", flag: "🇬🇧" },
-                { code: "ru", flag: "🇷🇺" },
-              ] as const).map((item) => (
+              {(
+                [
+                  { code: "cs", flag: "🇨🇿" },
+                  { code: "uk", flag: "🇺🇦" },
+                  { code: "en", flag: "🇬🇧" },
+                  { code: "ru", flag: "🇷🇺" },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.code}
                   type="button"
@@ -293,12 +300,14 @@ export default function HomePage() {
           {/* Mobile Right Side */}
           <div className="mobile-header-actions mobile-only">
             <div className="lang-toggle" aria-label="Language switcher">
-              {([
-                { code: "cs", flag: "🇨🇿" },
-                { code: "uk", flag: "🇺🇦" },
-                { code: "en", flag: "🇬🇧" },
-                { code: "ru", flag: "🇷🇺" },
-              ] as const).map((item) => (
+              {(
+                [
+                  { code: "cs", flag: "🇨🇿" },
+                  { code: "uk", flag: "🇺🇦" },
+                  { code: "en", flag: "🇬🇧" },
+                  { code: "ru", flag: "🇷🇺" },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.code}
                   type="button"
@@ -309,8 +318,8 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
-            <button 
-              className="hamburger" 
+            <button
+              className="hamburger"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle mobile menu"
             >
@@ -327,25 +336,63 @@ export default function HomePage() {
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </div>
             <nav className="main-nav">
-              <a href="#vlastni" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#vlastni"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 {t("navExclusive")}
               </a>
-              <a href="#allinclusive" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#allinclusive"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 {t("navPartner")}
               </a>
-              <a href="#destinace" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#destinace"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 {t("navTop")}
               </a>
-              <a href="#lastminute" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#lastminute"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 Last minute
               </a>
-              <a href="#sluzby" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#sluzby"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 {t("navServices")}
               </a>
-              <a href="#kontakt" onClick={(e) => { handleNavClick(e); setMobileMenuOpen(false); }}>
+              <a
+                href="#kontakt"
+                onClick={(e) => {
+                  handleNavClick(e);
+                  setMobileMenuOpen(false);
+                }}
+              >
                 {t("navContact")}
               </a>
-              <Link to="/admin-login" onClick={() => setMobileMenuOpen(false)}>{t("navAdmin")}</Link>
+              <Link to="/admin-login" onClick={() => setMobileMenuOpen(false)}>
+                {t("navAdmin")}
+              </Link>
             </nav>
           </div>
         </div>
@@ -386,37 +433,49 @@ export default function HomePage() {
                     <span className="hero-search__icon">📍</span>
                   </div>
                 </div>
-                <div 
-                  className="hero-search__item" 
+                <div
+                  className="hero-search__item"
                   style={{ position: "relative", cursor: "pointer" }}
                   onClick={() => {
-                      setIsDatePickerOpen(!isDatePickerOpen);
+                    setIsDatePickerOpen(!isDatePickerOpen);
                   }}
                 >
                   <label style={{ pointerEvents: "none" }}>{t("searchDate")}</label>
                   <div className="hero-search__control">
-                    <input 
-                      id="searchDate" 
-                      type="text" 
-                      value={`${new Date(searchDateStart).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")} - ${new Date(searchDateEnd).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")}`} 
-                      readOnly 
+                    <input
+                      id="searchDate"
+                      type="text"
+                      value={`${new Date(searchDateStart).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")} - ${new Date(searchDateEnd).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")}`}
+                      readOnly
                       style={{ pointerEvents: "none" }}
                     />
                     <span className="hero-search__icon">📅</span>
                   </div>
                   {isDatePickerOpen && (
                     <div className="search-popover" onClick={(e) => e.stopPropagation()}>
-                       <div className="popover-row">
-                          <label>{t("searchDeparture")}</label>
-                          <input type="date" value={searchDateStart} onChange={(e) => setSearchDateStart(e.target.value)} />
-                       </div>
-                       <div className="popover-row">
-                          <label>{t("searchReturn")}</label>
-                          <input type="date" value={searchDateEnd} onChange={(e) => setSearchDateEnd(e.target.value)} />
-                       </div>
-                       <button type="button" className="popover-done" onClick={() => setIsDatePickerOpen(false)}>
-                         {t("searchDone")}
-                       </button>
+                      <div className="popover-row">
+                        <label>{t("searchDeparture")}</label>
+                        <input
+                          type="date"
+                          value={searchDateStart}
+                          onChange={(e) => setSearchDateStart(e.target.value)}
+                        />
+                      </div>
+                      <div className="popover-row">
+                        <label>{t("searchReturn")}</label>
+                        <input
+                          type="date"
+                          value={searchDateEnd}
+                          onChange={(e) => setSearchDateEnd(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="popover-done"
+                        onClick={() => setIsDatePickerOpen(false)}
+                      >
+                        {t("searchDone")}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -466,6 +525,10 @@ export default function HomePage() {
                 <img
                   src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80"
                   alt="Background"
+                  loading="lazy"
+                  decoding="async"
+                  width={1200}
+                  height={800}
                 />
                 <div>
                   <p>
@@ -491,17 +554,30 @@ export default function HomePage() {
                   const startDate = new Date(item.startDate);
                   const endDate = new Date(item.endDate);
                   return (
-                    <article key={item.externalId} className="last-row" onClick={() => openLastMinuteModal(item)}>
+                    <article
+                      key={item.externalId}
+                      className="last-row"
+                      onClick={() => openLastMinuteModal(item)}
+                    >
                       <div>
                         <h4>{item.title}</h4>
                         <p>{item.destination}</p>
                       </div>
                       <div>
-                        <p>{startDate.toLocaleDateString("cs-CZ")} – {endDate.toLocaleDateString("cs-CZ")}</p>
-                        <p>{starsNum > 0 ? "\u2605".repeat(starsNum) + "\u2606".repeat(5 - starsNum) : ""}</p>
+                        <p>
+                          {startDate.toLocaleDateString("cs-CZ")} –{" "}
+                          {endDate.toLocaleDateString("cs-CZ")}
+                        </p>
+                        <p>
+                          {starsNum > 0
+                            ? "\u2605".repeat(starsNum) + "\u2606".repeat(5 - starsNum)
+                            : ""}
+                        </p>
                       </div>
                       <div>
-                        <strong>{t("from")} {formatPrice(item.price)}</strong>
+                        <strong>
+                          {t("from")} {formatPrice(item.price)}
+                        </strong>
                       </div>
                     </article>
                   );
@@ -532,18 +608,36 @@ export default function HomePage() {
             </div>
             <div id="partnerCards" className="hotel-grid">
               {filteredPartners.map((tour) => (
-                <article key={tour.hotel} className="hotel-card" onClick={() => openPartnerModal(tour)}>
-                  <img src={tour.image} alt={tour.hotel} />
+                <article
+                  key={tour.hotel}
+                  className="hotel-card"
+                  onClick={() => openPartnerModal(tour)}
+                >
+                  <img
+                    src={tour.image}
+                    alt={tour.hotel}
+                    loading="lazy"
+                    decoding="async"
+                    width={400}
+                    height={300}
+                  />
                   <div className="hotel-card__body">
                     <div className="hotel-topline">
-                      <div className="stars">{"★".repeat(tour.stars)}{"☆".repeat(5 - tour.stars)}</div>
+                      <div className="stars">
+                        {"★".repeat(tour.stars)}
+                        {"☆".repeat(5 - tour.stars)}
+                      </div>
                       <span className="hotel-board-badge">{tour.board}</span>
                     </div>
                     <h3>{tour.hotel}</h3>
                     <p className="hotel-meta">{tour.destination}</p>
                     <div className="hotel-info">
-                      <span className="hotel-line">{tour.term} | {tour.nights} nocí</span>
-                      <span className="hotel-line">{tour.transport} | {tour.departure}</span>
+                      <span className="hotel-line">
+                        {tour.term} | {tour.nights} nocí
+                      </span>
+                      <span className="hotel-line">
+                        {tour.transport} | {tour.departure}
+                      </span>
                     </div>
                     <span className="hotel-price">od {formatPrice(tour.price)}</span>
                   </div>
@@ -564,31 +658,33 @@ export default function HomePage() {
               <h2>{t("sectionFavTitle")}</h2>
             </header>
             <div id="favoriteGrid" className="favorite-grid">
-              {favorites.map((item) => (
+              {favorites.map((item) =>
                 (() => {
                   const liveDestination = destinationCounts[item.destination];
                   const livePrice = liveDestination?.minPrice ?? item.price;
                   const liveCount = liveDestination?.count ?? 0;
                   return (
-                <article
-                  key={item.destination}
-                  className="favorite-card"
-                  style={{ backgroundImage: `url('${item.image}')` }}
-                  onClick={() => openFavoriteSearch(item)}
-                >
-                  <div className="favorite-card__body">
-                    <h3>{item.destination}</h3>
-                    <span className="price-pill">{t("from")} {formatPrice(livePrice)}</span>
-                    {liveCount > 0 && (
-                      <span className="favorite-card__count">
-                        {liveCount.toLocaleString("cs-CZ")} termínů
-                      </span>
-                    )}
-                  </div>
-                </article>
+                    <article
+                      key={item.destination}
+                      className="favorite-card"
+                      style={{ backgroundImage: `url('${item.image}')` }}
+                      onClick={() => openFavoriteSearch(item)}
+                    >
+                      <div className="favorite-card__body">
+                        <h3>{item.destination}</h3>
+                        <span className="price-pill">
+                          {t("from")} {formatPrice(livePrice)}
+                        </span>
+                        {liveCount > 0 && (
+                          <span className="favorite-card__count">
+                            {liveCount.toLocaleString("cs-CZ")} termínů
+                          </span>
+                        )}
+                      </div>
+                    </article>
                   );
-                })()
-              ))}
+                })(),
+              )}
             </div>
           </div>
         </section>
@@ -609,6 +705,10 @@ export default function HomePage() {
                 <img
                   src="https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=900&q=80"
                   alt="SkyTravel trip"
+                  loading="lazy"
+                  decoding="async"
+                  width={900}
+                  height={600}
                 />
                 <span>{t("polaroid1")}</span>
               </div>
@@ -616,6 +716,10 @@ export default function HomePage() {
                 <img
                   src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=900&q=80"
                   alt="Vlastní zážitky"
+                  loading="lazy"
+                  decoding="async"
+                  width={900}
+                  height={600}
                 />
                 <span>{t("polaroid2")}</span>
               </div>
@@ -666,9 +770,7 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {modalDetail && (
-        <TourModal detail={modalDetail} onClose={closeModal} />
-      )}
+      {modalDetail && <TourModal detail={modalDetail} onClose={closeModal} />}
 
       <CookieConsent
         showCookies={cookies.showCookies}

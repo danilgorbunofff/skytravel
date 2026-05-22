@@ -1,11 +1,18 @@
-import { Router, Request, Response } from "express";
+import type { Request, Response } from "express";
+import { Router } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { getAllProviders, getProvider } from "../providers/index.js";
+import { getOrFetchPublicSearchResult } from "../providers/publicSearchCache.js";
 import {
-  getOrFetchPublicSearchResult,
-} from "../providers/publicSearchCache.js";
-import { getDestinationSearchContext, listPublicDestinations } from "../providers/destinationStore.js";
-import type { FilterFieldDescriptor, ToursResult, UnifiedFilters, UnifiedTour } from "../providers/types.js";
+  getDestinationSearchContext,
+  listPublicDestinations,
+} from "../providers/destinationStore.js";
+import type {
+  FilterFieldDescriptor,
+  ToursResult,
+  UnifiedFilters,
+  UnifiedTour,
+} from "../providers/types.js";
 
 const router = Router();
 
@@ -129,7 +136,11 @@ function validateProviderFilters(
   return providerFilters;
 }
 
-function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor[]): UnifiedFilters | undefined {
+function buildFilters(
+  req: Request,
+  res: Response,
+  fields: FilterFieldDescriptor[],
+): UnifiedFilters | undefined {
   const q = firstQueryValue(req.query.q);
   if (q && q.length > MAX_QUERY_LENGTH) {
     res.status(400).json({ error: "Search query is too long." });
@@ -191,7 +202,8 @@ function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor
 
   const page = parseOptionalNumber(req, res, "page", { integer: true, min: 1, max: 10_000 }) ?? 1;
   if (res.headersSent) return undefined;
-  const limit = parseOptionalNumber(req, res, "limit", { integer: true, min: 1, max: MAX_PUBLIC_LIMIT }) ?? 24;
+  const limit =
+    parseOptionalNumber(req, res, "limit", { integer: true, min: 1, max: MAX_PUBLIC_LIMIT }) ?? 24;
   if (res.headersSent) return undefined;
 
   const providerFilters = validateProviderFilters(req, res, fields);
@@ -216,7 +228,11 @@ function buildFilters(req: Request, res: Response, fields: FilterFieldDescriptor
   };
 }
 
-function sortTours(items: UnifiedTour[], sortBy: string | undefined, sortDir: "asc" | "desc" | undefined): UnifiedTour[] {
+function sortTours(
+  items: UnifiedTour[],
+  sortBy: string | undefined,
+  sortDir: "asc" | "desc" | undefined,
+): UnifiedTour[] {
   const dir = sortDir === "desc" ? -1 : 1;
   return [...items].sort((left, right) => {
     const leftValue = sortBy === "date" ? new Date(left.startDate).getTime() : left.price;
@@ -227,7 +243,9 @@ function sortTours(items: UnifiedTour[], sortBy: string | undefined, sortDir: "a
 }
 
 function sumOptional(values: Array<number | undefined>): number | undefined {
-  const filtered = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const filtered = values.filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
   return filtered.length > 0 ? filtered.reduce((sum, value) => sum + value, 0) : undefined;
 }
 
@@ -256,7 +274,9 @@ router.get(
       return;
     }
 
-    const destinationContext = destinationSlug ? await getDestinationSearchContext(destinationSlug) : null;
+    const destinationContext = destinationSlug
+      ? await getDestinationSearchContext(destinationSlug)
+      : null;
     if (destinationSlug && !destinationContext) {
       const emptyResult = {
         total: 0,
@@ -293,7 +313,9 @@ router.get(
             const providerFilters: Record<string, unknown> = {};
             if (transport) providerFilters.transport = transport;
 
-            const mapping = destinationContext?.mappings.find((item) => item.providerId === meta.id);
+            const mapping = destinationContext?.mappings.find(
+              (item) => item.providerId === meta.id,
+            );
             if (mapping) providerFilters[mapping.providerKey] = mapping.providerValue;
 
             const providerQuery: UnifiedFilters = {
@@ -318,13 +340,18 @@ router.get(
           if (item.status === "fulfilled") {
             successful.push(item.value);
           } else {
-            const message = item.reason instanceof Error ? item.reason.message : String(item.reason);
+            const message =
+              item.reason instanceof Error ? item.reason.message : String(item.reason);
             providerErrors.push({ providerId: meta.id, message });
             console.warn(`[PublicSearch] all-provider search failed for ${meta.id}:`, item.reason);
           }
         }
 
-        const mergedItems = sortTours(successful.flatMap(({ result }) => result.items), filters.sortBy, filters.sortDir);
+        const mergedItems = sortTours(
+          successful.flatMap(({ result }) => result.items),
+          filters.sortBy,
+          filters.sortDir,
+        );
         const filtered = successful.reduce((sum, { result }) => sum + result.filtered, 0);
         const total = successful.reduce((sum, { result }) => sum + result.total, 0);
         const start = (page - 1) * limit;
@@ -334,14 +361,20 @@ router.get(
           filtered,
           rawTotalOffers: sumOptional(successful.map(({ result }) => result.rawTotalOffers)),
           rawFilteredOffers: sumOptional(successful.map(({ result }) => result.rawFilteredOffers)),
-          uniqueDestinations: new Set(mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ"))).size,
+          uniqueDestinations: new Set(
+            mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ")),
+          ).size,
           page,
           limit,
           totalPages: Math.max(1, Math.ceil(filtered / limit)),
           items,
           degraded: providerErrors.length > 0,
           providerErrors,
-          providers: successful.map(({ meta, result }) => ({ id: meta.id, label: meta.label, filtered: result.filtered })),
+          providers: successful.map(({ meta, result }) => ({
+            id: meta.id,
+            label: meta.label,
+            filtered: result.filtered,
+          })),
         };
       },
     );
@@ -377,9 +410,7 @@ router.get(
     // Version derived from the most recent ProviderSync.lastSyncAt across
     // all providers. Used as an ETag so the browser returns 304 until the
     // server-side cache actually changes.
-    const versionParts = providers
-      .map((p) => p.cacheStatus?.lastRefresh ?? 0)
-      .join(":");
+    const versionParts = providers.map((p) => p.cacheStatus?.lastRefresh ?? 0).join(":");
     const etag = `W/"bootstrap-${Buffer.from(versionParts).toString("base64").slice(0, 24)}"`;
 
     if (req.headers["if-none-match"] === etag) {

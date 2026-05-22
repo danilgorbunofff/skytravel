@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────
 
 import { config } from "../config.js";
+import { type Prisma } from "@prisma/client";
 import prisma from "../prisma.js";
 import {
   fetchAlexandriaParsed,
@@ -20,11 +21,7 @@ import type {
   ProviderRegion,
   FilterFieldDescriptor,
 } from "./types.js";
-import {
-  readRegions,
-  writeRegions,
-  updateRegionTourCount,
-} from "./regionStore.js";
+import { readRegions, writeRegions, updateRegionTourCount } from "./regionStore.js";
 import {
   countOfferGroupsBy,
   groupOfferRows,
@@ -60,7 +57,9 @@ function nightsFromDates(startDate: Date | string, endDate: Date | string): numb
 }
 
 function photosFromJson(value: unknown, image: string): string[] {
-  const photos = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+  const photos = Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+    : [];
   return photos.length > 0 ? photos : image ? [image] : [];
 }
 
@@ -70,15 +69,29 @@ function photosFromJson(value: unknown, image: string): string[] {
 // read time and wire payload.
 function buildTourSelect(omitHeavy: boolean) {
   return {
-    id: true, externalId: true, source: true, regionKey: true,
-    destination: true, title: true, price: true, originalPrice: true,
-    startDate: true, endDate: true, transport: true, image: true,
-    stars: true, board: true, nights: true, adults: true,
-    children: true, roomType: true, currency: true, offersCount: true,
-    syncedAt: true, createdAt: true,
-    ...(omitHeavy
-      ? {}
-      : { url: true, description: true, photos: true }),
+    id: true,
+    externalId: true,
+    source: true,
+    regionKey: true,
+    destination: true,
+    title: true,
+    price: true,
+    originalPrice: true,
+    startDate: true,
+    endDate: true,
+    transport: true,
+    image: true,
+    stars: true,
+    board: true,
+    nights: true,
+    adults: true,
+    children: true,
+    roomType: true,
+    currency: true,
+    offersCount: true,
+    syncedAt: true,
+    createdAt: true,
+    ...(omitHeavy ? {} : { url: true, description: true, photos: true }),
   } as const;
 }
 
@@ -88,19 +101,14 @@ export class AlexandriaProvider implements TourProvider {
   readonly supportsStreaming = false;
   readonly refreshIntervalMs = 25 * 60 * 1000; // 25 min
 
-  private feedCacheMap = new Map<
-    number,
-    { data: AlexandriaTourInput[]; ts: number }
-  >();
+  private feedCacheMap = new Map<number, { data: AlexandriaTourInput[]; ts: number }>();
 
   private readonly CACHE_TTL = 30 * 60 * 1000; // 30 min
   private syncMutex: Promise<void> | null = null;
 
   // ── Private helpers ───────────────────────────────────────────────
 
-  private async getCachedFeed(
-    countryId?: number,
-  ): Promise<AlexandriaTourInput[]> {
+  private async getCachedFeed(countryId?: number): Promise<AlexandriaTourInput[]> {
     const zeme = countryId ?? config.alexandria.country;
     const cached = this.feedCacheMap.get(zeme);
     if (cached && Date.now() - cached.ts < this.CACHE_TTL) {
@@ -112,10 +120,7 @@ export class AlexandriaProvider implements TourProvider {
     return mapped;
   }
 
-  private serializeItem(
-    item: AlexandriaTourInput,
-    offersCount?: number,
-  ): UnifiedTour {
+  private serializeItem(item: AlexandriaTourInput, offersCount?: number): UnifiedTour {
     const tour: UnifiedTour = {
       externalId: item.externalId,
       destination: item.destination,
@@ -148,12 +153,15 @@ export class AlexandriaProvider implements TourProvider {
 
     // Fallback (cold DB) — return the static known list with no counts so
     // the UI can render immediately while the background sync populates DB.
-    return KNOWN_COUNTRIES
-      .map((c) => ({ id: c.id, name: c.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, "cs"));
+    return KNOWN_COUNTRIES.map((c) => ({ id: c.id, name: c.name })).sort((a, b) =>
+      a.name.localeCompare(b.name, "cs"),
+    );
   }
 
-  private async withGroupedRegionCounts(regions: ProviderRegion[], filters?: UnifiedFilters): Promise<ProviderRegion[]> {
+  private async withGroupedRegionCounts(
+    regions: ProviderRegion[],
+    filters?: UnifiedFilters,
+  ): Promise<ProviderRegion[]> {
     const { where, nightsRange } = this.buildTourQuery(filters ?? { providerFilters: {} });
     const rows = await prisma.providerTour.findMany({
       where,
@@ -168,7 +176,10 @@ export class AlexandriaProvider implements TourProvider {
         nights: true,
       },
     });
-    const counts = countOfferGroupsBy(this.filterRowsByNights(rows, nightsRange), (row) => row.regionKey);
+    const counts = countOfferGroupsBy(
+      this.filterRowsByNights(rows, nightsRange),
+      (row) => row.regionKey,
+    );
     return regions.map((region) => ({
       ...region,
       count: counts.get(String(region.id)) ?? undefined,
@@ -202,7 +213,7 @@ export class AlexandriaProvider implements TourProvider {
   }
 
   private buildTourQuery(filters: UnifiedFilters): {
-    where: any;
+    where: Prisma.ProviderTourWhereInput;
     sortBy: string;
     sortDir: "asc" | "desc";
     page: number;
@@ -211,11 +222,20 @@ export class AlexandriaProvider implements TourProvider {
     nightsRange: NightsRange;
   } {
     const pf = filters.providerFilters;
-    const zeme =
-      pf.zeme !== undefined ? Number(pf.zeme) : undefined;
+    const zeme = pf.zeme !== undefined ? Number(pf.zeme) : undefined;
     const transport = typeof pf.transport === "string" ? pf.transport : "";
-    const board = typeof filters.board === "string" ? filters.board : typeof pf.board === "string" ? pf.board : "";
-    const stars = typeof filters.stars === "string" ? filters.stars : typeof pf.stars === "string" ? pf.stars : "";
+    const board =
+      typeof filters.board === "string"
+        ? filters.board
+        : typeof pf.board === "string"
+          ? pf.board
+          : "";
+    const stars =
+      typeof filters.stars === "string"
+        ? filters.stars
+        : typeof pf.stars === "string"
+          ? pf.stars
+          : "";
     const groupBy = typeof pf.groupBy === "string" ? pf.groupBy : "";
     const nightsRange = parseNightsRange(filters.nights);
 
@@ -225,17 +245,17 @@ export class AlexandriaProvider implements TourProvider {
     const limit = Math.min(1_000, Math.max(1, filters.limit ?? 50));
 
     // Build Prisma where clause
-    const where: any = { source: this.id, price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK } };
+    const where: Prisma.ProviderTourWhereInput = {
+      source: this.id,
+      price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK },
+    };
     if (zeme !== undefined && Number.isFinite(zeme)) {
       where.regionKey = String(zeme);
     }
 
     if (filters.q) {
       const q = filters.q;
-      where.OR = [
-        { destination: { startsWith: q } },
-        { title: { contains: q } },
-      ];
+      where.OR = [{ destination: { startsWith: q } }, { title: { contains: q } }];
     }
 
     if (transport) where.transport = transport;
@@ -243,37 +263,41 @@ export class AlexandriaProvider implements TourProvider {
     if (stars) {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {
-        where.stars = { in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars) };
+        where.stars = {
+          in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars),
+        };
       }
     }
 
     if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
-      where.price = { ...where.price, gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK) };
+      where.price = {
+        ...(where.price as object),
+        gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK),
+      };
     }
     if (filters.priceMax !== undefined && Number.isFinite(filters.priceMax)) {
-      where.price = { ...where.price, lte: filters.priceMax };
+      where.price = { ...(where.price as object), lte: filters.priceMax };
     }
 
     if (filters.dateStart) {
       const ds = new Date(filters.dateStart);
       if (!Number.isNaN(ds.getTime())) {
-        where.startDate = { ...where.startDate, gte: ds };
+        where.startDate = { ...(where.startDate as object), gte: ds };
       }
     }
     if (filters.dateEnd) {
       const de = new Date(filters.dateEnd);
       if (!Number.isNaN(de.getTime())) {
-        where.endDate = { ...where.endDate, lte: de };
+        where.endDate = { ...(where.endDate as object), lte: de };
       }
     }
 
     return { where, sortBy, sortDir, page, limit, groupBy, nightsRange };
   }
 
-  private filterRowsByNights<T extends { startDate: Date | string; endDate: Date | string; nights?: number | null }>(
-    rows: T[],
-    nightsRange: NightsRange,
-  ): T[] {
+  private filterRowsByNights<
+    T extends { startDate: Date | string; endDate: Date | string; nights?: number | null },
+  >(rows: T[], nightsRange: NightsRange): T[] {
     if (!nightsRange) return rows;
     return rows.filter((row) => {
       const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate);
@@ -282,7 +306,8 @@ export class AlexandriaProvider implements TourProvider {
   }
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
-    const { where, sortBy, sortDir, page, limit, groupBy, nightsRange } = this.buildTourQuery(filters);
+    const { where, sortBy, sortDir, page, limit, groupBy, nightsRange } =
+      this.buildTourQuery(filters);
     const omitHeavy = filters.omitHeavy === true;
 
     if (filters.groupResults) {
@@ -294,16 +319,12 @@ export class AlexandriaProvider implements TourProvider {
       return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit, omitHeavy);
     }
 
-    const orderBy: any =
-      sortBy === "date"
-        ? { startDate: sortDir }
-        : { price: sortDir };
+    const orderBy: Prisma.ProviderTourOrderByWithRelationInput =
+      sortBy === "date" ? { startDate: sortDir } : { price: sortDir };
 
     const hasTextFilter = Boolean(filters.q);
-    const hasPriceFilter =
-      filters.priceMin !== undefined || filters.priceMax !== undefined;
-    const hasDateFilter =
-      filters.dateStart !== undefined || filters.dateEnd !== undefined;
+    const hasPriceFilter = filters.priceMin !== undefined || filters.priceMax !== undefined;
+    const hasDateFilter = filters.dateStart !== undefined || filters.dateEnd !== undefined;
     const needsSeparateTotal = hasTextFilter || hasPriceFilter || hasDateFilter;
 
     const [items, filtered, rawTotal, uniqueDestinations] = await Promise.all([
@@ -316,7 +337,9 @@ export class AlexandriaProvider implements TourProvider {
       }),
       prisma.providerTour.count({ where }),
       needsSeparateTotal
-        ? prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } })
+        ? prisma.providerTour.count({
+            where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) },
+          })
         : Promise.resolve(null),
       // Region count is derived from the persisted region list, not a
       // distinct scan over ProviderTour. For Alexandria each regionKey is a
@@ -343,7 +366,7 @@ export class AlexandriaProvider implements TourProvider {
   }
 
   private async fetchGroupedByDestination(
-    where: any,
+    where: Prisma.ProviderTourWhereInput,
     sortBy: string,
     sortDir: string,
     page: number,
@@ -354,30 +377,28 @@ export class AlexandriaProvider implements TourProvider {
     const allFiltered = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
-      take: 5_000,   // hard cap — Alexandria rarely exceeds this
+      take: 5_000, // hard cap — Alexandria rarely exceeds this
       select: buildTourSelect(omitHeavy),
     });
 
     const counts = new Map<string, number>();
-    const cheapest = new Map<string, typeof allFiltered[0]>();
+    const cheapest = new Map<string, (typeof allFiltered)[0]>();
     for (const t of allFiltered) {
       counts.set(t.destination, (counts.get(t.destination) ?? 0) + 1);
       if (!cheapest.has(t.destination)) cheapest.set(t.destination, t);
     }
 
-    let grouped = [...cheapest.values()].map((row) => ({
+    const grouped = [...cheapest.values()].map((row) => ({
       tour: this.rowToUnified(row),
       offersCount: counts.get(row.destination) ?? 1,
     }));
 
     // Sort the grouped results
     grouped.sort((a, b) => {
-      let d = 0;
-      if (sortBy === "date") {
-        d = new Date(a.tour.startDate).getTime() - new Date(b.tour.startDate).getTime();
-      } else {
-        d = a.tour.price - b.tour.price;
-      }
+      const d =
+        sortBy === "date"
+          ? new Date(a.tour.startDate).getTime() - new Date(b.tour.startDate).getTime()
+          : a.tour.price - b.tour.price;
       return sortDir === "asc" ? d : -d;
     });
 
@@ -401,31 +422,35 @@ export class AlexandriaProvider implements TourProvider {
     };
   }
 
-  private rowToUnified(row: any): UnifiedTour {
-    const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate) ?? undefined;
+  private rowToUnified(row: Record<string, unknown>): UnifiedTour {
+    const nights =
+      (row.nights as number | null) ??
+      nightsFromDates(row.startDate as string | Date, row.endDate as string | Date) ??
+      undefined;
     return {
-      externalId: row.externalId,
-      destination: row.destination,
-      title: row.title,
-      price: row.price,
-      originalPrice: row.originalPrice,
-      startDate: row.startDate instanceof Date ? row.startDate.toISOString() : row.startDate,
-      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : row.endDate,
-      transport: row.transport,
-      image: row.image,
-      description: row.description ?? null,
-      photos: photosFromJson(row.photos, row.image),
-      url: row.url ?? "",
-      stars: row.stars,
-      board: row.board,
+      externalId: row.externalId as string,
+      destination: row.destination as string,
+      title: row.title as string,
+      price: row.price as number,
+      originalPrice: row.originalPrice as number,
+      startDate:
+        row.startDate instanceof Date ? row.startDate.toISOString() : (row.startDate as string),
+      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : (row.endDate as string),
+      transport: row.transport as string,
+      image: row.image as string,
+      description: (row.description as string) ?? null,
+      photos: photosFromJson(row.photos, row.image as string),
+      url: (row.url as string) ?? "",
+      stars: row.stars as string,
+      board: row.board as string,
       source: this.id,
-      offersCount: row.offersCount ?? undefined,
+      offersCount: (row.offersCount as number) ?? undefined,
       nights,
     };
   }
 
   private async fetchGroupedByOffer(
-    where: any,
+    where: Prisma.ProviderTourWhereInput,
     sortBy: string,
     sortDir: string,
     page: number,
@@ -468,17 +493,16 @@ export class AlexandriaProvider implements TourProvider {
     };
   }
 
-  async fetchOfferGroup(
-    filters: UnifiedFilters,
-    offerGroupKey: string,
-  ): Promise<UnifiedTour[]> {
+  async fetchOfferGroup(filters: UnifiedFilters, offerGroupKey: string): Promise<UnifiedTour[]> {
     const { where, sortBy, sortDir, nightsRange } = this.buildTourQuery(filters);
     const rows = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
       take: MAX_GROUPED_TOUR_ROWS,
     });
-    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find((entry) => entry.key === offerGroupKey);
+    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find(
+      (entry) => entry.key === offerGroupKey,
+    );
     if (!group) return [];
 
     return sortOfferRows(group.offers, sortBy, sortDir).map((row) => ({
@@ -488,18 +512,12 @@ export class AlexandriaProvider implements TourProvider {
     }));
   }
 
-  async streamTours(
-    filters: UnifiedFilters,
-    onBatch: StreamCallback,
-  ): Promise<void> {
+  async streamTours(filters: UnifiedFilters, onBatch: StreamCallback): Promise<void> {
     const result = await this.fetchTours(filters);
     onBatch({ batch: result.items, loaded: result.items.length });
   }
 
-  async importTours(
-    ids: string[],
-    regionCtx: Record<string, unknown>,
-  ): Promise<ImportResult> {
+  async importTours(ids: string[], _regionCtx: Record<string, unknown>): Promise<ImportResult> {
     // Read from ProviderTour table instead of in-memory cache
     const providerRows = await prisma.providerTour.findMany({
       where: {
@@ -708,7 +726,9 @@ export class AlexandriaProvider implements TourProvider {
         });
         await updateRegionTourCount(this.id, regionKey, count);
 
-        console.log(`[Alexandria] Synced ${count} tours for country ${country.name} (${country.id})`);
+        console.log(
+          `[Alexandria] Synced ${count} tours for country ${country.name} (${country.id})`,
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         await prisma.providerSync.update({

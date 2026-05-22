@@ -26,8 +26,14 @@ export default function AdminRoutes() {
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="emails" element={<AdminEmailPage />} />
           <Route path="search" element={<AdminSearchPage />} />
-          <Route path="alexandria" element={<Navigate to="/admin/search?provider=alexandria" replace />} />
-          <Route path="orextravel" element={<Navigate to="/admin/search?provider=orextravel" replace />} />
+          <Route
+            path="alexandria"
+            element={<Navigate to="/admin/search?provider=alexandria" replace />}
+          />
+          <Route
+            path="orextravel"
+            element={<Navigate to="/admin/search?provider=orextravel" replace />}
+          />
         </Routes>
       </Suspense>
     </RequireAdmin>

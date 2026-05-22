@@ -99,7 +99,9 @@ export default function AdminTourPreview({
               type="button"
               className={cn(
                 "h-1.5 rounded-full transition-all",
-                index === previewIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/40",
+                index === previewIndex
+                  ? "w-4 bg-primary"
+                  : "w-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/40",
               )}
               onClick={() => setPreviewIndex(index)}
               aria-label={`Fotka ${index + 1}`}
@@ -113,18 +115,24 @@ export default function AdminTourPreview({
         <span className="inline-block rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground shadow-sm">
           {form.title || "SkyTravel Signature"}
         </span>
-        <h4 className="text-base font-bold leading-snug">{form.destination || "Destinace / Hotel"}</h4>
+        <h4 className="text-base font-bold leading-snug">
+          {form.destination || "Destinace / Hotel"}
+        </h4>
         <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {form.description ||
             "Tady bude krátký popis zájezdu – hlavní benefity, pro koho je určen a proč je zajímavý."}
         </p>
         <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
           <div>
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Termín</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Termín
+            </span>
             <p className="mt-0.5 text-sm font-semibold">{previewTerm}</p>
           </div>
           <div>
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Cena od</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Cena od
+            </span>
             <p className="mt-0.5 text-sm font-bold text-primary">
               {form.price ? formatPrice(Number(form.price)) : "— Kč"}
             </p>

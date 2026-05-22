@@ -27,10 +27,15 @@ function normalizeFallbackText(value: string): string {
 
 function getTourFallbackImage(destination: string): string {
   const normalizedDestination = normalizeFallbackText(destination);
-  const alias = Object.entries(fallbackDestinationAliases).find(([key]) => normalizedDestination.includes(key))?.[1];
+  const alias = Object.entries(fallbackDestinationAliases).find(([key]) =>
+    normalizedDestination.includes(key),
+  )?.[1];
   const match = popularDestinations.find((item) => {
     const normalizedFavorite = normalizeFallbackText(item.destination);
-    return normalizedDestination.includes(normalizedFavorite) || (alias != null && normalizedFavorite.includes(alias));
+    return (
+      normalizedDestination.includes(normalizedFavorite) ||
+      (alias != null && normalizedFavorite.includes(alias))
+    );
   });
   return match?.image ?? "/placeholder-tour.svg";
 }
@@ -44,14 +49,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function TourDetailModal({
-  tour,
-  providerLabel,
-  offers,
-  loading,
-  error,
-  onClose,
-}: Props) {
+export function TourDetailModal({ tour, providerLabel, offers, loading, error, onClose }: Props) {
   const { t } = useLanguage();
   const transportLabel: Record<string, string> = {
     plane: t("sModalTransportPlane"),
@@ -88,16 +86,27 @@ export function TourDetailModal({
   }, [tour]);
 
   const sortedOffers = useMemo(
-    () => [...offers].sort((left, right) => new Date(left.startDate).getTime() - new Date(right.startDate).getTime() || left.price - right.price),
+    () =>
+      [...offers].sort(
+        (left, right) =>
+          new Date(left.startDate).getTime() - new Date(right.startDate).getTime() ||
+          left.price - right.price,
+      ),
     [offers],
   );
-  const selectedOffer = sortedOffers.find((offer) => `${offer.source}-${offer.externalId}` === selectedOfferId) ?? sortedOffers[0] ?? tour;
+  const selectedOffer =
+    sortedOffers.find((offer) => `${offer.source}-${offer.externalId}` === selectedOfferId) ??
+    sortedOffers[0] ??
+    tour;
   const photos = selectedOffer.photos?.length
     ? selectedOffer.photos
     : [selectedOffer.image || getTourFallbackImage(selectedOffer.destination)];
-  const nights = selectedOffer.nights ?? Math.round(
-    (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) / 86_400_000,
-  );
+  const nights =
+    selectedOffer.nights ??
+    Math.round(
+      (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) /
+        86_400_000,
+    );
   const stars = starsDisplay(selectedOffer.stars);
   const hasMultiplePhotos = photos.length > 1;
 
@@ -133,8 +142,14 @@ export function TourDetailModal({
         onClose();
         return;
       }
-      if (event.key === "ArrowLeft") { showPreviousPhoto(); return; }
-      if (event.key === "ArrowRight") { showNextPhoto(); return; }
+      if (event.key === "ArrowLeft") {
+        showPreviousPhoto();
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        showNextPhoto();
+        return;
+      }
       if (event.key !== "Tab" || !containerRef.current) return;
       const focusables = containerRef.current.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -188,7 +203,7 @@ export function TourDetailModal({
       aria-modal="true"
       aria-labelledby="provider-tour-modal-title"
     >
-      <div className="provider-tour-modal__backdrop" onClick={onClose} />
+      <div className="provider-tour-modal__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="provider-tour-modal__content">
         <button
           ref={closeButtonRef}
@@ -212,15 +227,27 @@ export function TourDetailModal({
               decoding="async"
               width={1200}
               height={750}
-              onError={(event) => { (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg"; }}
+              onError={(event) => {
+                (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+              }}
             />
           ))}
           {hasMultiplePhotos && (
             <>
-              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--prev" onClick={showPreviousPhoto} aria-label={t("sModalPrev")}>
+              <button
+                type="button"
+                className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--prev"
+                onClick={showPreviousPhoto}
+                aria-label={t("sModalPrev")}
+              >
                 <ArrowLeft size={18} aria-hidden="true" />
               </button>
-              <button type="button" className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--next" onClick={showNextPhoto} aria-label={t("sModalNext")}>
+              <button
+                type="button"
+                className="provider-tour-modal__photo-nav provider-tour-modal__photo-nav--next"
+                onClick={showNextPhoto}
+                aria-label={t("sModalNext")}
+              >
                 <ArrowRight size={18} aria-hidden="true" />
               </button>
             </>
@@ -247,13 +274,49 @@ export function TourDetailModal({
           </div>
 
           <div className="provider-tour-modal__facts">
-            <div><span>{t("sModalTerm")}</span><strong>{fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}</strong></div>
-            <div><span>{t("sModalLength")}</span><strong>{Number.isFinite(nights) && nights > 0 ? `${nights} ${t("sModalNights")}` : t("sModalByOffer")}</strong></div>
-            <div><span>{t("sModalTransport")}</span><strong>{transportLabel[selectedOffer.transport] ?? (selectedOffer.transport || t("sModalByOffer"))}</strong></div>
-            <div><span>{t("sModalBoard")}</span><strong>{boardLabel[selectedOffer.board] ?? (selectedOffer.board || t("sModalByOffer"))}</strong></div>
-            {stars && <div><span>{t("sModalHotel")}</span><strong>{stars}</strong></div>}
-            {selectedOffer.roomType && <div><span>{t("sModalRoom")}</span><strong>{selectedOffer.roomType}</strong></div>}
-            <div className="provider-tour-modal__price"><span>{t("sModalPriceFrom")}</span><strong>{formatPrice(selectedOffer.price)}</strong></div>
+            <div>
+              <span>{t("sModalTerm")}</span>
+              <strong>
+                {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
+              </strong>
+            </div>
+            <div>
+              <span>{t("sModalLength")}</span>
+              <strong>
+                {Number.isFinite(nights) && nights > 0
+                  ? `${nights} ${t("sModalNights")}`
+                  : t("sModalByOffer")}
+              </strong>
+            </div>
+            <div>
+              <span>{t("sModalTransport")}</span>
+              <strong>
+                {transportLabel[selectedOffer.transport] ??
+                  (selectedOffer.transport || t("sModalByOffer"))}
+              </strong>
+            </div>
+            <div>
+              <span>{t("sModalBoard")}</span>
+              <strong>
+                {boardLabel[selectedOffer.board] ?? (selectedOffer.board || t("sModalByOffer"))}
+              </strong>
+            </div>
+            {stars && (
+              <div>
+                <span>{t("sModalHotel")}</span>
+                <strong>{stars}</strong>
+              </div>
+            )}
+            {selectedOffer.roomType && (
+              <div>
+                <span>{t("sModalRoom")}</span>
+                <strong>{selectedOffer.roomType}</strong>
+              </div>
+            )}
+            <div className="provider-tour-modal__price">
+              <span>{t("sModalPriceFrom")}</span>
+              <strong>{formatPrice(selectedOffer.price)}</strong>
+            </div>
           </div>
 
           {selectedOffer.description && (
@@ -269,15 +332,25 @@ export function TourDetailModal({
             ) : sortedOffers.length > 0 ? (
               <label className="provider-tour-modal__date-select">
                 <span className="provider-tour-modal__field-label">{t("sModalSelectDate")}</span>
-                <select value={`${selectedOffer.source}-${selectedOffer.externalId}`} onChange={(event) => setSelectedOfferId(event.target.value)}>
+                <select
+                  value={`${selectedOffer.source}-${selectedOffer.externalId}`}
+                  onChange={(event) => setSelectedOfferId(event.target.value)}
+                >
                   {sortedOffers.map((offer) => {
                     const offerId = `${offer.source}-${offer.externalId}`;
-                    const offerNights = offer.nights ?? Math.round(
-                      (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
-                    );
+                    const offerNights =
+                      offer.nights ??
+                      Math.round(
+                        (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) /
+                          86_400_000,
+                      );
                     return (
                       <option key={offerId} value={offerId}>
-                        {fmtDate(offer.startDate)} - {fmtDate(offer.endDate)} · {Number.isFinite(offerNights) && offerNights > 0 ? `${offerNights} ${t("sModalNights")}` : t("sModalLengthByOffer")} · {formatPrice(offer.price)}
+                        {fmtDate(offer.startDate)} - {fmtDate(offer.endDate)} ·{" "}
+                        {Number.isFinite(offerNights) && offerNights > 0
+                          ? `${offerNights} ${t("sModalNights")}`
+                          : t("sModalLengthByOffer")}{" "}
+                        · {formatPrice(offer.price)}
                       </option>
                     );
                   })}
@@ -311,7 +384,9 @@ export function TourDetailModal({
               </span>
             </label>
             {inquiryError && <p className="provider-tour-modal__form-error">{inquiryError}</p>}
-            {inquiryStatus === "sent" && <p className="provider-tour-modal__form-success">{t("sModalSent")}</p>}
+            {inquiryStatus === "sent" && (
+              <p className="provider-tour-modal__form-success">{t("sModalSent")}</p>
+            )}
             <button type="submit" disabled={inquiryStatus === "sending"}>
               {inquiryStatus === "sending" ? t("sModalSending") : t("sModalSubmit")}
             </button>

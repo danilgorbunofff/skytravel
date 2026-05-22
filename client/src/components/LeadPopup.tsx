@@ -37,7 +37,11 @@ export default function LeadPopup({
 
   return (
     <div className="lead-modal" role="dialog" aria-modal="true" aria-label="Exkluzivní nabídky">
-      <div className="lead-modal__backdrop" onClick={() => setShowLeadPopup(false)} />
+      <div
+        className="lead-modal__backdrop"
+        onClick={() => setShowLeadPopup(false)}
+        aria-hidden="true"
+      />
       <div className="lead-modal__card">
         <button className="lead-modal__close" type="button" onClick={() => setShowLeadPopup(false)}>
           ✕
@@ -45,9 +49,7 @@ export default function LeadPopup({
         <div className="lead-modal__content">
           <div className="lead-modal__badge">{t("leadBadge")}</div>
           <h3>
-            {prefilledQuery
-              ? `Nenašli jste vhodný zájezd do ${prefilledQuery}?`
-              : t("leadTitle")}
+            {prefilledQuery ? `Nenašli jste vhodný zájezd do ${prefilledQuery}?` : t("leadTitle")}
           </h3>
           <p>{t("leadDesc")}</p>
           {!leadSubmitted ? (

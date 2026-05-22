@@ -1,4 +1,8 @@
-// Prisma schema placeholder. We'll hook it up after you confirm DB credentials.
+// Prisma schema for SkyTravel.
+// Key decisions:
+// - i18n stored as JSON (Tour.i18n) for flexibility; typed at application layer
+// - ProviderTour uses composite indexes optimized for public search queries
+// - All mutable models have @updatedAt for change tracking
 
 datasource db {
   provider = "mysql"
@@ -11,56 +15,60 @@ generator client {
 
 model Tour {
   id          Int      @id @default(autoincrement())
-  destination String
-  title       String
+  destination String   @db.VarChar(255)
+  title       String   @db.VarChar(500)
   price       Int
   startDate   DateTime
   endDate     DateTime
-  transport   String
-  image       String
+  transport   String   @db.VarChar(100)
+  image       String   @db.VarChar(1000)
   description String?  @db.Text
   photos      Json?
   i18n        Json?
   sortOrder   Int      @default(0)
-  source      String   @default("manual")
-  externalId  String?
+  source      String   @default("manual") @db.VarChar(50)
+  externalId  String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   leads       Lead[]
 
   @@index([source])
   @@index([source, externalId])
+  @@index([sortOrder, createdAt])
+  @@index([destination])
 }
 
 model AdminUser {
   id           Int      @id @default(autoincrement())
-  login        String   @unique
-  passwordHash String
+  login        String   @unique @db.VarChar(100)
+  passwordHash String   @db.VarChar(255)
   createdAt    DateTime @default(now())
 }
 
 model Lead {
   id               Int      @id @default(autoincrement())
-  email            String
-  destination      String?
+  email            String   @db.VarChar(255)
+  destination      String?  @db.VarChar(500)
   tourId           Int?
   marketingConsent Boolean  @default(false)
   gdprConsent      Boolean  @default(false)
-  source           String?
+  source           String?  @default("web") @db.VarChar(50)
   createdAt        DateTime @default(now())
   tour             Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
 
   @@index([marketingConsent])
   @@index([tourId])
+  @@index([createdAt])
+  @@index([email])
 }
 
 model EmailCampaign {
   id             Int      @id @default(autoincrement())
-  subject        String
-  preheader      String?
-  fromEmail      String?
-  html           String
-  segment        String
+  subject        String   @db.VarChar(500)
+  preheader      String?  @db.VarChar(500)
+  fromEmail      String?  @db.VarChar(255)
+  html           String   @db.LongText
+  segment        String   @db.VarChar(50)
   recipientCount Int      @default(0)
   sentAt         DateTime?
   createdAt      DateTime @default(now())
@@ -68,27 +76,27 @@ model EmailCampaign {
 
 model ProviderTour {
   id            Int      @id @default(autoincrement())
-  externalId    String
-  source        String
-  regionKey     String
-  destination   String
-  title         String
+  externalId    String   @db.VarChar(255)
+  source        String   @db.VarChar(50)
+  regionKey     String   @db.VarChar(100)
+  destination   String   @db.VarChar(255)
+  title         String   @db.VarChar(500)
   price         Int
   originalPrice Int      @default(0)
   startDate     DateTime
   endDate       DateTime
-  transport     String
+  transport     String   @db.VarChar(100)
   image         String   @db.Text
   description   String?  @db.Text
   photos        Json?
   url           String   @db.Text
-  stars         String   @default("")
-  board         String   @default("")
+  stars         String   @default("") @db.VarChar(10)
+  board         String   @default("") @db.VarChar(50)
   nights        Int?
   adults        Int?
   children      Int?
-  roomType      String?
-  currency      String?
+  roomType      String?  @db.VarChar(100)
+  currency      String?  @db.VarChar(10)
   offersCount   Int?
   destinationId Int?
   syncedAt      DateTime @default(now())
@@ -99,41 +107,37 @@ model ProviderTour {
 
   @@unique([source, externalId])
   @@index([source, regionKey])
-  @@index([price])
-  @@index([startDate])
   @@index([source, regionKey, price])
+  @@index([source, regionKey, startDate, price])
   @@index([source, destination(100)])
-  @@index([destinationId])
   @@index([source, stateId])
+  @@index([source, stateId, price])
   @@index([source, transport])
   @@index([source, board])
   @@index([source, startDate])
-  @@index([source, stateId, price])
+  @@index([destinationId])
 }
 
 model Destination {
   id            Int      @id @default(autoincrement())
-  slug          String   @unique
-  czechName     String   @unique
-  canonicalName String   @unique
+  slug          String   @unique @db.VarChar(150)
+  czechName     String   @unique @db.VarChar(255)
+  canonicalName String   @unique @db.VarChar(255)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  mappings DestinationMapping[]
+  mappings      DestinationMapping[]
   providerTours ProviderTour[]
-
-  @@index([slug])
-  @@index([czechName])
 }
 
 model DestinationMapping {
   id            Int         @id @default(autoincrement())
   destinationId Int
   destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-  providerId    String
-  providerKey   String
-  providerValue String
-  providerLabel String
+  providerId    String      @db.VarChar(50)
+  providerKey   String      @db.VarChar(100)
+  providerValue String      @db.VarChar(255)
+  providerLabel String      @db.VarChar(255)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -144,9 +148,9 @@ model DestinationMapping {
 
 model ProviderSync {
   id           Int      @id @default(autoincrement())
-  providerId   String
-  regionKey    String
-  status       String   @default("idle")
+  providerId   String   @db.VarChar(50)
+  regionKey    String   @db.VarChar(100)
+  status       String   @default("idle") @db.VarChar(20)
   lastSyncAt   DateTime?
   itemCount    Int      @default(0)
   errorMessage String?  @db.Text
@@ -158,11 +162,11 @@ model ProviderSync {
 
 model ProviderRegion {
   id               Int      @id @default(autoincrement())
-  providerId       String
-  regionKey        String
-  externalId       String
-  parentExternalId String   @default("")
-  name             String
+  providerId       String   @db.VarChar(50)
+  regionKey        String   @db.VarChar(100)
+  externalId       String   @db.VarChar(100)
+  parentExternalId String   @default("") @db.VarChar(100)
+  name             String   @db.VarChar(255)
   tourCount        Int      @default(0)
   meta             Json?
   updatedAt        DateTime @updatedAt
@@ -174,10 +178,10 @@ model ProviderRegion {
 
 model PriceAlert {
   id          Int       @id @default(autoincrement())
-  email       String
-  providerId  String
-  externalId  String
-  tourTitle   String
+  email       String    @db.VarChar(255)
+  providerId  String    @db.VarChar(50)
+  externalId  String    @db.VarChar(255)
+  tourTitle   String    @db.VarChar(500)
   priceMax    Float
   createdAt   DateTime  @default(now())
   triggered   Boolean   @default(false)
@@ -185,4 +189,5 @@ model PriceAlert {
 
   @@index([providerId, externalId])
   @@index([email])
+  @@index([triggered])
 }

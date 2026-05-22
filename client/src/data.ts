@@ -81,8 +81,7 @@ export const defaultOwnTours: OwnTour[] = [
     startDate: "2026-02-21",
     endDate: "2026-04-21",
     transport: "plane",
-    description:
-      "Slunce po většinu roku, čisté moře a ověřené resorty vhodné pro páry i rodiny.",
+    description: "Slunce po většinu roku, čisté moře a ověřené resorty vhodné pro páry i rodiny.",
     image:
       "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1200&q=80",
     photos: [
@@ -132,8 +131,7 @@ export const defaultOwnTours: OwnTour[] = [
     startDate: "2026-02-21",
     endDate: "2026-04-21",
     transport: "plane",
-    description:
-      "Květinový ostrov s lehkou turistikou, oceánským výhledem a komfortním zázemím.",
+    description: "Květinový ostrov s lehkou turistikou, oceánským výhledem a komfortním zázemím.",
     image:
       "https://images.unsplash.com/photo-1510097467424-192d713fd8b2?auto=format&fit=crop&w=1200&q=80",
     photos: [
@@ -361,7 +359,7 @@ export const translations = {
     listOwn: "Vaše SkyTravel nabídky",
     apiReadonly: "Partnerské zájezdy (API, pouze pro čtení)",
     apiNote: "Tyto položky spravuje partner přes API. V adminu je nelze upravovat.",
-    
+
     // Transports
     plane: "Letecky",
     train: "Vlakem",
@@ -403,16 +401,16 @@ export const translations = {
     sectionToday2b: "partnerských zájezdů",
     sectionTodayNote: "SkyTravel roste - vlastní portfolio je priorita.",
     sectionLastMinute: "LAST MINUTE DOVOLENÁ",
-    
+
     sectionAllIncTitle: "LETECKÁ DOVOLENÁ S ALL INCLUSIVE",
     budget1: "do 10 000 Kč",
     budget2: "10 000 - 15 000 Kč",
     budget3: "15 000 - 20 000 Kč",
     budget4: "20 000+ Kč",
     emptyState: "Pro tento filtr nejsou dostupné žádné nabídky.",
-    
+
     sectionFavTitle: "OBLÍBENÉ DESTINACE",
-    
+
     sectionSocialTitle: "NENECHTE SI NIC UJÍT",
     sectionSocialSub: "Sledujte SkyTravel na sociálních sítích.",
     polaroid1: "SkyTravel trip",
@@ -424,19 +422,19 @@ export const translations = {
     f1_2: "Ověřené hotely",
     f1_3: "Menší skupiny",
     f1_4: "CZ podpora na místě",
-    
+
     footerSec2: "PARTNERSKÉ ZÁJEZDY",
     f2_1: "Výběr z více CK",
     f2_2: "Legální prodej zájezdů",
     f2_3: "Rychlé srovnání cen",
     f2_4: "Filtrace dle rozpočtu",
-    
+
     footerSec3: "SERVIS PRO KLIENTY",
     f3_1: "Cestovní pojištění",
     f3_2: "Převod rezervace",
     f3_3: "Storno podmínky",
     f3_4: "Časté dotazy (FAQ)",
-    
+
     footerSec4: "SKYTRAVEL",
     f4_1: "O nás",
     f4_2: "Reference klientů",
@@ -454,18 +452,21 @@ export const translations = {
     // Lead Popup
     leadBadge: "Exkluzivní nabídky",
     leadTitle: "Získejte bonusový travel guide",
-    leadDesc: "Pošleme vám exkluzivní nabídky SkyTravel a navíc bonusový travel guide sheet. Stačí e-mail.",
+    leadDesc:
+      "Pošleme vám exkluzivní nabídky SkyTravel a navíc bonusový travel guide sheet. Stačí e-mail.",
     leadConsentNews: "Souhlasím se zasíláním marketingových nabídek.",
     leadSubmit: "Chci nabídky",
     leadSuccess: "Díky! Potvrzení a guide pošleme na",
     // Cookies
     cookieTitle: "Cookies",
-    cookieText: "Kliknutím na „Přijmout všechny cookies“ souhlasíte s ukládáním cookies na vašem zařízení pro zlepšení navigace, analýzu návštěvnosti a podporu marketingu.",
+    cookieText:
+      "Kliknutím na „Přijmout všechny cookies“ souhlasíte s ukládáním cookies na vašem zařízení pro zlepšení navigace, analýzu návštěvnosti a podporu marketingu.",
     cookieManage: "Spravovat cookies",
     cookieAccept: "Přijmout všechny cookies",
     cookieReject: "Odmítnout vše",
     cookieSettingsTitle: "Nastavení cookies",
-    cookieSettingsIntro: "Cookies používáme pro základní funkce webu, měření návštěvnosti a personalizaci nabídky. Můžete si upravit, které cookies povolíte.",
+    cookieSettingsIntro:
+      "Cookies používáme pro základní funkce webu, měření návštěvnosti a personalizaci nabídky. Můžete si upravit, které cookies povolíte.",
     cookieSave: "Potvrdit volby",
     cookieAllowAll: "Povolit všechny cookies",
     cookieNecessary: "Nezbytné cookies",
@@ -489,7 +490,8 @@ export const translations = {
     sFormMore: "Termín a doprava ▼",
     sFormLess: "Méně možností ▲",
     sHeroTitle: "Najděte zájezd podle sebe",
-    sHeroSubtitle: "Vyhledávání pracuje s aktuálně synchronizovanými nabídkami partnerských cestovních kanceláří.",
+    sHeroSubtitle:
+      "Vyhledávání pracuje s aktuálně synchronizovanými nabídkami partnerských cestovních kanceláří.",
     sTrustVerified: "Ověřený partner cestovních kanceláří",
     sTrustInsured: "Pojištění vkladu zákazníka",
     sTrustNoFees: "Bez poplatků za poptávku",
@@ -699,16 +701,16 @@ export const translations = {
     sectionToday2b: "partner tours",
     sectionTodayNote: "SkyTravel is growing - our own portfolio is a priority.",
     sectionLastMinute: "LAST MINUTE HOLIDAYS",
-    
+
     sectionAllIncTitle: "FLIGHT HOLIDAYS WITH ALL INCLUSIVE",
     budget1: "up to 10 000 CZK",
     budget2: "10 000 - 15 000 CZK",
     budget3: "15 000 - 20 000 CZK",
     budget4: "20 000+ CZK",
     emptyState: "No offers available for this filter.",
-    
+
     sectionFavTitle: "POPULAR DESTINATIONS",
-    
+
     sectionSocialTitle: "DON'T MISS ANYTHING",
     sectionSocialSub: "Follow SkyTravel on social media.",
     polaroid1: "SkyTravel trip",
@@ -720,19 +722,19 @@ export const translations = {
     f1_2: "Verified hotels",
     f1_3: "Smaller groups",
     f1_4: "Local EN/CZ support",
-    
+
     footerSec2: "PARTNER TOURS",
     f2_1: "Choice from multiple agencies",
     f2_2: "Legal tour sales",
     f2_3: "Quick price comparison",
     f2_4: "Budget filter",
-    
+
     footerSec3: "CLIENT SERVICE",
     f3_1: "Travel insurance",
     f3_2: "Booking transfer",
     f3_3: "Cancellation policy",
     f3_4: "FAQ",
-    
+
     footerSec4: "SKYTRAVEL",
     f4_1: "About us",
     f4_2: "Client references",
@@ -750,18 +752,21 @@ export const translations = {
     // Lead Popup
     leadBadge: "Exclusive offers",
     leadTitle: "Get a bonus travel guide",
-    leadDesc: "We will send you SkyTravel exclusive offers plus a bonus travel guide sheet. Just an email.",
+    leadDesc:
+      "We will send you SkyTravel exclusive offers plus a bonus travel guide sheet. Just an email.",
     leadConsentNews: "I agree to receive marketing offers.",
     leadSubmit: "I want offers",
     leadSuccess: "Thanks! We will send the guide to",
     // Cookies
     cookieTitle: "Cookies",
-    cookieText: "By clicking “Accept all cookies”, you agree to the storage of cookies on your device to enhance site navigation, analyze usage, and support marketing.",
+    cookieText:
+      "By clicking “Accept all cookies”, you agree to the storage of cookies on your device to enhance site navigation, analyze usage, and support marketing.",
     cookieManage: "Manage cookies",
     cookieAccept: "Accept all cookies",
     cookieReject: "Reject all",
     cookieSettingsTitle: "Cookies settings",
-    cookieSettingsIntro: "We use cookies for core functionality, analytics, and personalization. You can customize which cookies to allow.",
+    cookieSettingsIntro:
+      "We use cookies for core functionality, analytics, and personalization. You can customize which cookies to allow.",
     cookieSave: "Confirm my choices",
     cookieAllowAll: "Allow all cookies",
     cookieNecessary: "Essential cookies",
@@ -964,7 +969,8 @@ export const translations = {
 
     // Modals
     modalTypeOwn: "Ексклюзивна пропозиція",
-    modalDescOwn: "Ексклюзивна пропозиція SkyTravel з перевіреними послугами та підтримкою агентства.",
+    modalDescOwn:
+      "Ексклюзивна пропозиція SkyTravel з перевіреними послугами та підтримкою агентства.",
     modalTypePartner: "Партнерський тур",
     modalDescPartner: "Деталі надані партнером через API feed.",
     modalTypeFav: "Напрямок",
@@ -995,16 +1001,16 @@ export const translations = {
     sectionToday2b: "партнерських турів",
     sectionTodayNote: "SkyTravel росте - власне портфоліо є пріоритетом.",
     sectionLastMinute: "LAST MINUTE ВІДПОЧИНОК",
-    
+
     sectionAllIncTitle: "АВІАТУРИ З ALL INCLUSIVE",
     budget1: "до 10 000 Kč",
     budget2: "10 000 - 15 000 Kč",
     budget3: "15 000 - 20 000 Kč",
     budget4: "20 000+ Kč",
     emptyState: "Для цього фільтра немає доступних пропозицій.",
-    
+
     sectionFavTitle: "ПОПУЛЯРНІ НАПРЯМКИ",
-    
+
     sectionSocialTitle: "НЕ ПРОПУСТІТЬ НІЧОГО",
     sectionSocialSub: "Слідкуйте за SkyTravel у соціальних мережах.",
     polaroid1: "Подорож SkyTravel",
@@ -1016,19 +1022,19 @@ export const translations = {
     f1_2: "Перевірені готелі",
     f1_3: "Невеликі групи",
     f1_4: "CZ/UK підтримка на місці",
-    
+
     footerSec2: "ПАРТНЕРСЬКІ ТУРИ",
     f2_1: "Вибір з багатьох агенцій",
     f2_2: "Легальний продаж турів",
     f2_3: "Швидке порівняння цін",
     f2_4: "Фільтр за бюджетом",
-    
+
     footerSec3: "СЕРВІС ДЛЯ КЛІЄНТІВ",
     f3_1: "Туристичне страхування",
     f3_2: "Передача бронювання",
     f3_3: "Умови ануляції",
     f3_4: "Часті питання (FAQ)",
-    
+
     footerSec4: "SKYTRAVEL",
     f4_1: "Про нас",
     f4_2: "Відгуки клієнтів",
@@ -1046,18 +1052,21 @@ export const translations = {
     // Lead Popup
     leadBadge: "Ексклюзивні пропозиції",
     leadTitle: "Отримайте бонусний travel guide",
-    leadDesc: "Ми надішлемо вам ексклюзивні пропозиції SkyTravel плюс бонусний путівник. Потрібен лише e-mail.",
+    leadDesc:
+      "Ми надішлемо вам ексклюзивні пропозиції SkyTravel плюс бонусний путівник. Потрібен лише e-mail.",
     leadConsentNews: "Я згоден отримувати маркетингові пропозиції.",
     leadSubmit: "Хочу пропозиції",
     leadSuccess: "Дякуємо! Ми відправимо guide на",
     // Cookies
     cookieTitle: "Cookies",
-    cookieText: "Натискаючи «Прийняти всі файли cookie», ви погоджуєтеся на зберігання файлів cookie на вашому пристрої для покращення навігації сайтом, аналізу використання та підтримки маркетингу.",
+    cookieText:
+      "Натискаючи «Прийняти всі файли cookie», ви погоджуєтеся на зберігання файлів cookie на вашому пристрої для покращення навігації сайтом, аналізу використання та підтримки маркетингу.",
     cookieManage: "Керувати файлами cookie",
     cookieAccept: "Прийняти всі",
     cookieReject: "Відхилити всі",
     cookieSettingsTitle: "Налаштування cookie",
-    cookieSettingsIntro: "Ми використовуємо файли cookie для основної роботи, аналітики та персоналізації. Ви можете налаштувати свої файли cookie.",
+    cookieSettingsIntro:
+      "Ми використовуємо файли cookie для основної роботи, аналітики та персоналізації. Ви можете налаштувати свої файли cookie.",
     cookieSave: "Підтвердити вибір",
     cookieAllowAll: "Дозволити всі",
     cookieNecessary: "Необхідні cookie",
@@ -1081,7 +1090,8 @@ export const translations = {
     sFormMore: "Дати і транспорт ▼",
     sFormLess: "Менше параметрів ▲",
     sHeroTitle: "Знайдіть свою подорож",
-    sHeroSubtitle: "Пошук працює з актуально синхронізованими пропозиціями партнерських туристичних агенцій.",
+    sHeroSubtitle:
+      "Пошук працює з актуально синхронізованими пропозиціями партнерських туристичних агенцій.",
     sTrustVerified: "Перевірений партнер туристичних агенцій",
     sTrustInsured: "Страхування внеску клієнта",
     sTrustNoFees: "Без зборів за запит",
@@ -1260,7 +1270,8 @@ export const translations = {
 
     // Modals
     modalTypeOwn: "Эксклюзивное предложение",
-    modalDescOwn: "Эксклюзивное предложение SkyTravel с проверенными услугами и поддержкой агентства.",
+    modalDescOwn:
+      "Эксклюзивное предложение SkyTravel с проверенными услугами и поддержкой агентства.",
     modalTypePartner: "Партнерский тур",
     modalDescPartner: "Детали предоставлены партнером через API feed.",
     modalTypeFav: "Направление",
@@ -1291,16 +1302,16 @@ export const translations = {
     sectionToday2b: "партнерских туров",
     sectionTodayNote: "SkyTravel растет - собственное портфолио в приоритете.",
     sectionLastMinute: "LAST MINUTE ОТДЫХ",
-    
+
     sectionAllIncTitle: "АВИАТУРЫ С ALL INCLUSIVE",
     budget1: "до 10 000 Kč",
     budget2: "10 000 - 15 000 Kč",
     budget3: "15 000 - 20 000 Kč",
     budget4: "20 000+ Kč",
     emptyState: "Для этого фильтра нет доступных предложений.",
-    
+
     sectionFavTitle: "ПОПУЛЯРНЫЕ НАПРАВЛЕНИЯ",
-    
+
     sectionSocialTitle: "НЕ ПРОПУСТИТЕ НИЧЕГО",
     sectionSocialSub: "Следите за SkyTravel в социальных сетях.",
     polaroid1: "Поездка SkyTravel",
@@ -1312,19 +1323,19 @@ export const translations = {
     f1_2: "Проверенные отели",
     f1_3: "Небольшие группы",
     f1_4: "CZ/RU поддержка на месте",
-    
+
     footerSec2: "ПАРТНЕРСКИЕ ТУРЫ",
     f2_1: "Выбор из многих агентств",
     f2_2: "Легальная продажа туров",
     f2_3: "Быстрое сравнение цен",
     f2_4: "Фильтр по бюджету",
-    
+
     footerSec3: "СЕРВИС ДЛЯ КЛИЕНТОВ",
     f3_1: "Туристическое страхование",
     f3_2: "Передача бронирования",
     f3_3: "Условия аннуляции",
     f3_4: "Частые вопросы (FAQ)",
-    
+
     footerSec4: "SKYTRAVEL",
     f4_1: "О нас",
     f4_2: "Отзывы клиентов",
@@ -1342,18 +1353,21 @@ export const translations = {
     // Lead Popup
     leadBadge: "Эксклюзивные предложения",
     leadTitle: "Получите бонусный travel guide",
-    leadDesc: "Мы вышлем вам эксклюзивные предложения SkyTravel плюс бонусный путеводитель. Нужен только e-mail.",
+    leadDesc:
+      "Мы вышлем вам эксклюзивные предложения SkyTravel плюс бонусный путеводитель. Нужен только e-mail.",
     leadConsentNews: "Я согласен получать маркетинговые предложения.",
     leadSubmit: "Хочу предложения",
     leadSuccess: "Спасибо! Мы отправим guide на",
     // Cookies
     cookieTitle: "Cookies",
-    cookieText: "Нажимая «Принять все файлы cookie», вы соглашаетесь на хранение файлов cookie на вашем устройстве для улучшения навигации по сайту, анализа использования и поддержки маркетинга.",
+    cookieText:
+      "Нажимая «Принять все файлы cookie», вы соглашаетесь на хранение файлов cookie на вашем устройстве для улучшения навигации по сайту, анализа использования и поддержки маркетинга.",
     cookieManage: "Управлять cookie",
     cookieAccept: "Принять все",
     cookieReject: "Отклонить все",
     cookieSettingsTitle: "Настройки cookie",
-    cookieSettingsIntro: "Мы используем файлы cookie для основной функциональности, аналитики и персонализации. Вы можете настроить файлы cookie.",
+    cookieSettingsIntro:
+      "Мы используем файлы cookie для основной функциональности, аналитики и персонализации. Вы можете настроить файлы cookie.",
     cookieSave: "Подтвердить выбор",
     cookieAllowAll: "Разрешить все",
     cookieNecessary: "Необходимые cookie",
@@ -1377,7 +1391,8 @@ export const translations = {
     sFormMore: "Даты и транспорт ▼",
     sFormLess: "Меньше опций ▲",
     sHeroTitle: "Найдите свою поездку",
-    sHeroSubtitle: "Поиск работает с актуально синхронизированными предложениями партнёрских турагентств.",
+    sHeroSubtitle:
+      "Поиск работает с актуально синхронизированными предложениями партнёрских турагентств.",
     sTrustVerified: "Проверенный партнёр турагентств",
     sTrustInsured: "Страхование взноса клиента",
     sTrustNoFees: "Без сборов за запрос",

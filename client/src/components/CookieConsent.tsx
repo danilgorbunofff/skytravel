@@ -34,31 +34,46 @@ export default function CookieConsent({
             <button
               type="button"
               className="cookie-btn cookie-btn--primary"
-              onClick={() => applyCookiePrefs({ necessary: true, analytics: true, marketing: true })}
+              onClick={() =>
+                applyCookiePrefs({ necessary: true, analytics: true, marketing: true })
+              }
             >
               {t("cookieAccept")}
             </button>
             <button
               type="button"
               className="cookie-btn"
-              onClick={() => applyCookiePrefs({ necessary: true, analytics: false, marketing: false })}
+              onClick={() =>
+                applyCookiePrefs({ necessary: true, analytics: false, marketing: false })
+              }
             >
               {t("cookieReject")}
             </button>
           </div>
-          <button type="button" className="cookie-manage" onClick={() => setCookieSettingsOpen(true)}>
+          <button
+            type="button"
+            className="cookie-manage"
+            onClick={() => setCookieSettingsOpen(true)}
+          >
             {t("cookieManage")}
           </button>
         </div>
       </div>
 
       {cookieSettingsOpen && (
-        <div className="cookie-modal" role="dialog" aria-modal="true" aria-label={t("cookieSettingsTitle")}>
+        <div
+          className="cookie-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("cookieSettingsTitle")}
+        >
           <div className="cookie-modal__backdrop" onClick={() => setCookieSettingsOpen(false)} />
           <div className="cookie-modal__card">
             <div className="cookie-modal__head">
               <strong>{t("cookieSettingsTitle")}</strong>
-              <button type="button" onClick={() => setCookieSettingsOpen(false)}>✕</button>
+              <button type="button" onClick={() => setCookieSettingsOpen(false)}>
+                ✕
+              </button>
             </div>
             <p className="cookie-modal__intro">{t("cookieSettingsIntro")}</p>
             <div className="cookie-modal__list">
@@ -71,7 +86,9 @@ export default function CookieConsent({
                   type="button"
                   className={`cookie-toggle${cookiePrefs.marketing ? " is-on" : ""}`}
                   aria-pressed={cookiePrefs.marketing}
-                  onClick={() => setCookiePrefs((prev) => ({ ...prev, marketing: !prev.marketing }))}
+                  onClick={() =>
+                    setCookiePrefs((prev) => ({ ...prev, marketing: !prev.marketing }))
+                  }
                 />
               </div>
               <div className="cookie-modal__item">
@@ -83,7 +100,9 @@ export default function CookieConsent({
                   type="button"
                   className={`cookie-toggle${cookiePrefs.analytics ? " is-on" : ""}`}
                   aria-pressed={cookiePrefs.analytics}
-                  onClick={() => setCookiePrefs((prev) => ({ ...prev, analytics: !prev.analytics }))}
+                  onClick={() =>
+                    setCookiePrefs((prev) => ({ ...prev, analytics: !prev.analytics }))
+                  }
                 />
               </div>
               <div className="cookie-modal__item">
@@ -91,21 +110,30 @@ export default function CookieConsent({
                   <strong>{t("cookieNecessary")}</strong>
                   <span>{t("cookieNecessaryDesc")}</span>
                 </div>
-                <button type="button" className="cookie-toggle is-on is-disabled" disabled aria-pressed />
+                <button
+                  type="button"
+                  className="cookie-toggle is-on is-disabled"
+                  disabled
+                  aria-pressed
+                />
               </div>
             </div>
             <div className="cookie-modal__actions">
               <button
                 type="button"
                 className="cookie-btn"
-                onClick={() => applyCookiePrefs({ necessary: true, analytics: false, marketing: false })}
+                onClick={() =>
+                  applyCookiePrefs({ necessary: true, analytics: false, marketing: false })
+                }
               >
                 {t("cookieReject")}
               </button>
               <button
                 type="button"
                 className="cookie-btn cookie-btn--ghost"
-                onClick={() => applyCookiePrefs({ necessary: true, analytics: true, marketing: true })}
+                onClick={() =>
+                  applyCookiePrefs({ necessary: true, analytics: true, marketing: true })
+                }
               >
                 {t("cookieAllowAll")}
               </button>

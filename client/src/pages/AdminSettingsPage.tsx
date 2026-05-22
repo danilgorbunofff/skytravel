@@ -31,11 +31,7 @@ export default function AdminSettingsPage() {
                 Zobrazí okno pro sběr e-mailu s bonusovým travel guide.
               </p>
             </div>
-            <Switch
-              id="lead-popup"
-              checked={leadPopupEnabled}
-              onCheckedChange={handleToggle}
-            />
+            <Switch id="lead-popup" checked={leadPopupEnabled} onCheckedChange={handleToggle} />
           </div>
         </CardContent>
       </Card>

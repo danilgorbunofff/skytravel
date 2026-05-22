@@ -62,7 +62,14 @@ export function useAdminTours() {
     async (photos: string[]) => {
       setError(null);
 
-      if (!form.destination || !form.title || !form.price || !form.startDate || !form.endDate || !form.transport) {
+      if (
+        !form.destination ||
+        !form.title ||
+        !form.price ||
+        !form.startDate ||
+        !form.endDate ||
+        !form.transport
+      ) {
         setError("Vyplňte prosím všechny povinné údaje.");
         return false;
       }
@@ -74,7 +81,9 @@ export function useAdminTours() {
 
       const payload: OwnTour = {
         ...form,
-        startDate: form.startDate ? new Date(`${form.startDate}T00:00:00`).toISOString() : undefined,
+        startDate: form.startDate
+          ? new Date(`${form.startDate}T00:00:00`).toISOString()
+          : undefined,
         endDate: form.endDate ? new Date(`${form.endDate}T00:00:00`).toISOString() : undefined,
         photos,
         image: photos[0],

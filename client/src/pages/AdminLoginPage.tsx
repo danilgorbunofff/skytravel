@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginAdmin } from "../features/admin/services/adminApi";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Button } from "../components/ui/button";
@@ -81,9 +88,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {error && (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
           </CardContent>
 
           <CardFooter className="flex-col gap-3">

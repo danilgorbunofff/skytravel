@@ -1,120 +1,146 @@
 import { Router } from "express";
 import prisma from "../../prisma.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
+import { validateBody } from "../../middleware/validate.js";
+import { createTourSchema, updateTourSchema, reorderToursSchema } from "../../validators/tours.js";
+import { success, fail } from "../../lib/response.js";
 
 const router = Router();
 
-router.get("/", asyncHandler(async (_req, res) => {
-  const tours = await prisma.tour.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
-  res.json({ items: tours });
-}));
+router.get(
+  "/",
+  asyncHandler(async (_req, res) => {
+    const tours = await prisma.tour.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    });
+    success(res, { items: tours });
+  }),
+);
 
-router.post("/", asyncHandler(async (req, res) => {
-  const { destination, title, price, image, description, photos, startDate, endDate, transport, i18n } =
-    req.body ?? {};
+router.post(
+  "/",
+  validateBody(createTourSchema),
+  asyncHandler(async (req, res) => {
+    const {
+      destination,
+      title,
+      price,
+      image,
+      description,
+      photos,
+      startDate,
+      endDate,
+      transport,
+      i18n,
+    } = req.body;
 
-  if (!destination || !title || !price || !image || !startDate || !endDate || !transport) {
-    return res.status(400).json({ error: "Missing required fields." });
-  }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      fail("INVALID_DATES", "Invalid date range.", 400);
+    }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return res.status(400).json({ error: "Invalid date range." });
-  }
+    const created = await prisma.tour.create({
+      data: {
+        destination,
+        title,
+        price,
+        image,
+        description: description ?? null,
+        photos: photos ?? null,
+        startDate: start,
+        endDate: end,
+        transport,
+        i18n: i18n ?? null,
+        sortOrder: await prisma.tour.count(),
+      },
+    });
 
-  const created = await prisma.tour.create({
-    data: {
-      destination: String(destination),
-      title: String(title),
-      price: Number(price),
-      image: String(image),
-      description: description ? String(description) : null,
-      photos: photos ?? null,
-      startDate: start,
-      endDate: end,
-      transport: String(transport),
-      i18n: i18n ?? null,
-      sortOrder: await prisma.tour.count(),
-    },
-  });
+    success(res, { item: created }, 201);
+  }),
+);
 
-  res.status(201).json({ item: created });
-}));
+router.put(
+  "/order",
+  validateBody(reorderToursSchema),
+  asyncHandler(async (req, res) => {
+    const { ids } = req.body;
 
-router.put("/order", asyncHandler(async (req, res) => {
-  let body = req.body;
-  if (typeof body === "string") {
-    try { body = JSON.parse(body); } catch { body = {}; }
-  }
+    const numericIds = ids
+      .map((id: unknown) => Number(id))
+      .filter((id: number) => Number.isFinite(id));
 
-  const idsFromBody = body?.ids ?? body;
-  const idsFromQuery =
-    typeof req.query.ids === "string" ? req.query.ids.split(",") : [];
-  const rawIds = Array.isArray(idsFromBody)
-    ? idsFromBody
-    : Array.isArray(idsFromQuery) && idsFromQuery.length > 0
-      ? idsFromQuery
-      : [];
+    if (numericIds.length === 0) {
+      fail("INVALID_IDS", "Invalid ids.", 400);
+    }
 
-  const numericIds = rawIds
-    .map((id: unknown) => Number(id))
-    .filter((id: number) => Number.isFinite(id));
+    const updates = numericIds.map((id: number, index: number) =>
+      prisma.tour.update({ where: { id }, data: { sortOrder: index } }),
+    );
+    await prisma.$transaction(updates);
+    success(res, null);
+  }),
+);
 
-  if (numericIds.length === 0) {
-    return res.status(400).json({ error: "Invalid ids." });
-  }
+router.put(
+  "/:id",
+  validateBody(updateTourSchema),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      fail("INVALID_ID", "Invalid id.", 400);
+    }
 
-  const updates = numericIds.map((id: number, index: number) =>
-    prisma.tour.update({ where: { id }, data: { sortOrder: index } }),
-  );
-  await prisma.$transaction(updates);
-  res.json({ ok: true });
-}));
+    const {
+      destination,
+      title,
+      price,
+      image,
+      description,
+      photos,
+      startDate,
+      endDate,
+      transport,
+      i18n,
+    } = req.body;
 
-router.put("/:id", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) {
-    return res.status(400).json({ error: "Invalid id." });
-  }
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) {
+      fail("INVALID_DATES", "Invalid date range.", 400);
+    }
 
-  const { destination, title, price, image, description, photos, startDate, endDate, transport, i18n } =
-    req.body ?? {};
+    const updated = await prisma.tour.update({
+      where: { id },
+      data: {
+        destination: destination ?? undefined,
+        title: title ?? undefined,
+        price: price !== undefined ? Number(price) : undefined,
+        image: image ?? undefined,
+        description:
+          description === undefined ? undefined : description ? String(description) : null,
+        photos: photos === undefined ? undefined : photos,
+        startDate: start ?? undefined,
+        endDate: end ?? undefined,
+        transport: transport ?? undefined,
+        i18n: i18n === undefined ? undefined : i18n,
+      },
+    });
 
-  const start = startDate ? new Date(startDate) : undefined;
-  const end = endDate ? new Date(endDate) : undefined;
-  if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) {
-    return res.status(400).json({ error: "Invalid date range." });
-  }
+    success(res, { item: updated });
+  }),
+);
 
-  const updated = await prisma.tour.update({
-    where: { id },
-    data: {
-      destination: destination ? String(destination) : undefined,
-      title: title ? String(title) : undefined,
-      price: price !== undefined ? Number(price) : undefined,
-      image: image ? String(image) : undefined,
-      description: description === undefined ? undefined : description ? String(description) : null,
-      photos: photos === undefined ? undefined : photos,
-      startDate: start ?? undefined,
-      endDate: end ?? undefined,
-      transport: transport ? String(transport) : undefined,
-      i18n: i18n === undefined ? undefined : i18n,
-    },
-  });
-
-  res.json({ item: updated });
-}));
-
-router.delete("/:id", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) {
-    return res.status(400).json({ error: "Invalid id." });
-  }
-  await prisma.tour.delete({ where: { id } });
-  res.status(204).send();
-}));
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      fail("INVALID_ID", "Invalid id.", 400);
+    }
+    await prisma.tour.delete({ where: { id } });
+    res.status(204).send();
+  }),
+);
 
 export default router;

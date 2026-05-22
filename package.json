@@ -1,6 +1,7 @@
 {
   "name": "skytravel",
   "private": true,
+  "type": "module",
   "workspaces": [
     "client",
     "server"
@@ -8,12 +9,27 @@
   "scripts": {
     "dev": "npm --workspace server run dev & npm --workspace client run dev",
     "build": "npm --workspace server run build && npm --workspace client run build",
-    "lint": "npm --workspace server run lint && npm --workspace client run lint"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "test": "npm --workspace server run test && npm --workspace client run test",
+    "test:e2e": "npx playwright test"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "prettier": "^3.8.3",
+    "typescript-eslint": "^8.59.4",
     "vite": "^8.0.1"
   },
   "overrides": {
@@ -21,5 +37,14 @@
     "@mapbox/node-pre-gyp": {
       "tar": "7.5.11"
     }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }

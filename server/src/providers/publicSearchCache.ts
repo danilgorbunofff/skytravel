@@ -22,9 +22,9 @@ type CacheEntry = {
   hardExpiresAt: number;
 };
 
-const HOT_TTL_MS = 5 * 60_000;       // bootstrap, destinations
-const FILTERED_TTL_MS = 60_000;      // /all/tours with filter combos
-const STALE_GRACE_MS = 5 * 60_000;   // serve stale up to 5 min past TTL
+const HOT_TTL_MS = 5 * 60_000; // bootstrap, destinations
+const FILTERED_TTL_MS = 60_000; // /all/tours with filter combos
+const STALE_GRACE_MS = 5 * 60_000; // serve stale up to 5 min past TTL
 
 const cache = new LRUCache<string, CacheEntry>({
   max: 2_000,
@@ -86,11 +86,7 @@ export async function getOrFetchPublicSearchResult<T>(
   return { data, cache: "miss" };
 }
 
-function runSingleFlight<T>(
-  key: string,
-  fetcher: () => Promise<T>,
-  ttlMs?: number,
-): Promise<T> {
+function runSingleFlight<T>(key: string, fetcher: () => Promise<T>, ttlMs?: number): Promise<T> {
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
   const promise = (async () => {
@@ -122,4 +118,30 @@ export function invalidatePublicSearchCache(providerId?: string): void {
       cache.delete(key);
     }
   }
+}
+
+export function getPublicSearchCacheStats(): {
+  size: number;
+  maxSize: number;
+  inflight: number;
+  staleEntries: number;
+  freshEntries: number;
+} {
+  const now = Date.now();
+  let staleEntries = 0;
+  let freshEntries = 0;
+  for (const entry of cache.values()) {
+    if (now >= entry.expiresAt) {
+      staleEntries++;
+    } else {
+      freshEntries++;
+    }
+  }
+  return {
+    size: cache.size,
+    maxSize: 2_000,
+    inflight: inflight.size,
+    staleEntries,
+    freshEntries,
+  };
 }

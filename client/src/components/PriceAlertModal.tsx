@@ -35,7 +35,7 @@ export function PriceAlertModal({ tour, onClose }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" type="button" onClick={onClose} aria-label="Zavřít">
           ✕
@@ -44,8 +44,7 @@ export function PriceAlertModal({ tour, onClose }: Props) {
         <p className="modal-subtitle">{tour.title}</p>
         {status === "done" ? (
           <p className="alert-success">
-            ✓ Zaregistrováno! Pošleme vám email, jakmile cena klesne pod{" "}
-            {formatPrice(priceMax)}.
+            ✓ Zaregistrováno! Pošleme vám email, jakmile cena klesne pod {formatPrice(priceMax)}.
           </p>
         ) : (
           <form onSubmit={submit}>
@@ -69,9 +68,7 @@ export function PriceAlertModal({ tour, onClose }: Props) {
                 required
               />
             </label>
-            {status === "error" && (
-              <p className="alert-error">Chyba. Zkuste to prosím znovu.</p>
-            )}
+            {status === "error" && <p className="alert-error">Chyba. Zkuste to prosím znovu.</p>}
             <button type="submit" disabled={status === "loading"} className="btn-primary">
               {status === "loading" ? "Ukládám…" : "Zaregistrovat upozornění"}
             </button>

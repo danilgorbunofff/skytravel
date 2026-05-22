@@ -8,7 +8,9 @@ export function useTourPreview(form: OwnTour, photos: string[]) {
     () =>
       photos.length > 0
         ? photos
-        : ["https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80"],
+        : [
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80",
+          ],
     [photos],
   );
 
@@ -40,8 +42,7 @@ export function useTourPreview(form: OwnTour, photos: string[]) {
   const prevSlide = () =>
     setPreviewIndex((prev) => (prev - 1 + previewPhotos.length) % previewPhotos.length);
 
-  const nextSlide = () =>
-    setPreviewIndex((prev) => (prev + 1) % previewPhotos.length);
+  const nextSlide = () => setPreviewIndex((prev) => (prev + 1) % previewPhotos.length);
 
   return {
     previewPhotos,

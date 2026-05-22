@@ -18,9 +18,18 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
   const [pending, setPending] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setLocalMin(clamp(valueMin, min, max)); }, [valueMin, min, max]);
-  useEffect(() => { setLocalMax(clamp(valueMax, min, max)); }, [valueMax, min, max]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(() => {
+    setLocalMin(clamp(valueMin, min, max));
+  }, [valueMin, min, max]);
+  useEffect(() => {
+    setLocalMax(clamp(valueMax, min, max));
+  }, [valueMax, min, max]);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   function commit(nextMin: number, nextMax: number) {
     if (timer.current) clearTimeout(timer.current);

@@ -25,8 +25,7 @@ async function throwIfNotOk(res: Response): Promise<void> {
   if (res.ok) return;
   const body = await res.json().catch(() => ({}));
   throw new Error(
-    (body as Record<string, string>)?.error ||
-      `Request failed with status ${res.status}`,
+    (body as Record<string, string>)?.error || `Request failed with status ${res.status}`,
   );
 }
 
@@ -41,9 +40,7 @@ export async function fetchProviders(): Promise<ProviderMeta[]> {
   return data.providers as ProviderMeta[];
 }
 
-export async function fetchProviderRegions(
-  providerId: string,
-): Promise<ProviderRegion[]> {
+export async function fetchProviderRegions(providerId: string): Promise<ProviderRegion[]> {
   const res = await fetch(
     `${API_URL}/api/admin/providers/${encodeURIComponent(providerId)}/regions`,
     { credentials: "include" },
@@ -84,9 +81,7 @@ export async function importProviderTours(
   return res.json() as Promise<ImportResult>;
 }
 
-export async function refreshProviderCache(
-  providerId: string,
-): Promise<void> {
+export async function refreshProviderCache(providerId: string): Promise<void> {
   const res = await fetch(
     `${API_URL}/api/admin/providers/${encodeURIComponent(providerId)}/refresh`,
     { method: "POST", credentials: "include" },
@@ -94,9 +89,7 @@ export async function refreshProviderCache(
   await throwIfNotOk(res);
 }
 
-export async function fetchProviderCacheStatus(
-  providerId: string,
-): Promise<CacheStatus> {
+export async function fetchProviderCacheStatus(providerId: string): Promise<CacheStatus> {
   const res = await fetch(
     `${API_URL}/api/admin/providers/${encodeURIComponent(providerId)}/cache-status`,
     { credentials: "include" },
@@ -121,5 +114,3 @@ export async function fetchAdminBootstrap(): Promise<AdminBootstrap> {
     regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
   };
 }
-
-

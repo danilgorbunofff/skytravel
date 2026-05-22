@@ -10,7 +10,7 @@ export type UnifiedTour = {
   price: number;
   originalPrice: number;
   startDate: string; // ISO 8601
-  endDate: string;   // ISO 8601
+  endDate: string; // ISO 8601
   transport: string;
   image: string;
   description: string | null;
@@ -119,10 +119,7 @@ export type CacheStatus = {
 };
 
 /** Callback for SSE streaming. */
-export type StreamCallback = (event: {
-  batch: UnifiedTour[];
-  loaded: number;
-}) => void;
+export type StreamCallback = (event: { batch: UnifiedTour[]; loaded: number }) => void;
 
 /** Core provider contract. */
 export interface TourProvider {
@@ -134,18 +131,9 @@ export interface TourProvider {
   getRegions(filters?: UnifiedFilters): Promise<ProviderRegion[]>;
   getProviderFilters(): FilterFieldDescriptor[];
   fetchTours(filters: UnifiedFilters): Promise<ToursResult>;
-  fetchOfferGroup(
-    filters: UnifiedFilters,
-    offerGroupKey: string,
-  ): Promise<UnifiedTour[]>;
-  streamTours(
-    filters: UnifiedFilters,
-    onBatch: StreamCallback,
-  ): Promise<void>;
-  importTours(
-    ids: string[],
-    regionCtx: Record<string, unknown>,
-  ): Promise<ImportResult>;
+  fetchOfferGroup(filters: UnifiedFilters, offerGroupKey: string): Promise<UnifiedTour[]>;
+  streamTours(filters: UnifiedFilters, onBatch: StreamCallback): Promise<void>;
+  importTours(ids: string[], regionCtx: Record<string, unknown>): Promise<ImportResult>;
   warmCache(): Promise<void>;
   refreshCache(): Promise<void>;
   getCacheStatus(): CacheStatus;

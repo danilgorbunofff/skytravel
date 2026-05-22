@@ -23,7 +23,9 @@ export function normalizeOfferText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-export function buildOfferGroupKey(input: Pick<OfferRow, "source" | "title" | "destination">): string {
+export function buildOfferGroupKey(
+  input: Pick<OfferRow, "source" | "title" | "destination">,
+): string {
   return [input.source, input.title, input.destination]
     .map((part) => normalizeOfferText(part))
     .join("|");
@@ -85,23 +87,21 @@ export function sortOfferGroups<T extends OfferRow>(
 ): OfferGroup<T>[] {
   const direction = sortDir === "desc" ? -1 : 1;
   return [...groups].sort((left, right) => {
-    const delta = sortBy === "date"
-      ? startTime(left.representative.startDate) - startTime(right.representative.startDate)
-      : left.representative.price - right.representative.price;
+    const delta =
+      sortBy === "date"
+        ? startTime(left.representative.startDate) - startTime(right.representative.startDate)
+        : left.representative.price - right.representative.price;
     return delta * direction;
   });
 }
 
-export function sortOfferRows<T extends OfferRow>(
-  rows: T[],
-  sortBy: string,
-  sortDir: string,
-): T[] {
+export function sortOfferRows<T extends OfferRow>(rows: T[], sortBy: string, sortDir: string): T[] {
   const direction = sortDir === "desc" ? -1 : 1;
   return [...rows].sort((left, right) => {
-    const delta = sortBy === "date"
-      ? startTime(left.startDate) - startTime(right.startDate)
-      : left.price - right.price;
+    const delta =
+      sortBy === "date"
+        ? startTime(left.startDate) - startTime(right.startDate)
+        : left.price - right.price;
     return delta * direction;
   });
 }

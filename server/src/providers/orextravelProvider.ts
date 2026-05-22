@@ -2,12 +2,12 @@
 // Orextravel Provider
 // ──────────────────────────────────────────────
 
+import { type Prisma } from "@prisma/client";
 import prisma from "../prisma.js";
 import {
   fetchTownState,
   fetchOrextravelTours,
   clearOrextravelCache,
-  clearTourCache,
   type OrextravelTourInput,
 } from "../lib/orextravel.js";
 import type {
@@ -21,11 +21,7 @@ import type {
   ProviderRegion,
   FilterFieldDescriptor,
 } from "./types.js";
-import {
-  readRegions,
-  writeRegions,
-  updateRegionTourCount,
-} from "./regionStore.js";
+import { readRegions, writeRegions, updateRegionTourCount } from "./regionStore.js";
 import {
   countOfferGroupsBy,
   groupOfferRows,
@@ -54,7 +50,9 @@ function nightsFromDates(startDate: Date | string, endDate: Date | string): numb
 }
 
 function photosFromJson(value: unknown, image: string): string[] {
-  const photos = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+  const photos = Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+    : [];
   return photos.length > 0 ? photos : image ? [image] : [];
 }
 
@@ -63,15 +61,29 @@ function photosFromJson(value: unknown, image: string): string[] {
 // the public SearchPage never displays. Saves DB read time and wire bytes.
 function buildTourSelect(omitHeavy: boolean) {
   return {
-    id: true, externalId: true, source: true, regionKey: true,
-    destination: true, title: true, price: true, originalPrice: true,
-    startDate: true, endDate: true, transport: true, image: true,
-    stars: true, board: true, nights: true, adults: true,
-    children: true, roomType: true, currency: true, offersCount: true,
-    syncedAt: true, createdAt: true,
-    ...(omitHeavy
-      ? {}
-      : { url: true, description: true, photos: true }),
+    id: true,
+    externalId: true,
+    source: true,
+    regionKey: true,
+    destination: true,
+    title: true,
+    price: true,
+    originalPrice: true,
+    startDate: true,
+    endDate: true,
+    transport: true,
+    image: true,
+    stars: true,
+    board: true,
+    nights: true,
+    adults: true,
+    children: true,
+    roomType: true,
+    currency: true,
+    offersCount: true,
+    syncedAt: true,
+    createdAt: true,
+    ...(omitHeavy ? {} : { url: true, description: true, photos: true }),
   } as const;
 }
 
@@ -81,20 +93,14 @@ export class OrextravelProvider implements TourProvider {
   readonly supportsStreaming = true;
   readonly refreshIntervalMs = 45 * 60 * 1000; // 45 min
 
-  private feedCacheMap = new Map<
-    string,
-    { data: OrextravelTourInput[]; ts: number }
-  >();
+  private feedCacheMap = new Map<string, { data: OrextravelTourInput[]; ts: number }>();
 
   private readonly CACHE_TTL = 60 * 60 * 1000; // 60 min
   private syncMutex: Promise<void> | null = null;
 
   // ── Private helpers ───────────────────────────────────────────────
 
-  private async getCachedFeed(
-    townFrom?: number,
-    stateId?: number,
-  ): Promise<OrextravelTourInput[]> {
+  private async getCachedFeed(townFrom?: number, stateId?: number): Promise<OrextravelTourInput[]> {
     const key = `${townFrom ?? "all"}-${stateId ?? "all"}`;
     const cached = this.feedCacheMap.get(key);
     if (cached && Date.now() - cached.ts < this.CACHE_TTL) {
@@ -166,7 +172,10 @@ export class OrextravelProvider implements TourProvider {
     }));
   }
 
-  private async withGroupedRegionCounts(regions: ProviderRegion[], filters?: UnifiedFilters): Promise<ProviderRegion[]> {
+  private async withGroupedRegionCounts(
+    regions: ProviderRegion[],
+    filters?: UnifiedFilters,
+  ): Promise<ProviderRegion[]> {
     const { where, nightsRange } = this.buildTourQuery(filters ?? { providerFilters: {} });
     const rows = await prisma.providerTour.findMany({
       where,
@@ -181,7 +190,10 @@ export class OrextravelProvider implements TourProvider {
         nights: true,
       },
     });
-    const counts = countOfferGroupsBy(this.filterRowsByNights(rows, nightsRange), (row) => row.regionKey);
+    const counts = countOfferGroupsBy(
+      this.filterRowsByNights(rows, nightsRange),
+      (row) => row.regionKey,
+    );
     return regions.map((region) => {
       const departureId = region.meta?.departureId;
       const key = departureId != null ? `${departureId}-${region.id}` : String(region.id);
@@ -213,7 +225,7 @@ export class OrextravelProvider implements TourProvider {
   }
 
   private buildTourQuery(filters: UnifiedFilters): {
-    where: any;
+    where: Prisma.ProviderTourWhereInput;
     sortBy: string;
     sortDir: "asc" | "desc";
     page: number;
@@ -223,23 +235,34 @@ export class OrextravelProvider implements TourProvider {
     nightsRange: NightsRange;
   } {
     const pf = filters.providerFilters;
-    const townFrom =
-      pf.townFrom !== undefined ? Number(pf.townFrom) : undefined;
-    const stateId =
-      pf.stateId !== undefined ? Number(pf.stateId) : undefined;
+    const townFrom = pf.townFrom !== undefined ? Number(pf.townFrom) : undefined;
+    const stateId = pf.stateId !== undefined ? Number(pf.stateId) : undefined;
 
     const regionKey = `${townFrom ?? "all"}-${stateId ?? "all"}`;
     const sortBy = filters.sortBy ?? "price";
     const sortDir = filters.sortDir ?? "asc";
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(1_000, Math.max(1, filters.limit ?? 50));
-    const board = typeof filters.board === "string" ? filters.board : typeof pf.board === "string" ? pf.board : "";
-    const stars = typeof filters.stars === "string" ? filters.stars : typeof pf.stars === "string" ? pf.stars : "";
+    const board =
+      typeof filters.board === "string"
+        ? filters.board
+        : typeof pf.board === "string"
+          ? pf.board
+          : "";
+    const stars =
+      typeof filters.stars === "string"
+        ? filters.stars
+        : typeof pf.stars === "string"
+          ? pf.stars
+          : "";
     const transport = typeof pf.transport === "string" ? pf.transport : "";
     const nightsRange = parseNightsRange(filters.nights);
 
     // Build Prisma where clause
-    const where: any = { source: this.id, price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK } };
+    const where: Prisma.ProviderTourWhereInput = {
+      source: this.id,
+      price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK },
+    };
 
     // Region filtering: if specific route selected, use exact key;
     // otherwise match any region for this provider
@@ -255,10 +278,7 @@ export class OrextravelProvider implements TourProvider {
 
     if (filters.q) {
       const q = filters.q;
-      where.OR = [
-        { destination: { startsWith: q } },
-        { title: { contains: q } },
-      ];
+      where.OR = [{ destination: { startsWith: q } }, { title: { contains: q } }];
     }
 
     if (board) where.board = board;
@@ -266,37 +286,41 @@ export class OrextravelProvider implements TourProvider {
     if (stars) {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {
-        where.stars = { in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars) };
+        where.stars = {
+          in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars),
+        };
       }
     }
 
     if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
-      where.price = { ...where.price, gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK) };
+      where.price = {
+        ...(where.price as object),
+        gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK),
+      };
     }
     if (filters.priceMax !== undefined && Number.isFinite(filters.priceMax)) {
-      where.price = { ...where.price, lte: filters.priceMax };
+      where.price = { ...(where.price as object), lte: filters.priceMax };
     }
 
     if (filters.dateStart) {
       const ds = new Date(filters.dateStart);
       if (!Number.isNaN(ds.getTime())) {
-        where.startDate = { ...where.startDate, gte: ds };
+        where.startDate = { ...(where.startDate as object), gte: ds };
       }
     }
     if (filters.dateEnd) {
       const de = new Date(filters.dateEnd);
       if (!Number.isNaN(de.getTime())) {
-        where.endDate = { ...where.endDate, lte: de };
+        where.endDate = { ...(where.endDate as object), lte: de };
       }
     }
 
     return { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange };
   }
 
-  private filterRowsByNights<T extends { startDate: Date | string; endDate: Date | string; nights?: number | null }>(
-    rows: T[],
-    nightsRange: NightsRange,
-  ): T[] {
+  private filterRowsByNights<
+    T extends { startDate: Date | string; endDate: Date | string; nights?: number | null },
+  >(rows: T[], nightsRange: NightsRange): T[] {
     if (!nightsRange) return rows;
     return rows.filter((row) => {
       const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate);
@@ -305,23 +329,20 @@ export class OrextravelProvider implements TourProvider {
   }
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
-    const { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange } = this.buildTourQuery(filters);
+    const { where, sortBy, sortDir, page, limit, townFrom, stateId, nightsRange } =
+      this.buildTourQuery(filters);
     const omitHeavy = filters.omitHeavy === true;
 
     if (filters.groupResults) {
       return this.fetchGroupedByOffer(where, sortBy, sortDir, page, limit, nightsRange, omitHeavy);
     }
 
-    const orderBy: any =
-      sortBy === "date"
-        ? { startDate: sortDir }
-        : { price: sortDir };
+    const orderBy: Prisma.ProviderTourOrderByWithRelationInput =
+      sortBy === "date" ? { startDate: sortDir } : { price: sortDir };
 
     const hasTextFilter = Boolean(filters.q);
-    const hasPriceFilter =
-      filters.priceMin !== undefined || filters.priceMax !== undefined;
-    const hasDateFilter =
-      filters.dateStart !== undefined || filters.dateEnd !== undefined;
+    const hasPriceFilter = filters.priceMin !== undefined || filters.priceMax !== undefined;
+    const hasDateFilter = filters.dateStart !== undefined || filters.dateEnd !== undefined;
     const needsSeparateTotal = hasTextFilter || hasPriceFilter || hasDateFilter;
 
     const [items, filtered, rawTotal, uniqueDestinations] = await Promise.all([
@@ -334,7 +355,9 @@ export class OrextravelProvider implements TourProvider {
       }),
       prisma.providerTour.count({ where }),
       needsSeparateTotal
-        ? prisma.providerTour.count({ where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) } })
+        ? prisma.providerTour.count({
+            where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) },
+          })
         : Promise.resolve(null),
       // Count distinct destination states from ProviderRegion (small table)
       // instead of scanning the entire filtered ProviderTour set.
@@ -373,34 +396,38 @@ export class OrextravelProvider implements TourProvider {
     return rows.length;
   }
 
-  private rowToUnified(row: any): UnifiedTour {
-    const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate) ?? undefined;
+  private rowToUnified(row: Record<string, unknown>): UnifiedTour {
+    const nights =
+      (row.nights as number | null) ??
+      nightsFromDates(row.startDate as string | Date, row.endDate as string | Date) ??
+      undefined;
     return {
-      externalId: row.externalId,
-      destination: row.destination,
-      title: row.title,
-      price: row.price,
-      originalPrice: row.originalPrice,
-      startDate: row.startDate instanceof Date ? row.startDate.toISOString() : row.startDate,
-      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : row.endDate,
-      transport: row.transport,
-      image: row.image,
-      description: row.description ?? null,
-      photos: photosFromJson(row.photos, row.image),
-      url: row.url ?? "",
-      stars: row.stars,
-      board: row.board,
+      externalId: row.externalId as string,
+      destination: row.destination as string,
+      title: row.title as string,
+      price: row.price as number,
+      originalPrice: row.originalPrice as number,
+      startDate:
+        row.startDate instanceof Date ? row.startDate.toISOString() : (row.startDate as string),
+      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : (row.endDate as string),
+      transport: row.transport as string,
+      image: row.image as string,
+      description: (row.description as string) ?? null,
+      photos: photosFromJson(row.photos, row.image as string),
+      url: (row.url as string) ?? "",
+      stars: row.stars as string,
+      board: row.board as string,
       source: this.id,
       nights,
-      adults: row.adults ?? undefined,
-      children: row.children ?? undefined,
-      roomType: row.roomType ?? undefined,
-      currency: row.currency ?? undefined,
+      adults: (row.adults as number) ?? undefined,
+      children: (row.children as number) ?? undefined,
+      roomType: (row.roomType as string) ?? undefined,
+      currency: (row.currency as string) ?? undefined,
     };
   }
 
   private async fetchGroupedByOffer(
-    where: any,
+    where: Prisma.ProviderTourWhereInput,
     sortBy: string,
     sortDir: string,
     page: number,
@@ -443,17 +470,16 @@ export class OrextravelProvider implements TourProvider {
     };
   }
 
-  async fetchOfferGroup(
-    filters: UnifiedFilters,
-    offerGroupKey: string,
-  ): Promise<UnifiedTour[]> {
+  async fetchOfferGroup(filters: UnifiedFilters, offerGroupKey: string): Promise<UnifiedTour[]> {
     const { where, sortBy, sortDir, nightsRange } = this.buildTourQuery(filters);
     const rows = await prisma.providerTour.findMany({
       where,
       orderBy: { price: "asc" },
       take: MAX_GROUPED_TOUR_ROWS,
     });
-    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find((entry) => entry.key === offerGroupKey);
+    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find(
+      (entry) => entry.key === offerGroupKey,
+    );
     if (!group) return [];
 
     return sortOfferRows(group.offers, sortBy, sortDir).map((row) => ({
@@ -463,18 +489,12 @@ export class OrextravelProvider implements TourProvider {
     }));
   }
 
-  async streamTours(
-    filters: UnifiedFilters,
-    onBatch: StreamCallback,
-  ): Promise<void> {
+  async streamTours(filters: UnifiedFilters, onBatch: StreamCallback): Promise<void> {
     const result = await this.fetchTours(filters);
     onBatch({ batch: result.items, loaded: result.items.length });
   }
 
-  async importTours(
-    ids: string[],
-    regionCtx: Record<string, unknown>,
-  ): Promise<ImportResult> {
+  async importTours(ids: string[], _regionCtx: Record<string, unknown>): Promise<ImportResult> {
     // Read from ProviderTour table instead of in-memory cache
     const providerRows = await prisma.providerTour.findMany({
       where: {
@@ -599,8 +619,9 @@ export class OrextravelProvider implements TourProvider {
     const routeGroups = new Map<string, typeof routes>();
     for (const r of routes) {
       const key = `${r.town}-${r.state}`;
-      if (!routeGroups.has(key)) routeGroups.set(key, []);
-      routeGroups.get(key)!.push(r);
+      const arr = routeGroups.get(key) ?? [];
+      arr.push(r);
+      routeGroups.set(key, arr);
     }
 
     for (const [regionKey, groupRoutes] of routeGroups) {

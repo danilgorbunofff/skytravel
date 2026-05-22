@@ -1,8 +1,8 @@
 import { XMLParser } from "fast-xml-parser";
 import { isPlausibleProviderPriceCzk } from "./providerPrice.js";
+import { fetchWithRetry } from "./fetchWithRetry.js";
 
-const ALEXANDRIA_URL =
-  process.env.ALEXANDRIA_API_URL || "https://export.alexandria.cz/export";
+const ALEXANDRIA_URL = process.env.ALEXANDRIA_API_URL || "https://export.alexandria.cz/export";
 const ALEXANDRIA_API_KEY = process.env.ALEXANDRIA_API_KEY || "";
 const ALEXANDRIA_COUNTRY = Number(process.env.ALEXANDRIA_COUNTRY || 107);
 
@@ -21,17 +21,16 @@ export async function fetchAlexandriaRaw(countryId?: number): Promise<string> {
   // Always use HTTPS to avoid 301 redirect issues
   const url = ALEXANDRIA_URL.replace(/^http:\/\//, "https://");
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
     redirect: "follow",
+    timeout: 30_000,
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Alexandria API error: ${response.status} ${response.statusText}`
-    );
+    throw new Error(`Alexandria API error: ${response.status} ${response.statusText}`);
   }
 
   const text = await response.text();
@@ -50,13 +49,24 @@ export async function fetchAlexandriaRaw(countryId?: number): Promise<string> {
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
+  processEntities: false,
+  stopNodes: ["*.script", "*.style"],
   isArray: (name) =>
-    ["zeme", "oblast", "misto", "hotel", "objekt", "obrazek", "termin", "cena", "ikona", "katalog"].includes(name),
+    [
+      "zeme",
+      "oblast",
+      "misto",
+      "hotel",
+      "objekt",
+      "obrazek",
+      "termin",
+      "cena",
+      "ikona",
+      "katalog",
+    ].includes(name),
 });
 
-export async function fetchAlexandriaParsed(
-  countryId?: number
-): Promise<Record<string, unknown>> {
+export async function fetchAlexandriaParsed(countryId?: number): Promise<Record<string, unknown>> {
   const xml = await fetchAlexandriaRaw(countryId);
   return xmlParser.parse(xml) as Record<string, unknown>;
 }
@@ -137,7 +147,10 @@ function cenaScore(node: unknown): number {
   return score;
 }
 
-function selectCenaPrice(termin: Record<string, unknown>, priceAttr: "cena" | "cena_katalog"): number {
+function selectCenaPrice(
+  termin: Record<string, unknown>,
+  priceAttr: "cena" | "cena_katalog",
+): number {
   const cenaNodes = ensureArray(termin.cena);
   if (cenaNodes.length === 0) return 0;
   const candidates = cenaNodes
@@ -147,7 +160,10 @@ function selectCenaPrice(termin: Record<string, unknown>, priceAttr: "cena" | "c
       score: cenaScore(node),
     }))
     .filter((candidate) => Number.isFinite(candidate.price) && candidate.price > 0)
-    .sort((left, right) => right.score - left.score || left.price - right.price || left.index - right.index);
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.price - right.price || left.index - right.index,
+    );
   return candidates[0]?.price ?? 0;
 }
 
@@ -170,24 +186,22 @@ export function extractOriginalPrice(termin: Record<string, unknown>): number {
 //
 // Each (hotel × termin) combination produces one AlexandriaTourInput.
 // ──────────────────────────────────────────────
-export function extractToursFromParsed(
-  parsed: Record<string, unknown>,
-): AlexandriaTourInput[] {
+export function extractToursFromParsed(parsed: Record<string, unknown>): AlexandriaTourInput[] {
   const results: AlexandriaTourInput[] = [];
-  const dataNode = (parsed as any).data;
+  const dataNode = parsed.data as Record<string, unknown> | undefined;
   if (!dataNode) return results;
 
   for (const zeme of ensureArray(dataNode.zeme)) {
     const zemeName = attr(zeme, "name") || attr(zeme, "id");
 
-    for (const oblast of ensureArray((zeme as any)?.oblast)) {
-      for (const misto of ensureArray((oblast as any)?.misto)) {
+    for (const oblast of ensureArray((zeme as Record<string, unknown>)?.oblast)) {
+      for (const misto of ensureArray((oblast as Record<string, unknown>)?.misto)) {
         const mistoName = attr(misto, "name");
-        const destination = `${zemeName} – ${mistoName}`;
+        const destination = `${zemeName} \u2013 ${mistoName}`;
 
-        for (const hotel of ensureArray((misto as any)?.hotel)) {
+        for (const hotel of ensureArray((misto as Record<string, unknown>)?.hotel)) {
           // objekt holds hotel metadata (may be single or array, take first)
-          const objektArr = ensureArray((hotel as any)?.objekt);
+          const objektArr = ensureArray((hotel as Record<string, unknown>)?.objekt);
           const objekt = objektArr[0] as Record<string, unknown> | undefined;
           const hotelName = attr(objekt, "nazev") || mistoName;
           const hotelId = attr(objekt, "ident_hotel");
@@ -199,18 +213,16 @@ export function extractToursFromParsed(
             null;
 
           // Hotel-level images
-          const hotelImages = ensureArray((hotel as any)?.obrazek)
+          const hotelImages = ensureArray((hotel as Record<string, unknown>)?.obrazek)
             .map((img: unknown) => {
               const soubor = attr(img, "soubor");
               if (!soubor) return "";
-              return hotelId
-                ? `${IMAGE_BASE}/${hotelId}/${soubor}`
-                : soubor;
+              return hotelId ? `${IMAGE_BASE}/${hotelId}/${soubor}` : soubor;
             })
             .filter(Boolean);
 
           // Each termin is a separate tour offer
-          for (const termin of ensureArray((hotel as any)?.termin)) {
+          for (const termin of ensureArray((hotel as Record<string, unknown>)?.termin)) {
             const startDate = parseCzDate(attr(termin, "datum_od"));
             const endDate = parseCzDate(attr(termin, "datum_do"));
             const transportType = mapTransport(attr(termin, "misto"));

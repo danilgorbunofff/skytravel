@@ -48,8 +48,7 @@ function serializeItem(item: AlexandriaTourInput) {
 router.get(
   "/last-minute",
   asyncHandler(async (req, res) => {
-    const countryId =
-      req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
+    const countryId = req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 8));
 
     const items = await getCachedFeed(countryId);

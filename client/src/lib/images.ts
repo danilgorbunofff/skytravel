@@ -19,7 +19,10 @@ export function withWidth(url: string, width: number): string {
   }
 }
 
-export function buildSrcSet(url: string, widths: readonly number[] = [480, 768, 1200]): string | undefined {
+export function buildSrcSet(
+  url: string,
+  widths: readonly number[] = [480, 768, 1200],
+): string | undefined {
   if (!isResizableImage(url)) return undefined;
   return widths.map((w) => `${withWidth(url, w)} ${w}w`).join(", ");
 }

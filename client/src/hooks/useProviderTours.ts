@@ -1,8 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-import {
-  fetchProviderTours,
-} from "../api/providers";
+import { fetchProviderTours } from "../api/providers";
 import type { UnifiedFilters, UnifiedTour } from "../types/providers";
 
 export function useProviderTours() {
@@ -14,27 +12,30 @@ export function useProviderTours() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [uniqueDestinations, setUniqueDestinations] = useState(0);
+  const requestIdRef = useRef(0);
 
-  const loadTours = useCallback(
-    async (providerId: string, filters: UnifiedFilters) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchProviderTours(providerId, filters);
-        setTours(result.items);
-        setTotalCount(result.total);
-        setFilteredCount(result.filtered);
-        setPage(result.page);
-        setTotalPages(result.totalPages);
-        setUniqueDestinations(result.uniqueDestinations);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
+  const loadTours = useCallback(async (providerId: string, filters: UnifiedFilters) => {
+    const id = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchProviderTours(providerId, filters);
+      if (id !== requestIdRef.current) return; // stale response
+      setTours(result.items);
+      setTotalCount(result.total);
+      setFilteredCount(result.filtered);
+      setPage(result.page);
+      setTotalPages(result.totalPages);
+      setUniqueDestinations(result.uniqueDestinations);
+    } catch (err) {
+      if (id !== requestIdRef.current) return;
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (id === requestIdRef.current) {
         setLoading(false);
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const reset = useCallback(() => {
     setTours([]);

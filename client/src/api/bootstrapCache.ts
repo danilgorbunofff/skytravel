@@ -71,15 +71,14 @@ export function loadBootstrap(): {
     });
   } else {
     lastFetchTs = now;
-    fresh = fetchPublicBootstrap()
-      .then((data) => {
-        writeCache(data);
-        return {
-          providers: data.providers,
-          regionsByProvider: data.regionsByProvider,
-          fromCache: false,
-        };
-      });
+    fresh = fetchPublicBootstrap().then((data) => {
+      writeCache(data);
+      return {
+        providers: data.providers,
+        regionsByProvider: data.regionsByProvider,
+        fromCache: false,
+      };
+    });
   }
 
   return {

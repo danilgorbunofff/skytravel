@@ -10,5 +10,7 @@ function readMinProviderTourPrice(): number {
 export const MIN_PROVIDER_TOUR_PRICE_CZK = readMinProviderTourPrice();
 
 export function isPlausibleProviderPriceCzk(price: number | null | undefined): price is number {
-  return typeof price === "number" && Number.isFinite(price) && price >= MIN_PROVIDER_TOUR_PRICE_CZK;
+  return (
+    typeof price === "number" && Number.isFinite(price) && price >= MIN_PROVIDER_TOUR_PRICE_CZK
+  );
 }

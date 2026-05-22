@@ -4,11 +4,11 @@ import type { OwnTour } from "./data";
 // so use a relative base. In local dev VITE_API_URL can override to http://localhost:4000.
 const API_URL = import.meta.env.VITE_API_URL || "";
 
-export async function fetchTours() {
-  const res = await fetch(`${API_URL}/api/tours`);
+export async function fetchTours(options?: { signal?: AbortSignal }) {
+  const res = await fetch(`${API_URL}/api/tours`, { signal: options?.signal });
   if (!res.ok) throw new Error("Failed to load tours");
   const data = await res.json();
-  return data.items as OwnTour[];
+  return data.items ?? (data.data?.items as OwnTour[]);
 }
 
 export async function fetchAdminTours() {

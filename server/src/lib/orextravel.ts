@@ -1,13 +1,13 @@
 import { XMLParser } from "fast-xml-parser";
 import { config } from "../config.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "./providerPrice.js";
+import { fetchWithRetry } from "./fetchWithRetry.js";
 
 // ──────────────────────────────────────────────
 // Config
 // ──────────────────────────────────────────────
 const BASE_URL = config.orextravel.url;
 const TOKEN = config.orextravel.token;
-const DEFAULT_TOWN_FROM = config.orextravel.townFrom;
 
 const DELAY_MS = 50;
 const CONCURRENCY = 6;
@@ -19,6 +19,8 @@ const OREX_EUR_TO_CZK = Number(process.env.OREX_EUR_TO_CZK || 25.5);
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
+  processEntities: false,
+  stopNodes: ["*.script", "*.style"],
   isArray: (name) =>
     [
       "state",
@@ -59,6 +61,24 @@ function parseSamoXml(xml: string): Record<string, unknown> {
   return xmlParser.parse(xml) as Record<string, unknown>;
 }
 
+/** Safely extract Response.Data from parsed SAMO XML. */
+function samoData(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
+  const response = parsed.Response as Record<string, unknown> | undefined;
+  return response?.Data as Record<string, unknown> | undefined;
+}
+
+/** Ensure value is an array (like ensureArray for XML nodes). */
+function samoArray(
+  data: Record<string, unknown> | undefined,
+  key: string,
+): Record<string, unknown>[] {
+  if (!data) return [];
+  const v = data[key];
+  if (Array.isArray(v)) return v as Record<string, unknown>[];
+  if (v && typeof v === "object") return [v as Record<string, unknown>];
+  return [];
+}
+
 /**
  * Parse a price string from SAMO XML.
  *
@@ -97,7 +117,12 @@ export function parseSamoPrice(raw: string | number | undefined | null): number 
 
 function isEuroCurrency(value: string): boolean {
   const normalized = normalizeCurrencyLabel(value);
-  return normalized === "eur" || normalized === "euro" || normalized.includes("euro") || normalized.includes("eur");
+  return (
+    normalized === "eur" ||
+    normalized === "euro" ||
+    normalized.includes("euro") ||
+    normalized.includes("eur")
+  );
 }
 
 function normalizeCurrencyLabel(value: string): string {
@@ -111,7 +136,12 @@ function normalizeCurrencyLabel(value: string): string {
 function isCzkCurrency(value: string, currencyId?: number): boolean {
   if (currencyId === 203) return true;
   const normalized = normalizeCurrencyLabel(value);
-  return normalized === "czk" || normalized === "kc" || normalized === "kcs" || normalized.includes("koruna");
+  return (
+    normalized === "czk" ||
+    normalized === "kc" ||
+    normalized === "kcs" ||
+    normalized.includes("koruna")
+  );
 }
 
 function isExplicitEuroCurrency(value: string, currencyId?: number): boolean {
@@ -129,7 +159,11 @@ function resolveSanePeopleCount(peopleCount: number, adults?: number, children?:
   return 1;
 }
 
-function shouldConvertOrexPriceToCzk(perPersonPrice: number, currencyName: string, currencyId?: number): boolean {
+function shouldConvertOrexPriceToCzk(
+  perPersonPrice: number,
+  currencyName: string,
+  currencyId?: number,
+): boolean {
   if (isExplicitEuroCurrency(currencyName, currencyId)) return true;
   if (isCzkCurrency(currencyName, currencyId)) {
     return perPersonPrice < MIN_PROVIDER_TOUR_PRICE_CZK;
@@ -151,11 +185,20 @@ export function normalizeOrexPrice(
 ): number {
   const sanePeopleCount = resolveSanePeopleCount(peopleCount, options.adults, options.children);
   const perPersonPrice = price / sanePeopleCount;
-  const dividedPriceCzk = Math.max(0, Math.round(convertOrexAmountToCzk(perPersonPrice, currencyName, options.currencyId)));
-  const undividedPriceCzk = Math.max(0, Math.round(convertOrexAmountToCzk(price, currencyName, options.currencyId)));
-  const normalizedPrice = sanePeopleCount > 1 && dividedPriceCzk < MIN_PROVIDER_TOUR_PRICE_CZK && isPlausibleProviderPriceCzk(undividedPriceCzk)
-    ? undividedPriceCzk
-    : dividedPriceCzk;
+  const dividedPriceCzk = Math.max(
+    0,
+    Math.round(convertOrexAmountToCzk(perPersonPrice, currencyName, options.currencyId)),
+  );
+  const undividedPriceCzk = Math.max(
+    0,
+    Math.round(convertOrexAmountToCzk(price, currencyName, options.currencyId)),
+  );
+  const normalizedPrice =
+    sanePeopleCount > 1 &&
+    dividedPriceCzk < MIN_PROVIDER_TOUR_PRICE_CZK &&
+    isPlausibleProviderPriceCzk(undividedPriceCzk)
+      ? undividedPriceCzk
+      : dividedPriceCzk;
 
   if (process.env.OREX_DEBUG_PRICE === "1" && normalizedPrice < MIN_PROVIDER_TOUR_PRICE_CZK) {
     console.warn("[Orextravel] Suspicious normalized price", {
@@ -183,7 +226,7 @@ async function fetchSamoRaw(params: Record<string, string>): Promise<string> {
     url.searchParams.set(k, v);
   }
 
-  const response = await fetch(url.toString(), { redirect: "follow" });
+  const response = await fetchWithRetry(url.toString(), { redirect: "follow", timeout: 15_000 });
 
   if (!response.ok) {
     throw new Error(`SAMO API error: ${response.status} ${response.statusText}`);
@@ -191,10 +234,7 @@ async function fetchSamoRaw(params: Record<string, string>): Promise<string> {
 
   const text = await response.text();
 
-  if (
-    text.trimStart().startsWith("<!") ||
-    text.trimStart().startsWith("<html")
-  ) {
+  if (text.trimStart().startsWith("<!") || text.trimStart().startsWith("<html")) {
     throw new Error("SAMO API returned HTML — check OREXTRAVEL_TOKEN or IP whitelist");
   }
 
@@ -205,10 +245,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function runConcurrent<T>(
-  tasks: (() => Promise<T>)[],
-  concurrency: number,
-): Promise<T[]> {
+async function runConcurrent<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
   const results: T[] = [];
   let index = 0;
   async function worker() {
@@ -248,7 +285,6 @@ export type OrextravelTourInput = {
 };
 
 type RefEntry = { inc: number; name: string; lname: string; status?: string; pic?: string };
-type HotelAttrEntry = { hotel: number; name: string; lname: string; value: string; tags: string };
 
 // ──────────────────────────────────────────────
 // In-memory reference cache
@@ -268,11 +304,7 @@ const refCache = {
 };
 const REF_TTL = 4 * 60 * 60 * 1000; // 4 hours
 
-function resolveLabel(
-  map: Map<number, RefEntry>,
-  id: number | string,
-  fallback?: string,
-): string {
+function resolveLabel(map: Map<number, RefEntry>, id: number | string, fallback?: string): string {
   const entry = map.get(Number(id));
   if (entry) return entry.name || entry.lname || fallback || String(id);
   return fallback || String(id);
@@ -290,11 +322,15 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
     type: "currentstamp",
   });
   const stampParsed = parseSamoXml(stampXml);
-  const stampData = (stampParsed as any)?.Response?.Data?.currentstamp;
+  const stampDataRoot = samoData(stampParsed);
+  const stampData = stampDataRoot?.currentstamp as
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+    | undefined;
   let delStamp =
-    (Array.isArray(stampData)
-      ? stampData[0]?.["@_stamp"]
-      : stampData?.["@_stamp"]) || "0x0000000000000000";
+    ((Array.isArray(stampData)
+      ? (stampData[0] as Record<string, unknown>)?.["@_stamp"]
+      : stampData?.["@_stamp"]) as string) || "0x0000000000000000";
 
   await delay(DELAY_MS);
 
@@ -313,14 +349,14 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
     });
 
     const parsed = parseSamoXml(xml);
-    const data = (parsed as any)?.Response?.Data;
+    const data = samoData(parsed);
     if (!data) break;
 
-    const items: any[] = Array.isArray(data[type]) ? data[type] : data[type] ? [data[type]] : [];
+    const items = samoArray(data, type);
 
     // Separate active and deleted
-    const active = items.filter((i: any) => i["@_status"] !== "D");
-    const deleted = items.filter((i: any) => i["@_status"] === "D");
+    const active = items.filter((i) => i["@_status"] !== "D");
+    const deleted = items.filter((i) => i["@_status"] === "D");
 
     for (const item of active) {
       results.push({
@@ -330,13 +366,13 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
         status: String(item["@_status"] ?? ""),
         pic: String(item["@_pic"] ?? item["@_www"] ?? item["@_image"] ?? ""),
       });
-      const stamp = item["@_stamp"];
+      const stamp = String(item["@_stamp"] ?? "");
       if (stamp && stamp > lastStamp) lastStamp = stamp;
     }
 
     // Update delStamp from deleted records
     for (const item of deleted) {
-      const stamp = item["@_stamp"];
+      const stamp = String(item["@_stamp"] ?? "");
       if (stamp && stamp > delStamp) delStamp = stamp;
     }
 
@@ -358,11 +394,15 @@ async function syncHotelAttributes(): Promise<void> {
     type: "currentstamp",
   });
   const stampParsed = parseSamoXml(stampXml);
-  const stampData = (stampParsed as any)?.Response?.Data?.currentstamp;
+  const stampDataRoot = samoData(stampParsed);
+  const stampData = stampDataRoot?.currentstamp as
+    | Record<string, unknown>
+    | Record<string, unknown>[]
+    | undefined;
   let delStamp =
-    (Array.isArray(stampData)
-      ? stampData[0]?.["@_stamp"]
-      : stampData?.["@_stamp"]) || "0x0000000000000000";
+    ((Array.isArray(stampData)
+      ? (stampData[0] as Record<string, unknown>)?.["@_stamp"]
+      : stampData?.["@_stamp"]) as string) || "0x0000000000000000";
 
   await delay(DELAY_MS);
 
@@ -380,32 +420,29 @@ async function syncHotelAttributes(): Promise<void> {
     });
 
     const parsed = parseSamoXml(xml);
-    const data = (parsed as any)?.Response?.Data;
+    const data = samoData(parsed);
     if (!data) break;
 
-    const items: any[] = Array.isArray(data.hotelattributes)
-      ? data.hotelattributes
-      : data.hotelattributes
-        ? [data.hotelattributes]
-        : [];
+    const items = samoArray(data, "hotelattributes");
 
-    const active = items.filter((i: any) => i["@_status"] !== "D");
-    const deleted = items.filter((i: any) => i["@_status"] === "D");
+    const active = items.filter((i) => i["@_status"] !== "D");
+    const deleted = items.filter((i) => i["@_status"] === "D");
 
     for (const item of active) {
       const hotelId = Number(item["@_hotel"] ?? 0);
       const attrName = String(item["@_name"] ?? item["@_lname"] ?? "");
       const attrValue = String(item["@_value"] ?? "");
       if (hotelId && attrValue) {
-        if (!grouped.has(hotelId)) grouped.set(hotelId, []);
-        grouped.get(hotelId)!.push(`${attrName}: ${attrValue}`);
+        const arr = grouped.get(hotelId) ?? [];
+        arr.push(`${attrName}: ${attrValue}`);
+        grouped.set(hotelId, arr);
       }
-      const stamp = item["@_stamp"];
+      const stamp = String(item["@_stamp"] ?? "");
       if (stamp && stamp > lastStamp) lastStamp = stamp;
     }
 
     for (const item of deleted) {
-      const stamp = item["@_stamp"];
+      const stamp = String(item["@_stamp"] ?? "");
       if (stamp && stamp > delStamp) delStamp = stamp;
     }
 
@@ -490,20 +527,20 @@ export async function fetchTownState(): Promise<TownStateRoute[]> {
   });
 
   const parsed = parseSamoXml(xml);
-  const data = (parsed as any)?.Response?.Data;
+  const data = samoData(parsed);
   if (!data) return [];
 
-  const items: any[] = Array.isArray(data.townstate)
-    ? data.townstate
-    : data.townstate
-      ? [data.townstate]
-      : [];
+  const items = samoArray(data, "townstate");
 
-  const routes: TownStateRoute[] = items.map((item: any) => ({
+  const routes: TownStateRoute[] = items.map((item) => ({
     town: Number(item["@_town"] ?? 0),
-    townName: resolveLabel(refCache.towns, item["@_town"], `Town ${item["@_town"]}`),
+    townName: resolveLabel(refCache.towns, Number(item["@_town"] ?? 0), `Town ${item["@_town"]}`),
     state: Number(item["@_state"] ?? 0),
-    stateName: resolveLabel(refCache.states, item["@_state"], `State ${item["@_state"]}`),
+    stateName: resolveLabel(
+      refCache.states,
+      Number(item["@_state"] ?? 0),
+      `State ${item["@_state"]}`,
+    ),
     packetType: Number(item["@_packet_type"] ?? 0),
   }));
 
@@ -533,10 +570,7 @@ type SpoListItem = {
   enable4delete: number;
 };
 
-async function fetchSpoList(
-  townFrom: number,
-  stateId: number,
-): Promise<SpoListItem[]> {
+async function fetchSpoList(townFrom: number, stateId: number): Promise<SpoListItem[]> {
   const xml = await fetchSamoRaw({
     samo_action: "reference",
     type: "spolist",
@@ -545,17 +579,13 @@ async function fetchSpoList(
   });
 
   const parsed = parseSamoXml(xml);
-  const data = (parsed as any)?.Response?.Data;
+  const data = samoData(parsed);
   if (!data) return [];
 
-  const items: any[] = Array.isArray(data.spolist)
-    ? data.spolist
-    : data.spolist
-      ? [data.spolist]
-      : [];
+  const items = samoArray(data, "spolist");
 
   return items
-    .map((item: any) => ({
+    .map((item) => ({
       inc: Number(item["@_inc"] ?? 0),
       name: String(item["@_name"] ?? ""),
       spog: Number(item["@_spog"] ?? 0),
@@ -587,16 +617,12 @@ async function fetchDateNights(
   });
 
   const parsed = parseSamoXml(xml);
-  const data = (parsed as any)?.Response?.Data;
+  const data = samoData(parsed);
   if (!data) return [];
 
-  const items: any[] = Array.isArray(data.cat_claim_info)
-    ? data.cat_claim_info
-    : data.cat_claim_info
-      ? [data.cat_claim_info]
-      : [];
+  const items = samoArray(data, "cat_claim_info");
 
-  return items.map((item: any) => ({
+  return items.map((item) => ({
     checkin: String(item["@_checkin"] ?? ""),
     nights: Number(item["@_nights"] ?? 7),
   }));
@@ -642,44 +668,39 @@ async function fetchPrices(
   });
 
   const parsed = parseSamoXml(xml);
-  const data = (parsed as any)?.Response?.Data;
+  const data = samoData(parsed);
   if (!data) return [];
 
-  const items: any[] = Array.isArray(data.cat_claim)
-    ? data.cat_claim
-    : data.cat_claim
-      ? [data.cat_claim]
-      : [];
+  const items = samoArray(data, "cat_claim");
 
-  return items.map((item: any) => ({
-    inc: Number(item["@_Inc"] ?? item["@_inc"] ?? 0),
-    tour: Number(item["@_Tour"] ?? item["@_tour"] ?? 0),
-    spog: Number(item["@_Spog"] ?? item["@_spog"] ?? 0),
-    price: parseSamoPrice(item["@_Price"] ?? item["@_price"]),
-    currency: Number(item["@_Currency"] ?? item["@_currency"] ?? 0),
-    peopleCount: Number(item["@_PeopleCount"] ?? item["@_peoplecount"] ?? 0),
-    hotel: Number(item["@_Hotel"] ?? item["@_hotel"] ?? 0),
-    htplace: Number(item["@_HtPlace"] ?? item["@_htplace"] ?? 0),
-    meal: Number(item["@_Meal"] ?? item["@_meal"] ?? 0),
-    room: Number(item["@_Room"] ?? item["@_room"] ?? 0),
-    adult: Number(item["@_Adult"] ?? item["@_adult"] ?? 0),
-    child: Number(item["@_Child"] ?? item["@_child"] ?? 0),
-    packetType: Number(item["@_Packet_type"] ?? item["@_packet_type"] ?? 0),
-    hnights: Number(item["@_Hnights"] ?? item["@_hnights"] ?? nights),
-    checkin,
-    dateOut: String(item["@_DateOut"] ?? item["@_dateout"] ?? ""),
-    nights,
-    internetInvisible: Number(item["@_InternetInvisible"] ?? item["@_internetinvisible"] ?? 0),
-  })).filter((c) => c.internetInvisible === 0);
+  return items
+    .map((item) => ({
+      inc: Number(item["@_Inc"] ?? item["@_inc"] ?? 0),
+      tour: Number(item["@_Tour"] ?? item["@_tour"] ?? 0),
+      spog: Number(item["@_Spog"] ?? item["@_spog"] ?? 0),
+      price: parseSamoPrice((item["@_Price"] ?? item["@_price"]) as string | number | undefined),
+      currency: Number(item["@_Currency"] ?? item["@_currency"] ?? 0),
+      peopleCount: Number(item["@_PeopleCount"] ?? item["@_peoplecount"] ?? 0),
+      hotel: Number(item["@_Hotel"] ?? item["@_hotel"] ?? 0),
+      htplace: Number(item["@_HtPlace"] ?? item["@_htplace"] ?? 0),
+      meal: Number(item["@_Meal"] ?? item["@_meal"] ?? 0),
+      room: Number(item["@_Room"] ?? item["@_room"] ?? 0),
+      adult: Number(item["@_Adult"] ?? item["@_adult"] ?? 0),
+      child: Number(item["@_Child"] ?? item["@_child"] ?? 0),
+      packetType: Number(item["@_Packet_type"] ?? item["@_packet_type"] ?? 0),
+      hnights: Number(item["@_Hnights"] ?? item["@_hnights"] ?? nights),
+      checkin,
+      dateOut: String(item["@_DateOut"] ?? item["@_dateout"] ?? ""),
+      nights,
+      internetInvisible: Number(item["@_InternetInvisible"] ?? item["@_internetinvisible"] ?? 0),
+    }))
+    .filter((c) => c.internetInvisible === 0);
 }
 
 // ──────────────────────────────────────────────
 // Orchestrator — fetch all tours for a route
 // ──────────────────────────────────────────────
-const tourCacheMap = new Map<
-  string,
-  { data: OrextravelTourInput[]; ts: number }
->();
+const tourCacheMap = new Map<string, { data: OrextravelTourInput[]; ts: number }>();
 const TOUR_CACHE_TTL = 60 * 60 * 1000; // 1h
 
 function mapClaimToTour(
@@ -691,7 +712,9 @@ function mapClaimToTour(
   routeState: number,
 ): OrextravelTourInput {
   const hotelEntry = refCache.hotels.get(claim.hotel);
-  const hotelName = hotelEntry ? (hotelEntry.name || hotelEntry.lname || `Hotel ${claim.hotel}`) : `Hotel ${claim.hotel}`;
+  const hotelName = hotelEntry
+    ? hotelEntry.name || hotelEntry.lname || `Hotel ${claim.hotel}`
+    : `Hotel ${claim.hotel}`;
   const hotelImage = hotelEntry?.pic || "";
   const mealName = resolveLabel(refCache.meals, claim.meal, "");
   const roomName = resolveLabel(refCache.rooms, claim.room, "");
@@ -759,9 +782,7 @@ export async function fetchOrextravelTours(
   const filteredRoutes =
     townFrom || stateId
       ? routes.filter(
-          (r) =>
-            (!townFrom || r.town === townFrom) &&
-            (!stateId || r.state === stateId),
+          (r) => (!townFrom || r.town === townFrom) && (!stateId || r.state === stateId),
         )
       : routes;
 
@@ -788,11 +809,7 @@ export async function fetchOrextravelTours(
       const spoTasks = spoSlice.map((spo) => async () => {
         const spoTours: OrextravelTourInput[] = [];
         try {
-          const dateNights = await fetchDateNights(
-            route.town,
-            route.state,
-            spo.inc,
-          );
+          const dateNights = await fetchDateNights(route.town, route.state, spo.inc);
           await delay(DELAY_MS);
 
           const comboSlice = dateNights.slice(0, MAX_DATE_COMBOS_PER_SPO);
@@ -832,9 +849,7 @@ export async function fetchOrextravelTours(
 
           await runConcurrent(comboTasks, CONCURRENCY);
         } catch (err) {
-          console.warn(
-            `[Orextravel] Error fetching date/nights for SPO ${spo.inc}: ${err}`,
-          );
+          console.warn(`[Orextravel] Error fetching date/nights for SPO ${spo.inc}: ${err}`);
         }
         return spoTours;
       });

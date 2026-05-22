@@ -4,9 +4,15 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import { cn } from "../../../lib/utils";
-import { Upload, X, ChevronLeft, ChevronRight, Plus, ImagePlus, Save, RotateCcw } from "lucide-react";
+import { Upload, X, ChevronLeft, ChevronRight, ImagePlus, Save, RotateCcw } from "lucide-react";
 
 type Props = {
   form: OwnTour;
@@ -28,7 +34,11 @@ type Props = {
   onDragEnter: (index: number) => void;
   onDragLeave: () => void;
   onDrop: (index: number, e: React.DragEvent<HTMLDivElement>) => void;
-  onUpdateI18n: (langKey: string, field: "destination" | "title" | "description", value: string) => void;
+  onUpdateI18n: (
+    langKey: string,
+    field: "destination" | "title" | "description",
+    value: string,
+  ) => void;
   t: (key: TranslationKey) => string;
 };
 
@@ -224,7 +234,9 @@ export default function AdminTourForm({
         {photos.length > 0 && (
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground">
-              {photos.length} {photos.length === 1 ? "fotka" : photos.length < 5 ? "fotky" : "fotek"} • přetažením změníte pořadí
+              {photos.length}{" "}
+              {photos.length === 1 ? "fotka" : photos.length < 5 ? "fotky" : "fotek"} • přetažením
+              změníte pořadí
             </p>
             <div
               className="flex flex-wrap gap-3"
@@ -251,7 +263,11 @@ export default function AdminTourForm({
                   onDrop={(e) => onDrop(index, e)}
                   onDragEnter={() => onDragEnter(index)}
                 >
-                  <img src={photo} alt={`Photo ${index + 1}`} className="h-full w-full cursor-grab object-cover active:cursor-grabbing" />
+                  <img
+                    src={photo}
+                    alt={`Photo ${index + 1}`}
+                    className="h-full w-full cursor-grab object-cover active:cursor-grabbing"
+                  />
                   {index === 0 && (
                     <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                       Hlavní
@@ -322,7 +338,9 @@ export default function AdminTourForm({
           { code: "ru", label: "RU", flag: "🇷🇺" },
         ].map((item) => (
           <div key={item.code} className="grid grid-cols-[40px_1fr_1fr_1fr] items-center gap-2">
-            <span className="text-center text-sm" title={item.label}>{item.flag}</span>
+            <span className="text-center text-sm" title={item.label}>
+              {item.flag}
+            </span>
             <Input
               placeholder="Destinace"
               value={form.i18n?.[item.code]?.destination || ""}

@@ -54,7 +54,9 @@ export default function TourModal({ detail, onClose }: Props) {
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, []);
 
   function handleModalSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -78,8 +80,8 @@ export default function TourModal({ detail, onClose }: Props) {
   }
 
   return (
-    <div id="detailModal" className="detail-modal" aria-hidden={false}>
-      <div className="detail-modal__backdrop" onClick={onClose} />
+    <div id="detailModal" className="detail-modal" role="dialog" aria-modal="true">
+      <div className="detail-modal__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="detail-modal__content">
         <button className="detail-modal__close" type="button" onClick={onClose}>
           ✕

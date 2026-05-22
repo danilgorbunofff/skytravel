@@ -8,8 +8,39 @@
       name="description"
       content="SkyTravel - exkluzivní nabídky SkyTravel a partnerské zájezdy na jednom místě."
     />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SkyTravel" />
+    <meta property="og:title" content="SkyTravel | Dovolená na míru" />
+    <meta
+      property="og:description"
+      content="Exkluzivní nabídky zájezdů a last minute dovolené na jednom místě."
+    />
+    <meta property="og:url" content="https://sky-travel.tours/" />
+    <meta property="og:image" content="https://sky-travel.tours/og-image.jpg" />
+    <meta property="og:locale" content="cs_CZ" />
+
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TravelAgency",
+        "name": "SkyTravel",
+        "url": "https://sky-travel.tours",
+        "description": "Cestovní agentura nabízející exkluzivní zájezdy a last minute dovolenou.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Křižíkova 6",
+          "addressLocality": "Praha",
+          "addressCountry": "CZ"
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"

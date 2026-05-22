@@ -7,21 +7,56 @@ import Placeholder from "@tiptap/extension-placeholder";
 import "../admin.css";
 import AdminLayout from "../components/AdminLayout";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { deleteLead, fetchLeads, sendCampaign, sendTestCampaign, uploadAdminImages } from "../features/admin/services/adminApi";
+import {
+  deleteLead,
+  fetchLeads,
+  sendCampaign,
+  sendTestCampaign,
+  uploadAdminImages,
+} from "../features/admin/services/adminApi";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { cn } from "../lib/utils";
 import {
-  Bold, Italic, List, Heading2, Link2, ImageIcon, Upload, Eye, Download, Trash2,
-  Search, Users, ShieldCheck, ShieldOff, Mail, SendHorizonal, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  Strikethrough, Code, Undo2, Redo2, ListOrdered,
+  Bold,
+  Italic,
+  List,
+  Heading2,
+  Link2,
+  ImageIcon,
+  Upload,
+  Eye,
+  Download,
+  Trash2,
+  Search,
+  Users,
+  ShieldCheck,
+  ShieldOff,
+  Mail,
+  SendHorizonal,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  Strikethrough,
+  Code,
+  Undo2,
+  Redo2,
+  ListOrdered,
 } from "lucide-react";
 
 type Lead = {
@@ -68,20 +103,25 @@ export default function AdminEmailPage() {
       Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: "Začněte psát obsah e-mailu…" }),
     ],
-    content: "<h2>Nové termíny pro vaše vysněné destinace</h2><p>Vybrali jsme pro vás nejlepší nabídky týdne. Podívejte se na nová data odletů a stáhněte si bonusový travel guide.</p><p><strong>Tip:</strong> odpovězte nám na tento e-mail a připravíme nabídku na míru.</p>",
+    content:
+      "<h2>Nové termíny pro vaše vysněné destinace</h2><p>Vybrali jsme pro vás nejlepší nabídky týdne. Podívejte se na nová data odletů a stáhněte si bonusový travel guide.</p><p><strong>Tip:</strong> odpovězte nám na tento e-mail a připravíme nabídku na míru.</p>",
     editorProps: {
       attributes: { class: "min-h-[240px] p-4 text-sm outline-none focus:outline-none" },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) return false;
-        const files = Array.from(event.dataTransfer?.files ?? []).filter((f) => f.type.startsWith("image/"));
+        const files = Array.from(event.dataTransfer?.files ?? []).filter((f) =>
+          f.type.startsWith("image/"),
+        );
         if (files.length === 0) return false;
         event.preventDefault();
         uploadAdminImages(files)
           .then((data) => {
             data.urls.forEach((url) => {
-              view.dispatch(view.state.tr.replaceSelectionWith(
-                view.state.schema.nodes.image.create({ src: url })
-              ));
+              view.dispatch(
+                view.state.tr.replaceSelectionWith(
+                  view.state.schema.nodes.image.create({ src: url }),
+                ),
+              );
             });
             addToast("success", "Obrázek nahrán.");
           })
@@ -111,7 +151,7 @@ export default function AdminEmailPage() {
 
   const consentedCount = useMemo(
     () => leads.filter((lead) => lead.marketingConsent).length,
-    [leads]
+    [leads],
   );
 
   const filtered = useMemo(() => {
@@ -122,7 +162,7 @@ export default function AdminEmailPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       result = result.filter(
-        (l) => l.email.toLowerCase().includes(q) || (l.destination ?? "").toLowerCase().includes(q)
+        (l) => l.email.toLowerCase().includes(q) || (l.destination ?? "").toLowerCase().includes(q),
       );
     }
     return result;
@@ -250,8 +290,16 @@ export default function AdminEmailPage() {
 
   // ── Toolbar button helper ──
   function ToolbarBtn({
-    onClick, title, active, children,
-  }: { onClick: () => void; title: string; active?: boolean; children: React.ReactNode }) {
+    onClick,
+    title,
+    active,
+    children,
+  }: {
+    onClick: () => void;
+    title: string;
+    active?: boolean;
+    children: React.ReactNode;
+  }) {
     return (
       <Button
         type="button"
@@ -272,11 +320,22 @@ export default function AdminEmailPage() {
       <>
         {Array.from({ length: 5 }).map((_, i) => (
           <TableRow key={i}>
-            <TableCell><div className="h-4 w-36 animate-pulse rounded bg-muted" /><div className="mt-1.5 h-3 w-20 animate-pulse rounded bg-muted" /></TableCell>
-            <TableCell><div className="h-4 w-20 animate-pulse rounded bg-muted" /></TableCell>
-            <TableCell><div className="h-5 w-16 animate-pulse rounded-full bg-muted" /></TableCell>
-            <TableCell><div className="h-5 w-14 animate-pulse rounded-full bg-muted" /></TableCell>
-            <TableCell><div className="h-8 w-8 animate-pulse rounded bg-muted" /></TableCell>
+            <TableCell>
+              <div className="h-4 w-36 animate-pulse rounded bg-muted" />
+              <div className="mt-1.5 h-3 w-20 animate-pulse rounded bg-muted" />
+            </TableCell>
+            <TableCell>
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+            </TableCell>
+            <TableCell>
+              <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+            </TableCell>
+            <TableCell>
+              <div className="h-5 w-14 animate-pulse rounded-full bg-muted" />
+            </TableCell>
+            <TableCell>
+              <div className="h-8 w-8 animate-pulse rounded bg-muted" />
+            </TableCell>
           </TableRow>
         ))}
       </>
@@ -294,7 +353,7 @@ export default function AdminEmailPage() {
               "pointer-events-auto flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg backdrop-blur-sm animate-in slide-in-from-right-5 fade-in duration-300",
               toast.type === "success" && "border-success/30 bg-success/10 text-success",
               toast.type === "error" && "border-destructive/30 bg-destructive/10 text-destructive",
-              toast.type === "info" && "border-primary/30 bg-primary/10 text-primary"
+              toast.type === "info" && "border-primary/30 bg-primary/10 text-primary",
             )}
           >
             {toast.type === "success" && <CheckCircle2 className="h-4 w-4 shrink-0" />}
@@ -309,8 +368,18 @@ export default function AdminEmailPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { label: "Celkem kontaktů", value: leads.length, icon: Users, color: "text-primary" },
-          { label: "Marketing souhlas", value: consentedCount, icon: ShieldCheck, color: "text-success" },
-          { label: "Bez souhlasu", value: leads.length - consentedCount, icon: ShieldOff, color: "text-warning" },
+          {
+            label: "Marketing souhlas",
+            value: consentedCount,
+            icon: ShieldCheck,
+            color: "text-success",
+          },
+          {
+            label: "Bez souhlasu",
+            value: leads.length - consentedCount,
+            icon: ShieldOff,
+            color: "text-warning",
+          },
           { label: "Aktuální segment", value: filtered.length, icon: Mail, color: "text-primary" },
         ].map((stat) => (
           <Card key={stat.label}>
@@ -341,11 +410,17 @@ export default function AdminEmailPage() {
             </Button>
           </div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Tabs value={segment} onValueChange={(v) => setSegment(v as typeof segment)} className="w-full sm:w-auto">
+            <Tabs
+              value={segment}
+              onValueChange={(v) => setSegment(v as typeof segment)}
+              className="w-full sm:w-auto"
+            >
               <TabsList>
                 <TabsTrigger value="all">Vše ({leads.length})</TabsTrigger>
                 <TabsTrigger value="consented">Souhlas ({consentedCount})</TabsTrigger>
-                <TabsTrigger value="pending">Bez souhlasu ({leads.length - consentedCount})</TabsTrigger>
+                <TabsTrigger value="pending">
+                  Bez souhlasu ({leads.length - consentedCount})
+                </TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="relative flex-1 sm:max-w-xs">
@@ -385,44 +460,47 @@ export default function AdminEmailPage() {
                       <div className="mx-auto max-w-xs space-y-2">
                         <Mail className="mx-auto h-10 w-10 text-muted-foreground/40" />
                         <p className="text-sm font-medium text-muted-foreground">
-                          {searchQuery ? "Žádné výsledky pro tento dotaz." : "Zatím žádné kontakty."}
+                          {searchQuery
+                            ? "Žádné výsledky pro tento dotaz."
+                            : "Zatím žádné kontakty."}
                         </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && filtered.map((lead) => (
-                  <TableRow key={lead.id} className="group">
-                    <TableCell>
-                      <p className="font-medium">{lead.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(lead.createdAt).toLocaleDateString("cs-CZ")}
-                      </p>
-                    </TableCell>
-                    <TableCell className="font-medium">{lead.destination || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={lead.marketingConsent ? "success" : "warning"}>
-                        {lead.marketingConsent ? "Souhlas" : "Bez souhlasu"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={lead.gdprConsent ? "success" : "warning"}>
-                        {lead.gdprConsent ? "Souhlas" : "Ne"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={() => handleDelete(lead.id)}
-                        title="Smazat kontakt"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {!loading &&
+                  filtered.map((lead) => (
+                    <TableRow key={lead.id} className="group">
+                      <TableCell>
+                        <p className="font-medium">{lead.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(lead.createdAt).toLocaleDateString("cs-CZ")}
+                        </p>
+                      </TableCell>
+                      <TableCell className="font-medium">{lead.destination || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={lead.marketingConsent ? "success" : "warning"}>
+                          {lead.marketingConsent ? "Souhlas" : "Bez souhlasu"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={lead.gdprConsent ? "success" : "warning"}>
+                          {lead.gdprConsent ? "Souhlas" : "Ne"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={() => handleDelete(lead.id)}
+                          title="Smazat kontakt"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </div>
@@ -434,7 +512,8 @@ export default function AdminEmailPage() {
         <CardHeader>
           <CardTitle>Nová kampaň</CardTitle>
           <CardDescription>
-            Vytvořte a odešlete marketingový e-mail kontaktům se souhlasem ({consentedCount} příjemců).
+            Vytvořte a odešlete marketingový e-mail kontaktům se souhlasem ({consentedCount}{" "}
+            příjemců).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -448,7 +527,11 @@ export default function AdminEmailPage() {
                     id="from-email"
                     value={fromEmail}
                     onChange={(e) => setFromEmail(e.target.value)}
-                    className={cn(!fromEmailValid && fromEmail && "border-destructive focus-visible:ring-destructive")}
+                    className={cn(
+                      !fromEmailValid &&
+                        fromEmail &&
+                        "border-destructive focus-visible:ring-destructive",
+                    )}
                   />
                   {!fromEmailValid && fromEmail && (
                     <p className="text-xs text-destructive">Neplatný formát e-mailu.</p>
@@ -460,18 +543,17 @@ export default function AdminEmailPage() {
                     id="subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className={cn(!subjectValid && "border-destructive focus-visible:ring-destructive")}
+                    className={cn(
+                      !subjectValid && "border-destructive focus-visible:ring-destructive",
+                    )}
                   />
-                  {!subjectValid && (
-                    <p className="text-xs text-destructive">Předmět je povinný.</p>
-                  )}
+                  {!subjectValid && <p className="text-xs text-destructive">Předmět je povinný.</p>}
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="preheader">
-                  Preheader{" "}
-                  <span className="font-normal text-muted-foreground">(volitelný)</span>
+                  Preheader <span className="font-normal text-muted-foreground">(volitelný)</span>
                 </Label>
                 <Input
                   id="preheader"
@@ -489,10 +571,16 @@ export default function AdminEmailPage() {
                   <div className="flex flex-wrap items-center gap-px border-b border-input bg-muted/60 px-1.5 py-1">
                     {/* History */}
                     <div className="flex items-center gap-px">
-                      <ToolbarBtn title="Zpět (Ctrl+Z)" onClick={() => editor?.chain().focus().undo().run()}>
+                      <ToolbarBtn
+                        title="Zpět (Ctrl+Z)"
+                        onClick={() => editor?.chain().focus().undo().run()}
+                      >
                         <Undo2 className="h-4 w-4" />
                       </ToolbarBtn>
-                      <ToolbarBtn title="Znovu (Ctrl+Shift+Z)" onClick={() => editor?.chain().focus().redo().run()}>
+                      <ToolbarBtn
+                        title="Znovu (Ctrl+Shift+Z)"
+                        onClick={() => editor?.chain().focus().redo().run()}
+                      >
                         <Redo2 className="h-4 w-4" />
                       </ToolbarBtn>
                     </div>
@@ -566,7 +654,10 @@ export default function AdminEmailPage() {
                       <ToolbarBtn title="Vložit obrázek (URL)" onClick={handleInsertImageUrl}>
                         <ImageIcon className="h-4 w-4" />
                       </ToolbarBtn>
-                      <ToolbarBtn title="Nahrát obrázek" onClick={() => fileInputRef.current?.click()}>
+                      <ToolbarBtn
+                        title="Nahrát obrázek"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
                         <Upload className="h-4 w-4" />
                       </ToolbarBtn>
                     </div>
@@ -575,7 +666,13 @@ export default function AdminEmailPage() {
                     <ToolbarBtn title="Náhled e-mailu" onClick={() => setPreviewOpen(true)}>
                       <Eye className="h-4 w-4" />
                     </ToolbarBtn>
-                    <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleUploadImage} />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={handleUploadImage}
+                    />
                   </div>
 
                   {/* TipTap content area — drag/drop handled by editor's handleDrop */}
@@ -595,12 +692,24 @@ export default function AdminEmailPage() {
                       value={testEmail}
                       onChange={(e) => setTestEmail(e.target.value)}
                       placeholder="test@skytravel.cz"
-                      className={cn("w-60", !testEmailValid && testEmail && "border-destructive focus-visible:ring-destructive")}
+                      className={cn(
+                        "w-60",
+                        !testEmailValid &&
+                          testEmail &&
+                          "border-destructive focus-visible:ring-destructive",
+                      )}
                     />
-                    <Button type="button" variant="outline" onClick={handleSendTest} disabled={!canSendTest || sendingTest}>
-                      {sendingTest
-                        ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                        : <SendHorizonal className="mr-1.5 h-4 w-4" />}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSendTest}
+                      disabled={!canSendTest || sendingTest}
+                    >
+                      {sendingTest ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <SendHorizonal className="mr-1.5 h-4 w-4" />
+                      )}
                       Poslat test
                     </Button>
                   </div>
@@ -615,9 +724,11 @@ export default function AdminEmailPage() {
                   onClick={() => setConfirmSendOpen(true)}
                   disabled={!canSend || sending}
                 >
-                  {sending
-                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    : <SendHorizonal className="mr-2 h-4 w-4" />}
+                  {sending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <SendHorizonal className="mr-2 h-4 w-4" />
+                  )}
                   Odeslat kampaň ({consentedCount})
                 </Button>
               </div>
@@ -629,8 +740,14 @@ export default function AdminEmailPage() {
                 <h4 className="text-sm font-semibold text-muted-foreground">Živý náhled</h4>
                 <div className="overflow-hidden rounded-lg border shadow-sm">
                   <div className="space-y-1 border-b bg-muted/40 px-4 py-3 text-xs">
-                    <p><span className="font-semibold text-muted-foreground">Od:</span> {fromEmail || "—"}</p>
-                    <p><span className="font-semibold text-muted-foreground">Předmět:</span> {subject || "—"}</p>
+                    <p>
+                      <span className="font-semibold text-muted-foreground">Od:</span>{" "}
+                      {fromEmail || "—"}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-muted-foreground">Předmět:</span>{" "}
+                      {subject || "—"}
+                    </p>
                     {preheader && <p className="text-muted-foreground/70">{preheader}</p>}
                   </div>
                   <div
@@ -652,8 +769,13 @@ export default function AdminEmailPage() {
           </DialogHeader>
           <div className="overflow-hidden rounded-lg border">
             <div className="space-y-1 border-b bg-muted/40 px-4 py-3 text-sm">
-              <p><span className="font-semibold text-muted-foreground">Od:</span> {fromEmail || "info@skytravel.cz"}</p>
-              <p><span className="font-semibold text-muted-foreground">Předmět:</span> {subject}</p>
+              <p>
+                <span className="font-semibold text-muted-foreground">Od:</span>{" "}
+                {fromEmail || "info@skytravel.cz"}
+              </p>
+              <p>
+                <span className="font-semibold text-muted-foreground">Předmět:</span> {subject}
+              </p>
               {preheader && <p className="text-xs text-muted-foreground">{preheader}</p>}
             </div>
             <div

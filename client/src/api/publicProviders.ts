@@ -1,4 +1,11 @@
-import type { ProviderMeta, ProviderRegion, PublicDestinationSummary, ToursResult, UnifiedFilters, UnifiedTour } from "../types/providers";
+import type {
+  ProviderMeta,
+  ProviderRegion,
+  PublicDestinationSummary,
+  ToursResult,
+  UnifiedFilters,
+  UnifiedTour,
+} from "../types/providers";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -44,7 +51,9 @@ export async function fetchPublicBootstrap(): Promise<PublicBootstrap> {
   };
 }
 
-export async function fetchPublicDestinations(providerId?: string): Promise<PublicDestinationSummary[]> {
+export async function fetchPublicDestinations(
+  providerId?: string,
+): Promise<PublicDestinationSummary[]> {
   const params = new URLSearchParams();
   if (providerId) params.set("providerId", providerId);
   const query = params.toString();

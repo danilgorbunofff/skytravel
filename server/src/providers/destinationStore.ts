@@ -51,8 +51,18 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     canonicalName: "Bulgaria",
     aliases: ["bulharsko", "bulgaria"],
     mappings: [
-      { providerId: "alexandria", providerKey: "zeme", providerValue: "53", providerLabel: "Bulharsko" },
-      { providerId: "orextravel", providerKey: "stateId", providerValue: "17", providerLabel: "Bulharsko" },
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "53",
+        providerLabel: "Bulharsko",
+      },
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "17",
+        providerLabel: "Bulharsko",
+      },
     ],
   },
   {
@@ -60,14 +70,28 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     czechName: "Chorvatsko",
     canonicalName: "Croatia",
     aliases: ["chorvatsko", "croatia", "hrvatska"],
-    mappings: [{ providerId: "alexandria", providerKey: "zeme", providerValue: "107", providerLabel: "Chorvatsko" }],
+    mappings: [
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "107",
+        providerLabel: "Chorvatsko",
+      },
+    ],
   },
   {
     slug: "italie",
     czechName: "Itálie",
     canonicalName: "Italy",
     aliases: ["italie", "italy", "italija", "itálie"],
-    mappings: [{ providerId: "alexandria", providerKey: "zeme", providerValue: "147", providerLabel: "Itálie" }],
+    mappings: [
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "147",
+        providerLabel: "Itálie",
+      },
+    ],
   },
   { slug: "egypt", czechName: "Egypt", canonicalName: "Egypt", aliases: ["egypt"] },
   {
@@ -75,60 +99,142 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     czechName: "Tunisko",
     canonicalName: "Tunisia",
     aliases: ["tunisko", "tunisia", "tunezja"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "14", providerLabel: "Tunezja" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "14",
+        providerLabel: "Tunezja",
+      },
+    ],
   },
   {
     slug: "recko",
     czechName: "Řecko",
     canonicalName: "Greece",
     aliases: ["recko", "řecko", "greece", "rhodos", "santorini"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "16", providerLabel: "Řecko" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "16",
+        providerLabel: "Řecko",
+      },
+    ],
   },
   {
     slug: "turecko",
     czechName: "Turecko",
     canonicalName: "Turkey",
     aliases: ["turecko", "turkey", "alanya"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "9", providerLabel: "Turecko" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "9",
+        providerLabel: "Turecko",
+      },
+    ],
   },
-  { slug: "kypr", czechName: "Kypr", canonicalName: "Cyprus", aliases: ["kypr", "cyprus", "larnaka", "jizni kypr", "jižní kypr"] },
+  {
+    slug: "kypr",
+    czechName: "Kypr",
+    canonicalName: "Cyprus",
+    aliases: ["kypr", "cyprus", "larnaka", "jizni kypr", "jižní kypr"],
+  },
   {
     slug: "spanelsko",
     czechName: "Španělsko",
     canonicalName: "Spain",
     aliases: ["spanelsko", "španělsko", "spain", "mallorca"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "15", providerLabel: "Španělsko" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "15",
+        providerLabel: "Španělsko",
+      },
+    ],
   },
-  { slug: "thajsko", czechName: "Thajsko", canonicalName: "Thailand", aliases: ["thajsko", "thailand"] },
-  { slug: "madagaskar", czechName: "Madagaskar", canonicalName: "Madagascar", aliases: ["madagaskar", "madagascar"] },
+  {
+    slug: "thajsko",
+    czechName: "Thajsko",
+    canonicalName: "Thailand",
+    aliases: ["thajsko", "thailand"],
+  },
+  {
+    slug: "madagaskar",
+    czechName: "Madagaskar",
+    canonicalName: "Madagascar",
+    aliases: ["madagaskar", "madagascar"],
+  },
   {
     slug: "dominikanska-republika",
     czechName: "Dominikánská republika",
     canonicalName: "Dominican Republic",
-    aliases: ["dominikanska republika", "dominikánská republika", "dominican republic", "dominic republic", "punta cana"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "26", providerLabel: "Dominic Republic" }],
+    aliases: [
+      "dominikanska republika",
+      "dominikánská republika",
+      "dominican republic",
+      "dominic republic",
+      "punta cana",
+    ],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "26",
+        providerLabel: "Dominic Republic",
+      },
+    ],
   },
-  { slug: "portugalsko", czechName: "Portugalsko", canonicalName: "Portugal", aliases: ["portugalsko", "portugal", "madeira"] },
+  {
+    slug: "portugalsko",
+    czechName: "Portugalsko",
+    canonicalName: "Portugal",
+    aliases: ["portugalsko", "portugal", "madeira"],
+  },
   {
     slug: "indie",
     czechName: "Indie",
     canonicalName: "India",
     aliases: ["indie", "india"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "33", providerLabel: "India" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "33",
+        providerLabel: "India",
+      },
+    ],
   },
   {
     slug: "maledivy",
     czechName: "Maledivy",
     canonicalName: "Maldives",
     aliases: ["maledivy", "maldives"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "50", providerLabel: "Maldives" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "50",
+        providerLabel: "Maldives",
+      },
+    ],
   },
   {
     slug: "spojene-arabske-emiraty",
     czechName: "Spojené arabské emiráty",
     canonicalName: "United Arab Emirates",
     aliases: ["spojene arabske emiraty", "spojené arabské emiráty", "united arab emirates", "uae"],
-    mappings: [{ providerId: "orextravel", providerKey: "stateId", providerValue: "13", providerLabel: "UAE" }],
+    mappings: [
+      {
+        providerId: "orextravel",
+        providerKey: "stateId",
+        providerValue: "13",
+        providerLabel: "UAE",
+      },
+    ],
   },
 ];
 
@@ -155,12 +261,18 @@ function findKnownDestination(label: string): KnownDestination | undefined {
   return KNOWN_DESTINATIONS.find((destination) =>
     destination.aliases.some((alias) => {
       const normalizedAlias = normalizeDestination(alias);
-      return normalized === normalizedAlias || normalized.startsWith(`${normalizedAlias} `) || normalized.includes(` ${normalizedAlias} `);
+      return (
+        normalized === normalizedAlias ||
+        normalized.startsWith(`${normalizedAlias} `) ||
+        normalized.includes(` ${normalizedAlias} `)
+      );
     }),
   );
 }
 
-async function findOrCreateCanonicalDestination(destination: KnownDestination): Promise<{ id: number }> {
+async function findOrCreateCanonicalDestination(
+  destination: KnownDestination,
+): Promise<{ id: number }> {
   const directMatches = await prisma.destination.findMany({
     where: {
       OR: [
@@ -170,9 +282,10 @@ async function findOrCreateCanonicalDestination(destination: KnownDestination): 
       ],
     },
   });
-  const directMatch = directMatches.find((row) => row.slug === destination.slug)
-    ?? directMatches.find((row) => row.czechName === destination.czechName)
-    ?? directMatches.find((row) => row.canonicalName === destination.canonicalName);
+  const directMatch =
+    directMatches.find((row) => row.slug === destination.slug) ??
+    directMatches.find((row) => row.czechName === destination.czechName) ??
+    directMatches.find((row) => row.canonicalName === destination.canonicalName);
 
   if (directMatch) {
     return prisma.destination.update({
@@ -189,7 +302,9 @@ async function findOrCreateCanonicalDestination(destination: KnownDestination): 
   const aliases = new Set(destination.aliases.map(normalizeDestination));
   const allDestinations = await prisma.destination.findMany();
   const aliasMatch = allDestinations.find((row) =>
-    [row.slug, row.czechName, row.canonicalName].some((value) => aliases.has(normalizeDestination(value))),
+    [row.slug, row.czechName, row.canonicalName].some((value) =>
+      aliases.has(normalizeDestination(value)),
+    ),
   );
   if (aliasMatch) {
     return prisma.destination.update({
@@ -213,7 +328,10 @@ async function findOrCreateCanonicalDestination(destination: KnownDestination): 
   });
 }
 
-async function moveProviderToursForMapping(mapping: DestinationMappingSeed, destinationId: number): Promise<void> {
+async function moveProviderToursForMapping(
+  mapping: DestinationMappingSeed,
+  destinationId: number,
+): Promise<void> {
   if (mapping.providerKey === "stateId") {
     const stateId = Number(mapping.providerValue);
     if (Number.isFinite(stateId)) {
@@ -241,7 +359,10 @@ async function moveProviderToursForMapping(mapping: DestinationMappingSeed, dest
   }
 }
 
-async function mergeAliasDestinationRows(destination: KnownDestination, destinationId: number): Promise<void> {
+async function mergeAliasDestinationRows(
+  destination: KnownDestination,
+  destinationId: number,
+): Promise<void> {
   const aliases = new Set(destination.aliases.map(normalizeDestination));
   const rows = await prisma.destination.findMany({
     where: { id: { not: destinationId } },
@@ -250,7 +371,9 @@ async function mergeAliasDestinationRows(destination: KnownDestination, destinat
     },
   });
   const duplicates = rows.filter((row) =>
-    [row.slug, row.czechName, row.canonicalName].some((value) => aliases.has(normalizeDestination(value))),
+    [row.slug, row.czechName, row.canonicalName].some((value) =>
+      aliases.has(normalizeDestination(value)),
+    ),
   );
 
   for (const duplicate of duplicates) {
@@ -258,7 +381,9 @@ async function mergeAliasDestinationRows(destination: KnownDestination, destinat
       where: { destinationId: duplicate.id },
       data: { destinationId },
     });
-    const mappings = await prisma.destinationMapping.findMany({ where: { destinationId: duplicate.id } });
+    const mappings = await prisma.destinationMapping.findMany({
+      where: { destinationId: duplicate.id },
+    });
     for (const mapping of mappings) {
       await prisma.destinationMapping.upsert({
         where: {
@@ -368,7 +493,9 @@ export async function ensureProviderDestinationMapping(args: {
   return destination.id;
 }
 
-export async function listPublicDestinations(providerId?: string): Promise<PublicDestinationSummary[]> {
+export async function listPublicDestinations(
+  providerId?: string,
+): Promise<PublicDestinationSummary[]> {
   await ensureKnownDestinations();
 
   // SQL-level aggregation. Previously this loaded every active
@@ -382,17 +509,17 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
   // MySQL's default `utf8mb4_unicode_ci` collation makes this accent- and
   // case-insensitive, matching the JS normalization closely enough for the
   // destinations sidebar (any drift is < 1% and not user-visible).
-  const providerFilter = providerId
-    ? Prisma.sql`AND source = ${providerId}`
-    : Prisma.empty;
+  const providerFilter = providerId ? Prisma.sql`AND source = ${providerId}` : Prisma.empty;
 
   const [perDestinationRows, perProviderRows] = await Promise.all([
-    prisma.$queryRaw<Array<{
-      destinationId: number;
-      groupCount: bigint;
-      rawCount: bigint;
-      minPrice: number;
-    }>>`
+    prisma.$queryRaw<
+      Array<{
+        destinationId: number;
+        groupCount: bigint;
+        rawCount: bigint;
+        minPrice: number;
+      }>
+    >`
       SELECT destinationId,
              COUNT(DISTINCT title, destination) AS groupCount,
              COUNT(*) AS rawCount,
@@ -402,12 +529,14 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
       ${providerFilter}
       GROUP BY destinationId
     `,
-    prisma.$queryRaw<Array<{
-      destinationId: number;
-      source: string;
-      groupCount: bigint;
-      rawCount: bigint;
-    }>>`
+    prisma.$queryRaw<
+      Array<{
+        destinationId: number;
+        source: string;
+        groupCount: bigint;
+        rawCount: bigint;
+      }>
+    >`
       SELECT destinationId,
              source,
              COUNT(DISTINCT title, destination) AS groupCount,
@@ -469,7 +598,9 @@ export async function listPublicDestinations(providerId?: string): Promise<Publi
   });
 }
 
-export async function getDestinationSearchContext(slug: string): Promise<DestinationSearchContext | null> {
+export async function getDestinationSearchContext(
+  slug: string,
+): Promise<DestinationSearchContext | null> {
   await ensureKnownDestinations();
   const destination = await prisma.destination.findUnique({
     where: { slug },

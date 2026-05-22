@@ -44,7 +44,9 @@ export default function AdminLayout({
               <span className="text-blue-300">Sky</span>
               <span className="text-amber-300">Travel</span>
             </Link>
-            <p className="mt-1 text-xs font-medium uppercase tracking-widest opacity-60">Admin Console</p>
+            <p className="mt-1 text-xs font-medium uppercase tracking-widest opacity-60">
+              Admin Console
+            </p>
           </div>
           <button
             className="mt-1 rounded-md p-1 text-sidebar-foreground/70 hover:text-white lg:hidden"
@@ -78,7 +80,9 @@ export default function AdminLayout({
         </nav>
 
         <div className="mt-auto rounded-xl bg-white/10 p-3 text-sm backdrop-blur-sm">
-          <span className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/60">Status API</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/60">
+            Status API
+          </span>
           <div className="mt-1 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
             <strong className="text-sm">Online</strong>
@@ -102,13 +106,13 @@ export default function AdminLayout({
               <span className="text-amber-500">Travel</span>
             </Link>
             <Separator orientation="vertical" className="hidden h-6 lg:block" />
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              {title}
+            </h1>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">
-          {children}
-        </main>
+        <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

@@ -47,7 +47,8 @@ export default function ProviderFilterRenderer({ fields, values, onChange }: Pro
                 </select>
                 {parentDisabled && field.dependsOn && (
                   <small style={{ color: "#999" }}>
-                    Nejprve vyberte {fields.find((f) => f.key === field.dependsOn)?.label ?? field.dependsOn}
+                    Nejprve vyberte{" "}
+                    {fields.find((f) => f.key === field.dependsOn)?.label ?? field.dependsOn}
                   </small>
                 )}
               </div>
@@ -79,10 +80,7 @@ export default function ProviderFilterRenderer({ fields, values, onChange }: Pro
                   value={String(values[field.key] ?? "")}
                   disabled={parentDisabled}
                   onChange={(e) =>
-                    onChange(
-                      field.key,
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                    )
+                    onChange(field.key, e.target.value === "" ? undefined : Number(e.target.value))
                   }
                 />
               </div>
@@ -107,7 +105,10 @@ export default function ProviderFilterRenderer({ fields, values, onChange }: Pro
           case "boolean":
             return (
               <div className="alex-filter-field" key={field.key}>
-                <label htmlFor={`pf-${field.key}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <label
+                  htmlFor={`pf-${field.key}`}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+                >
                   <input
                     id={`pf-${field.key}`}
                     type="checkbox"

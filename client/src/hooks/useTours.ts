@@ -6,7 +6,8 @@ export function useTours() {
   const [tours, setTours] = useState<OwnTour[]>(defaultOwnTours);
 
   useEffect(() => {
-    fetchTours()
+    const controller = new AbortController();
+    fetchTours({ signal: controller.signal })
       .then((items) => {
         if (items.length > 0) {
           const sorted = [...items].sort((a, b) => {
@@ -22,9 +23,11 @@ export function useTours() {
           setTours(defaultOwnTours);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err instanceof Error && err.name === "AbortError") return;
         setTours(defaultOwnTours);
       });
+    return () => controller.abort();
   }, []);
 
   return tours;

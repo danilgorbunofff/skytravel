@@ -16,11 +16,13 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
   const originalWrite = res.write.bind(res);
   const originalEnd = res.end.bind(res);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   res.write = function patchedWrite(chunk: any, ...rest: any[]): boolean {
     if (chunk) bytes += Buffer.byteLength(typeof chunk === "string" ? chunk : chunk);
     return originalWrite(chunk, ...rest);
   } as typeof res.write;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   res.end = function patchedEnd(chunk?: any, ...rest: any[]): Response {
     if (chunk) bytes += Buffer.byteLength(typeof chunk === "string" ? chunk : chunk);
     const durMs = Number(process.hrtime.bigint() - start) / 1_000_000;

@@ -1,6 +1,9 @@
 import { Router } from "express";
 import prisma from "../prisma.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
+import { validateBody } from "../middleware/validate.js";
+import { createAlertSchema } from "../validators/alerts.js";
+import { success } from "../lib/response.js";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -10,39 +13,26 @@ const alertLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many requests. Try again later." },
+  message: {
+    ok: false,
+    error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." },
+  },
 });
 
 router.post(
   "/",
   alertLimiter,
+  validateBody(createAlertSchema),
   asyncHandler(async (req, res) => {
-    const { email, providerId, externalId, tourTitle, priceMax } = req.body as {
-      email?: string;
-      providerId?: string;
-      externalId?: string;
-      tourTitle?: string;
-      priceMax?: number;
-    };
-
-    if (!email || !providerId || !externalId || !priceMax) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "Invalid email" });
-    }
-
-    if (typeof priceMax !== "number" || priceMax <= 0) {
-      return res.status(400).json({ error: "Invalid priceMax" });
-    }
+    const { email, providerId, externalId, tourTitle, priceMax } = req.body;
 
     // Prevent duplicate active alerts for same email + tour
     const existing = await prisma.priceAlert.findFirst({
       where: { email, providerId, externalId, triggered: false },
     });
     if (existing) {
-      return res.json({ ok: true, message: "Alert already registered" });
+      success(res, { message: "Alert already registered" });
+      return;
     }
 
     await prisma.priceAlert.create({
@@ -55,8 +45,8 @@ router.post(
       },
     });
 
-    return res.json({ ok: true });
-  })
+    success(res, null, 201);
+  }),
 );
 
 export default router;
