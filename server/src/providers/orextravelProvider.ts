@@ -476,13 +476,21 @@ export class OrextravelProvider implements TourProvider {
       where,
       orderBy: { price: "asc" },
       take: MAX_GROUPED_TOUR_ROWS,
+      select: buildTourSelect(true),
     });
     const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find(
       (entry) => entry.key === offerGroupKey,
     );
     if (!group) return [];
 
-    return sortOfferRows(group.offers, sortBy, sortDir).map((row) => ({
+    const externalIds = group.offers.map((o) => o.externalId);
+    const fullRows = await prisma.providerTour.findMany({
+      where: { source: this.id, externalId: { in: externalIds } },
+    });
+    const fullRowsMap = new Map(fullRows.map((r) => [r.externalId, r]));
+    const offersWithFullData = group.offers.map((o) => fullRowsMap.get(o.externalId) || o);
+
+    return sortOfferRows(offersWithFullData, sortBy, sortDir).map((row) => ({
       ...this.rowToUnified(row),
       offerGroupKey,
       offersCount: group.offers.length,
