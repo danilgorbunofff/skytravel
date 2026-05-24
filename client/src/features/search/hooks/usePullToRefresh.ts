@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface PullToRefreshState {
   pulling: boolean;
@@ -17,6 +17,12 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
   });
   const startY = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const THRESHOLD = 60;
 
@@ -39,7 +45,9 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
       setState({ pulling: false, pullDistance: 0, refreshing: true });
       hapticFeedback("medium");
       await onRefresh();
-      setState({ pulling: false, pullDistance: 0, refreshing: false });
+      if (mountedRef.current) {
+        setState({ pulling: false, pullDistance: 0, refreshing: false });
+      }
     } else {
       setState({ pulling: false, pullDistance: 0, refreshing: false });
     }

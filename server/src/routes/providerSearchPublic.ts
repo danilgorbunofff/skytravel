@@ -606,7 +606,14 @@ router.get(
     }
 
     // Search with minimal filters and look for the specific externalId
-    const filters: UnifiedFilters = { q: externalId, providerFilters: {} };
+    const filters: UnifiedFilters = {
+      q: externalId,
+      providerFilters: {},
+      page: 1,
+      limit: 100,
+      sortBy: "price",
+      sortDir: "asc",
+    };
     const result: ToursResult = await provider.fetchTours(filters);
     const tour = result.items.find((t: UnifiedTour) => t.externalId === externalId);
 

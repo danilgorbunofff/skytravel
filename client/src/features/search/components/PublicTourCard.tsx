@@ -124,7 +124,11 @@ export const PublicTourCard = memo(function PublicTourCard({
             width={640}
             height={400}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallback) {
+                img.dataset.fallback = "1";
+                img.src = "/placeholder-tour.svg";
+              }
             }}
           />
           <button
@@ -236,7 +240,11 @@ export const PublicTourCard = memo(function PublicTourCard({
           width={200}
           height={140}
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+            const img = e.currentTarget as HTMLImageElement;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = "1";
+              img.src = "/placeholder-tour.svg";
+            }
           }}
         />
         {discount && (

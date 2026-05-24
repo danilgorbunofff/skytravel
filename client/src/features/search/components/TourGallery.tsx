@@ -43,7 +43,7 @@ export function TourGallery({ photos, alt }: Props) {
             width={1200}
             height={750}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+              const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
             }}
           />
           <button type="button" className="tour-gallery__zoom" aria-label="Zvětšit">
@@ -81,14 +81,14 @@ export function TourGallery({ photos, alt }: Props) {
           <div className="tour-gallery__thumbs" ref={thumbsRef}>
             {photos.slice(0, 8).map((photo, i) => (
               <button
-                key={i}
+                key={`${photo}-${i}`}
                 type="button"
                 className={`tour-gallery__thumb${i === index ? " is-active" : ""}`}
                 onClick={() => setIndex(i)}
                 aria-label={`Fotka ${i + 1}`}
               >
                 <img src={photo} alt="" loading="lazy" decoding="async" onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+                  const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
                 }} />
               </button>
             ))}
@@ -174,7 +174,7 @@ function TourGalleryLightbox({ photos, index, onIndexChange, onClose }: Lightbox
         alt=""
         onClick={(e) => e.stopPropagation()}
         onError={(e) => {
-          (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+          const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
         }}
       />
       {photos.length > 1 && (

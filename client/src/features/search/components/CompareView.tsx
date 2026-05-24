@@ -80,7 +80,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
                 src={tour.image || "/placeholder-tour.svg"}
                 alt={tour.title}
                 className="compare-view__image"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg"; }}
+                onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; } }}
               />
               <h3>{tour.title}</h3>
               <p>{tour.destination}</p>

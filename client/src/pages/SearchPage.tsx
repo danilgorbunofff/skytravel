@@ -324,11 +324,7 @@ export default function SearchPage() {
 
   const toursToRender =
     isMobile && !showFavoritesOnly
-      ? results.accumulatedItems.filter(
-          (tour) =>
-            !showFavoritesOnly ||
-            favorites.includes(`${tour.source}-${tour.externalId}`),
-        )
+      ? results.accumulatedItems
       : results.displayedTours;
 
   // ─── Render ──────────────────────────────────────────────────────────
