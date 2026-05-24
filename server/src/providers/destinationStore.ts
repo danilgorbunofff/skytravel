@@ -2,6 +2,29 @@ import { Prisma } from "@prisma/client";
 import prisma from "../prisma.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK } from "../lib/providerPrice.js";
 
+/**
+ * Retries a Prisma operation on deadlock/write-conflict (P2034) with
+ * exponential back-off + jitter. All other errors are re-thrown immediately.
+ */
+async function withDeadlockRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts = 5,
+  baseDelayMs = 100,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      const isDeadlock =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+      if (!isDeadlock || attempt >= maxAttempts) throw err;
+      // Exponential back-off: 100ms, 200ms, 400ms, 800ms … + up to 50ms jitter
+      const delay = baseDelayMs * 2 ** (attempt - 1) + Math.random() * 50;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 type DestinationMappingSeed = {
   providerId: string;
   providerKey: string;
@@ -335,27 +358,31 @@ async function moveProviderToursForMapping(
   if (mapping.providerKey === "stateId") {
     const stateId = Number(mapping.providerValue);
     if (Number.isFinite(stateId)) {
-      await prisma.providerTour.updateMany({
-        where: {
-          source: mapping.providerId,
-          stateId,
-          OR: [{ destinationId: null }, { destinationId: { not: destinationId } }],
-        },
-        data: { destinationId },
-      });
+      await withDeadlockRetry(() =>
+        prisma.providerTour.updateMany({
+          where: {
+            source: mapping.providerId,
+            stateId,
+            OR: [{ destinationId: null }, { destinationId: { not: destinationId } }],
+          },
+          data: { destinationId },
+        }),
+      );
     }
     return;
   }
 
   if (mapping.providerKey === "zeme") {
-    await prisma.providerTour.updateMany({
-      where: {
-        source: mapping.providerId,
-        regionKey: mapping.providerValue,
-        OR: [{ destinationId: null }, { destinationId: { not: destinationId } }],
-      },
-      data: { destinationId },
-    });
+    await withDeadlockRetry(() =>
+      prisma.providerTour.updateMany({
+        where: {
+          source: mapping.providerId,
+          regionKey: mapping.providerValue,
+          OR: [{ destinationId: null }, { destinationId: { not: destinationId } }],
+        },
+        data: { destinationId },
+      }),
+    );
   }
 }
 
@@ -377,10 +404,12 @@ async function mergeAliasDestinationRows(
   );
 
   for (const duplicate of duplicates) {
-    await prisma.providerTour.updateMany({
-      where: { destinationId: duplicate.id },
-      data: { destinationId },
-    });
+    await withDeadlockRetry(() =>
+      prisma.providerTour.updateMany({
+        where: { destinationId: duplicate.id },
+        data: { destinationId },
+      }),
+    );
     const mappings = await prisma.destinationMapping.findMany({
       where: { destinationId: duplicate.id },
     });
