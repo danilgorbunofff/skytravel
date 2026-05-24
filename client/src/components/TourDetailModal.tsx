@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Plane,
+  Bus,
+  Car,
+  Ship,
+  Train,
+  BedDouble,
+  Utensils,
+  Star,
+  Users,
+  CheckCircle,
+  X,
+  Moon,
+} from "lucide-react";
 import { createInquiry } from "../api";
 import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
@@ -40,6 +56,16 @@ function getTourFallbackImage(destination: string): string {
   return match?.image ?? "/placeholder-tour.svg";
 }
 
+const TRANSPORT_ICONS: Record<string, typeof Plane> = {
+  plane: Plane,
+  bus: Bus,
+  train: Train,
+  car: Car,
+  boat: Ship,
+};
+
+const MAX_VISIBLE_OFFERS = 20;
+
 interface Props {
   tour: UnifiedTour;
   providerLabel: string;
@@ -73,6 +99,8 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
   const [inquiryConsent, setInquiryConsent] = useState(false);
   const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [inquiryError, setInquiryError] = useState("");
+  const [showAllOffers, setShowAllOffers] = useState(false);
+  const [animateIn, setAnimateIn] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -83,7 +111,17 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
     setPhotoIndex(0);
     setInquiryStatus("idle");
     setInquiryError("");
+    setShowAllOffers(false);
   }, [tour]);
+
+  // Animate modal in after mount
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setAnimateIn(true);
+      });
+    });
+  }, []);
 
   const sortedOffers = useMemo(
     () =>
@@ -109,6 +147,11 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
     );
   const stars = starsDisplay(selectedOffer.stars);
   const hasMultiplePhotos = photos.length > 1;
+
+  const visibleOffers = showAllOffers
+    ? sortedOffers
+    : sortedOffers.slice(0, MAX_VISIBLE_OFFERS);
+  const hiddenOfferCount = Math.max(sortedOffers.length - MAX_VISIBLE_OFFERS, 0);
 
   function showPreviousPhoto() {
     if (!hasMultiplePhotos) return;
@@ -195,16 +238,25 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
     }
   }
 
+  const TransportIcon = TRANSPORT_ICONS[selectedOffer.transport] ?? Plane;
+  const guestSummary = [
+    selectedOffer.adults ? `${selectedOffer.adults} ${t("sFormAdults").toLowerCase()}` : null,
+    selectedOffer.children ? `${selectedOffer.children} ${t("sFormChildren").toLowerCase()}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div
       ref={containerRef}
-      className="provider-tour-modal"
+      className={`provider-tour-modal${animateIn ? " is-open" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="provider-tour-modal-title"
     >
       <div className="provider-tour-modal__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="provider-tour-modal__content">
+        {/* ── Close button ───────────────────────────────────── */}
         <button
           ref={closeButtonRef}
           type="button"
@@ -212,8 +264,10 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
           onClick={onClose}
           aria-label={t("sModalClose")}
         >
-          ✕
+          <X size={20} />
         </button>
+
+        {/* ── Photo area ─────────────────────────────────────── */}
         <div className="provider-tour-modal__media">
           {photos.map((photo, index) => (
             <img
@@ -252,118 +306,213 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
               </button>
             </>
           )}
+
+          {/* Photo counter badge */}
           {hasMultiplePhotos && (
-            <div className="provider-tour-modal__dots">
-              {photos.map((_, index) => (
+            <div className="provider-tour-modal__photo-counter">
+              {photoIndex + 1} / {photos.length}
+            </div>
+          )}
+
+          {/* Thumbnail strip */}
+          {hasMultiplePhotos && (
+            <div className="provider-tour-modal__thumbs">
+              {photos.slice(0, 5).map((photo, index) => (
                 <button
-                  key={index}
+                  key={`thumb-${index}`}
                   type="button"
-                  className={index === photoIndex ? "is-active" : ""}
-                  aria-label={`${t("sModalPhoto")} ${index + 1}`}
+                  className={`provider-tour-modal__thumb${index === photoIndex ? " is-active" : ""}`}
                   onClick={() => setPhotoIndex(index)}
-                />
+                  aria-label={`${t("sModalPhoto")} ${index + 1}`}
+                >
+                  <img
+                    src={photo}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    onError={(event) => {
+                      (event.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
+                    }}
+                  />
+                </button>
               ))}
+              {photos.length > 5 && (
+                <button
+                  type="button"
+                  className="provider-tour-modal__thumb provider-tour-modal__thumb--more"
+                  onClick={() => setPhotoIndex(5)}
+                  aria-label={`${t("sModalPhoto")} 6+`}
+                >
+                  +{photos.length - 5}
+                </button>
+              )}
             </div>
           )}
         </div>
+
+        {/* ── Details panel ───────────────────────────────────── */}
         <div className="provider-tour-modal__body">
+          {/* Header */}
           <div className="provider-tour-modal__heading">
-            <span>{providerLabel}</span>
+            <span className="provider-tour-modal__provider-badge">{providerLabel}</span>
             <h2 id="provider-tour-modal-title">{selectedOffer.title}</h2>
-            <p>{selectedOffer.destination}</p>
+            <p className="provider-tour-modal__destination">
+              {selectedOffer.destination}
+              {stars && <span className="provider-tour-modal__stars">{stars}</span>}
+            </p>
           </div>
 
-          <div className="provider-tour-modal__facts">
-            <div>
-              <span>{t("sModalTerm")}</span>
-              <strong>
-                {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
-              </strong>
-            </div>
-            <div>
-              <span>{t("sModalLength")}</span>
-              <strong>
-                {Number.isFinite(nights) && nights > 0
-                  ? `${nights} ${t("sModalNights")}`
-                  : t("sModalByOffer")}
-              </strong>
-            </div>
-            <div>
-              <span>{t("sModalTransport")}</span>
-              <strong>
-                {transportLabel[selectedOffer.transport] ??
-                  (selectedOffer.transport || t("sModalByOffer"))}
-              </strong>
-            </div>
-            <div>
-              <span>{t("sModalBoard")}</span>
-              <strong>
-                {boardLabel[selectedOffer.board] ?? (selectedOffer.board || t("sModalByOffer"))}
-              </strong>
-            </div>
-            {stars && (
-              <div>
-                <span>{t("sModalHotel")}</span>
-                <strong>{stars}</strong>
+          {/* Info rows */}
+          <div className="provider-tour-modal__info-rows">
+            {/* Date row */}
+            <div className="provider-tour-modal__info-row">
+              <div className="provider-tour-modal__info-icon">
+                <Calendar size={18} />
               </div>
-            )}
+              <div className="provider-tour-modal__info-text">
+                <strong>
+                  {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
+                </strong>
+                <span>
+                  {Number.isFinite(nights) && nights > 0
+                    ? `${nights + 1} dní / ${nights} ${t("sModalNights")}`
+                    : t("sModalByOffer")}
+                  {selectedOffer.board &&
+                    ` / ${boardLabel[selectedOffer.board] ?? selectedOffer.board}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Transport row */}
+            <div className="provider-tour-modal__info-row">
+              <div className="provider-tour-modal__info-icon">
+                <TransportIcon size={18} />
+              </div>
+              <div className="provider-tour-modal__info-text">
+                <strong>
+                  {transportLabel[selectedOffer.transport] ??
+                    (selectedOffer.transport || t("sModalByOffer"))}
+                </strong>
+              </div>
+            </div>
+
+            {/* Room row */}
             {selectedOffer.roomType && (
-              <div>
-                <span>{t("sModalRoom")}</span>
-                <strong>{selectedOffer.roomType}</strong>
+              <div className="provider-tour-modal__info-row">
+                <div className="provider-tour-modal__info-icon">
+                  <BedDouble size={18} />
+                </div>
+                <div className="provider-tour-modal__info-text">
+                  <strong>{selectedOffer.roomType}</strong>
+                  {guestSummary && <span>{guestSummary}</span>}
+                </div>
               </div>
             )}
-            <div className="provider-tour-modal__price">
-              <span>{t("sModalPriceFrom")}</span>
+          </div>
+
+          {/* Price card */}
+          <div className="provider-tour-modal__price-card">
+            <div className="provider-tour-modal__price-main">
+              <CheckCircle size={20} className="provider-tour-modal__price-check" />
               <strong>{formatPrice(selectedOffer.price)}</strong>
+              <span className="provider-tour-modal__price-per">
+                <Users size={14} /> {t("sModalPriceFrom").toLowerCase()}
+              </span>
             </div>
+            {selectedOffer.adults && selectedOffer.adults > 1 && (
+              <div className="provider-tour-modal__price-total">
+                <Users size={14} />
+                <span>
+                  Celková cena{" "}
+                  <strong>{formatPrice(selectedOffer.price * selectedOffer.adults)}</strong>
+                </span>
+              </div>
+            )}
           </div>
 
           {selectedOffer.description && (
             <p className="provider-tour-modal__description">{selectedOffer.description}</p>
           )}
 
+          {/* ── Offers list ──────────────────────────────────── */}
           <section className="provider-tour-modal__offers" aria-live="polite">
             <h3>{t("sModalAvailableDates")}</h3>
             {loading ? (
-              <p>{t("sModalLoadingDates")}</p>
+              <div className="provider-tour-modal__offers-skeleton">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="provider-tour-modal__offer-skeleton-row">
+                    <div className="skeleton-line" style={{ width: "35%" }} />
+                    <div className="skeleton-line" style={{ width: "15%" }} />
+                    <div className="skeleton-line" style={{ width: "20%" }} />
+                    <div className="skeleton-line" style={{ width: "18%" }} />
+                  </div>
+                ))}
+              </div>
             ) : error ? (
-              <p>{error}</p>
+              <p className="provider-tour-modal__offers-error">{error}</p>
             ) : sortedOffers.length > 0 ? (
-              <label className="provider-tour-modal__date-select">
-                <span className="provider-tour-modal__field-label">{t("sModalSelectDate")}</span>
-                <select
-                  value={`${selectedOffer.source}-${selectedOffer.externalId}`}
-                  onChange={(event) => setSelectedOfferId(event.target.value)}
-                >
-                  {sortedOffers.map((offer) => {
+              <>
+                <div className="provider-tour-modal__offers-list">
+                  {visibleOffers.map((offer) => {
                     const offerId = `${offer.source}-${offer.externalId}`;
                     const offerNights =
                       offer.nights ??
                       Math.round(
-                        (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) /
+                        (new Date(offer.endDate).getTime() -
+                          new Date(offer.startDate).getTime()) /
                           86_400_000,
                       );
+                    const isSelected = offerId === `${selectedOffer.source}-${selectedOffer.externalId}`;
                     return (
-                      <option key={offerId} value={offerId}>
-                        {fmtDate(offer.startDate)} - {fmtDate(offer.endDate)} ·{" "}
-                        {Number.isFinite(offerNights) && offerNights > 0
-                          ? `${offerNights} ${t("sModalNights")}`
-                          : t("sModalLengthByOffer")}{" "}
-                        · {formatPrice(offer.price)}
-                      </option>
+                      <button
+                        key={offerId}
+                        type="button"
+                        className={`provider-tour-modal__offer-row${isSelected ? " is-selected" : ""}`}
+                        onClick={() => setSelectedOfferId(offerId)}
+                      >
+                        <span className="provider-tour-modal__offer-date">
+                          <Calendar size={14} />
+                          {fmtDate(offer.startDate)} – {fmtDate(offer.endDate)}
+                        </span>
+                        <span className="provider-tour-modal__offer-nights">
+                          <Moon size={14} />
+                          {Number.isFinite(offerNights) && offerNights > 0
+                            ? `${offerNights} ${t("sModalNights")}`
+                            : "–"}
+                        </span>
+                        <span className="provider-tour-modal__offer-board">
+                          <Utensils size={14} />
+                          {boardLabel[offer.board] ?? offer.board ?? "–"}
+                        </span>
+                        <span className="provider-tour-modal__offer-price">
+                          {formatPrice(offer.price)}
+                        </span>
+                      </button>
                     );
                   })}
-                </select>
-              </label>
+                </div>
+                {!showAllOffers && hiddenOfferCount > 0 && (
+                  <button
+                    type="button"
+                    className="provider-tour-modal__offers-show-all"
+                    onClick={() => setShowAllOffers(true)}
+                  >
+                    Zobrazit všech {sortedOffers.length} termínů
+                  </button>
+                )}
+              </>
             ) : (
-              <p>{t("sModalNoDates")}</p>
+              <p className="provider-tour-modal__offers-empty">{t("sModalNoDates")}</p>
             )}
           </section>
 
+          {/* ── Inquiry form ─────────────────────────────────── */}
           <form className="provider-tour-modal__inquiry" onSubmit={submitInquiry}>
-            <label>
-              <span className="provider-tour-modal__field-label">{t("sModalEmailLabel")}</span>
+            <div className="provider-tour-modal__inquiry-header">
+              <Star size={16} />
+              <span>{t("sModalEmailLabel")}</span>
+            </div>
+            <div className="provider-tour-modal__inquiry-fields">
               <input
                 type="email"
                 value={inquiryEmail}
@@ -371,7 +520,10 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
                 placeholder={t("sModalEmailPlaceholder")}
                 required
               />
-            </label>
+              <button type="submit" disabled={inquiryStatus === "sending"}>
+                {inquiryStatus === "sending" ? t("sModalSending") : t("sModalSubmit")}
+              </button>
+            </div>
             <label className="provider-tour-modal__consent">
               <input
                 type="checkbox"
@@ -385,11 +537,10 @@ export function TourDetailModal({ tour, providerLabel, offers, loading, error, o
             </label>
             {inquiryError && <p className="provider-tour-modal__form-error">{inquiryError}</p>}
             {inquiryStatus === "sent" && (
-              <p className="provider-tour-modal__form-success">{t("sModalSent")}</p>
+              <p className="provider-tour-modal__form-success">
+                <CheckCircle size={16} /> {t("sModalSent")}
+              </p>
             )}
-            <button type="submit" disabled={inquiryStatus === "sending"}>
-              {inquiryStatus === "sending" ? t("sModalSending") : t("sModalSubmit")}
-            </button>
           </form>
         </div>
       </div>
