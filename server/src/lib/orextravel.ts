@@ -284,7 +284,7 @@ export type OrextravelTourInput = {
   currency: string;
 };
 
-type RefEntry = { inc: number; name: string; lname: string; status?: string; pic?: string };
+type RefEntry = { inc: number; name: string; lname: string; status?: string; pic?: string; star?: number };
 
 // ──────────────────────────────────────────────
 // In-memory reference cache
@@ -306,8 +306,8 @@ const REF_TTL = 4 * 60 * 60 * 1000; // 4 hours
 
 function resolveLabel(map: Map<number, RefEntry>, id: number | string, fallback?: string): string {
   const entry = map.get(Number(id));
-  if (entry) return entry.name || entry.lname || fallback || String(id);
-  return fallback || String(id);
+  if (entry) return entry.name || entry.lname || (fallback ?? String(id));
+  return fallback ?? String(id);
 }
 
 // ──────────────────────────────────────────────
@@ -365,6 +365,7 @@ async function fetchFullReference(type: string): Promise<RefEntry[]> {
         lname: String(item["@_lname"] ?? ""),
         status: String(item["@_status"] ?? ""),
         pic: String(item["@_pic"] ?? item["@_www"] ?? item["@_image"] ?? ""),
+        star: item["@_star"] != null ? Number(item["@_star"]) : undefined,
       });
       const stamp = String(item["@_stamp"] ?? "");
       if (stamp && stamp > lastStamp) lastStamp = stamp;
@@ -719,7 +720,9 @@ function mapClaimToTour(
   const mealName = resolveLabel(refCache.meals, claim.meal, "");
   const roomName = resolveLabel(refCache.rooms, claim.room, "");
   const htplaceName = resolveLabel(refCache.htplaces, claim.htplace, "");
-  const starsLabel = resolveLabel(refCache.stars, claim.hotel, "");
+  const starsLabel = hotelEntry?.star
+    ? resolveLabel(refCache.stars, hotelEntry.star, "")
+    : "";
   const currencyName = resolveLabel(refCache.currencies, claim.currency, "");
   const hotelDesc = refCache.hotelDescriptions.get(claim.hotel) || null;
   const price = normalizeOrexPrice(claim.price, claim.peopleCount, currencyName, {
