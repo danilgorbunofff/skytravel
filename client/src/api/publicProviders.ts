@@ -22,9 +22,14 @@ function filtersToParams(filters: UnifiedFilters): URLSearchParams {
 async function throwIfNotOk(res: Response): Promise<void> {
   if (res.ok) return;
   const body = await res.json().catch(() => ({}));
-  throw new Error(
-    (body as Record<string, string>)?.error || `Request failed with status ${res.status}`,
-  );
+  const rawError = (body as Record<string, unknown>)?.error;
+  const message =
+    typeof rawError === "string"
+      ? rawError
+      : rawError && typeof rawError === "object" && "message" in rawError
+        ? String((rawError as { message: unknown }).message)
+        : `Request failed with status ${res.status}`;
+  throw new Error(message);
 }
 
 export async function fetchPublicProviders(): Promise<ProviderMeta[]> {
