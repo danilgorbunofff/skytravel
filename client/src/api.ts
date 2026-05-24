@@ -101,6 +101,8 @@ export async function createInquiry(data: {
   marketingConsent?: boolean;
   gdprConsent?: boolean;
   source?: string;
+  phone?: string;
+  message?: string;
 }) {
   const res = await fetch(`${API_URL}/api/inquiries`, {
     method: "POST",

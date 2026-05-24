@@ -1,0 +1,261 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon } from "lucide-react";
+import type { UnifiedTour } from "../../../types/providers";
+import type { TranslationKey } from "../../../hooks/useLanguage";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { fmtDate, starsDisplay } from "../../../lib/formatters";
+import { TourGallery } from "./TourGallery";
+import { TourPriceCard } from "./TourPriceCard";
+import { TourDetailTabs } from "./TourDetailTabs";
+import { OfferComparisonTable } from "./OfferComparisonTable";
+import { TourInquiryForm } from "./TourInquiryForm";
+import { RelatedTours } from "./RelatedTours";
+import { getTourFallbackImage } from "./PublicTourCard";
+
+const TRANSPORT_ICONS: Record<string, typeof Plane> = {
+  plane: Plane,
+  bus: Bus,
+  train: Train,
+  car: Car,
+  boat: Ship,
+};
+
+interface Props {
+  tour: UnifiedTour;
+  providerLabel: string;
+  offers: UnifiedTour[];
+  loading: boolean;
+  error?: string;
+  relatedTours?: UnifiedTour[];
+  onClose: () => void;
+  onNavigateToTour?: (tour: UnifiedTour) => void;
+}
+
+export function TourDetailModal({
+  tour,
+  providerLabel,
+  offers,
+  loading,
+  error,
+  relatedTours = [],
+  onClose,
+  onNavigateToTour,
+}: Props) {
+  const { t } = useLanguage();
+  const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
+  const [animateIn, setAnimateIn] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const inquiryRef = useRef<HTMLDivElement>(null);
+
+  const boardLabel: Record<string, string> = {
+    AI: t("sModalBoardAI"),
+    UAI: t("sModalBoardUAI"),
+    FB: t("sModalBoardFB"),
+    HB: t("sModalBoardHB"),
+    BB: t("sModalBoardBB"),
+    RO: t("sModalBoardRO"),
+    SC: t("sModalBoardRO"),
+  };
+
+  const transportLabel: Record<string, string> = {
+    plane: t("sModalTransportPlane"),
+    bus: t("sModalTransportBus"),
+    train: t("sModalTransportTrain"),
+    car: t("sModalTransportCar"),
+    boat: t("sModalTransportBoat"),
+  };
+
+  useEffect(() => {
+    setSelectedOfferId(`${tour.source}-${tour.externalId}`);
+  }, [tour]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimateIn(true));
+    });
+  }, []);
+
+  // Focus management
+  useEffect(() => {
+    previouslyFocusedRef.current = (document.activeElement as HTMLElement | null) ?? null;
+    closeButtonRef.current?.focus();
+    const main = document.querySelector("main");
+    main?.setAttribute("aria-hidden", "true");
+    return () => {
+      main?.removeAttribute("aria-hidden");
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, []);
+
+  // Body scroll lock + keyboard
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !containerRef.current) return;
+      const focusables = containerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
+
+  const sortedOffers = useMemo(
+    () =>
+      [...offers].sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime() || a.price - b.price,
+      ),
+    [offers],
+  );
+
+  const selectedOffer =
+    sortedOffers.find((o) => `${o.source}-${o.externalId}` === selectedOfferId) ??
+    sortedOffers[0] ??
+    tour;
+
+  const photos = selectedOffer.photos?.length
+    ? selectedOffer.photos
+    : [selectedOffer.image || getTourFallbackImage(selectedOffer.destination)];
+
+  const nights =
+    selectedOffer.nights ??
+    Math.round(
+      (new Date(selectedOffer.endDate).getTime() - new Date(selectedOffer.startDate).getTime()) /
+        86_400_000,
+    );
+
+  const stars = starsDisplay(selectedOffer.stars);
+  const TransportIcon = TRANSPORT_ICONS[selectedOffer.transport] ?? Plane;
+  const currentTourId = `${selectedOffer.source}-${selectedOffer.externalId}`;
+
+  function scrollToInquiry() {
+    inquiryRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`tour-detail-modal${animateIn ? " is-open" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-detail-modal-title"
+    >
+      <div className="tour-detail-modal__backdrop" onClick={onClose} aria-hidden="true" />
+
+      <div className="tour-detail-modal__content">
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="tour-detail-modal__close"
+          onClick={onClose}
+          aria-label={t("sModalClose")}
+        >
+          <X size={20} />
+        </button>
+
+        {/* Gallery */}
+        <TourGallery photos={photos} alt={selectedOffer.title} />
+
+        {/* Body */}
+        <div className="tour-detail-modal__body">
+          {/* Header */}
+          <div className="tour-detail-modal__header">
+            <h2 id="tour-detail-modal-title">{selectedOffer.title}</h2>
+            <p className="tour-detail-modal__subtitle">
+              {selectedOffer.destination}
+              {stars && <span className="tour-detail-modal__stars">{stars}</span>}
+            </p>
+          </div>
+
+          {/* Key Facts */}
+          <div className="tour-detail-modal__facts">
+            <div className="tour-detail-modal__fact">
+              <Calendar size={16} />
+              <span>
+                {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
+                {Number.isFinite(nights) && nights > 0 && ` (${nights} nocí)`}
+              </span>
+            </div>
+            <div className="tour-detail-modal__fact">
+              <TransportIcon size={16} />
+              <span>{transportLabel[selectedOffer.transport] ?? selectedOffer.transport}</span>
+            </div>
+            {selectedOffer.board && (
+              <div className="tour-detail-modal__fact">
+                <Moon size={16} />
+                <span>{boardLabel[selectedOffer.board] ?? selectedOffer.board}</span>
+              </div>
+            )}
+            {selectedOffer.roomType && (
+              <div className="tour-detail-modal__fact">
+                <BedDouble size={16} />
+                <span>{selectedOffer.roomType}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Price Card */}
+          <TourPriceCard
+            tour={selectedOffer}
+            providerLabel={providerLabel}
+            t={t}
+            onInquiry={scrollToInquiry}
+          />
+
+          {/* Tabs: Description / Offers / Location */}
+          <TourDetailTabs
+            description={selectedOffer.description ?? undefined}
+            t={t}
+            offers={
+              <OfferComparisonTable
+                offers={sortedOffers}
+                selectedId={currentTourId}
+                onSelect={setSelectedOfferId}
+                loading={loading}
+                error={error}
+                t={t}
+                boardLabel={boardLabel}
+              />
+            }
+          />
+
+          {/* Inquiry Form */}
+          <div ref={inquiryRef}>
+            <TourInquiryForm tour={selectedOffer} providerLabel={providerLabel} t={t} />
+          </div>
+
+          {/* Related Tours */}
+          {relatedTours.length > 0 && onNavigateToTour && (
+            <RelatedTours
+              tours={relatedTours}
+              currentTourId={currentTourId}
+              onSelect={onNavigateToTour}
+              t={t}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

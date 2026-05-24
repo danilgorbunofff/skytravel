@@ -94,9 +94,12 @@ export async function fetchPublicProviderTours(
   return res.json() as Promise<ToursResult>;
 }
 
-export async function fetchPublicAllProviderTours(filters: UnifiedFilters): Promise<ToursResult> {
+export async function fetchPublicAllProviderTours(
+  filters: UnifiedFilters,
+  signal?: AbortSignal,
+): Promise<ToursResult> {
   const params = filtersToParams(filters);
-  const res = await fetch(`${API_URL}/api/search/all/tours?${params}`);
+  const res = await fetch(`${API_URL}/api/search/all/tours?${params}`, { signal });
   await throwIfNotOk(res);
   return res.json() as Promise<ToursResult>;
 }
@@ -116,4 +119,16 @@ export async function fetchPublicProviderOfferGroup(
   await throwIfNotOk(res);
   const data = await res.json();
   return data.items as UnifiedTour[];
+}
+
+export async function fetchPublicSingleTour(
+  providerId: string,
+  externalId: string,
+): Promise<UnifiedTour> {
+  const res = await fetch(
+    `${API_URL}/api/search/tour/${encodeURIComponent(providerId)}/${encodeURIComponent(externalId)}`,
+  );
+  await throwIfNotOk(res);
+  const data = await res.json();
+  return data.tour as UnifiedTour;
 }

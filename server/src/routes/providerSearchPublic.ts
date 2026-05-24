@@ -178,9 +178,13 @@ function buildFilters(
   }
 
   const board = firstQueryValue(req.query.board);
-  if (board && (board.length > 16 || !/^[A-Za-z0-9_-]+$/.test(board))) {
-    res.status(400).json({ error: "board has an unsupported value." });
-    return undefined;
+  // Support comma-separated board values for multi-select (e.g. "AI,UAI")
+  if (board) {
+    const boardValues = board.split(",");
+    if (boardValues.some((v) => v.length > 16 || !/^[A-Za-z0-9_-]+$/.test(v))) {
+      res.status(400).json({ error: "board has an unsupported value." });
+      return undefined;
+    }
   }
 
   const adults = parseOptionalNumber(req, res, "adults", { integer: true, min: 1, max: 9 });
@@ -263,7 +267,9 @@ router.get(
     if (!filters) return;
 
     const destinationSlug = firstQueryValue(req.query.destinationSlug);
-    if (destinationSlug && !/^[a-z0-9-]{1,120}$/.test(destinationSlug)) {
+    // Support comma-separated destination slugs for multi-select
+    const destinationSlugs = destinationSlug ? destinationSlug.split(",").filter(Boolean) : [];
+    if (destinationSlugs.some((s) => !/^[a-z0-9-]{1,120}$/.test(s))) {
       res.status(400).json({ error: "destinationSlug has an unsupported value." });
       return;
     }
@@ -274,10 +280,14 @@ router.get(
       return;
     }
 
-    const destinationContext = destinationSlug
-      ? await getDestinationSearchContext(destinationSlug)
+    const destinationContext = destinationSlugs.length === 1
+      ? await getDestinationSearchContext(destinationSlugs[0])
       : null;
-    if (destinationSlug && !destinationContext) {
+    // For multi-destination, resolve all contexts
+    const multiDestinationContexts = destinationSlugs.length > 1
+      ? (await Promise.all(destinationSlugs.map((s) => getDestinationSearchContext(s)))).filter(Boolean)
+      : [];
+    if (destinationSlugs.length === 1 && !destinationContext) {
       const emptyResult = {
         total: 0,
         filtered: 0,
@@ -313,14 +323,31 @@ router.get(
             const providerFilters: Record<string, unknown> = {};
             if (transport) providerFilters.transport = transport;
 
+            // Single destination
             const mapping = destinationContext?.mappings.find(
               (item) => item.providerId === meta.id,
             );
             if (mapping) providerFilters[mapping.providerKey] = mapping.providerValue;
 
+            // Multi-destination: collect all mappings for this provider
+            if (multiDestinationContexts.length > 0) {
+              const mappings = multiDestinationContexts
+                .map((ctx) => ctx!.mappings.find((m) => m.providerId === meta.id))
+                .filter(Boolean);
+              if (mappings.length > 0) {
+                // Use array of values for OR logic (provider must support this)
+                providerFilters[mappings[0]!.providerKey] = mappings.map((m) => m!.providerValue);
+              }
+            }
+
+            const fallbackQuery = destinationContext?.destination.czechName
+              ?? (multiDestinationContexts.length > 0
+                ? multiDestinationContexts.map((ctx) => ctx!.destination.czechName).join("|")
+                : undefined);
+
             const providerQuery: UnifiedFilters = {
               ...filters,
-              q: mapping ? filters.q : (filters.q ?? destinationContext?.destination.czechName),
+              q: mapping ? filters.q : (filters.q ?? fallbackQuery),
               page: 1,
               limit: perProviderLimit,
               providerFilters,
@@ -561,6 +588,34 @@ router.get(
       }
       throw err;
     }
+  }),
+);
+
+/**
+ * GET /api/search/tour/:providerId/:externalId
+ * Fetch a single tour by provider + externalId (for deep linking).
+ */
+router.get(
+  "/tour/:providerId/:externalId",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { providerId, externalId } = req.params;
+    const provider = getProvider(providerId);
+    if (!provider) {
+      res.status(404).json({ error: "Provider not found" });
+      return;
+    }
+
+    // Search with minimal filters and look for the specific externalId
+    const filters: UnifiedFilters = { q: externalId, providerFilters: {} };
+    const result: ToursResult = await provider.fetchTours(filters);
+    const tour = result.items.find((t: UnifiedTour) => t.externalId === externalId);
+
+    if (!tour) {
+      res.status(404).json({ error: "Tour not found" });
+      return;
+    }
+
+    res.json({ tour });
   }),
 );
 
