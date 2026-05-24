@@ -5,9 +5,9 @@ export function validateBody(schema: ZodType) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const error = result.error as ZodError;
-      const issue = error.issues[0];
-      const err = new Error(issue.message);
+      const error = result.error as any;
+      const issue = error.issues ? error.issues[0] : (error.errors ? error.errors[0] : error);
+      const err = new Error(issue?.message || "Validation failed");
       err.name = "ZodError";
       (err as Error & { status: number }).status = 400;
       next(err);
@@ -22,9 +22,9 @@ export function validateQuery(schema: ZodType) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      const error = result.error as ZodError;
-      const issue = error.issues[0];
-      const err = new Error(issue.message);
+      const error = result.error as any;
+      const issue = error.issues ? error.issues[0] : (error.errors ? error.errors[0] : error);
+      const err = new Error(issue?.message || "Validation failed");
       err.name = "ZodError";
       (err as Error & { status: number }).status = 400;
       next(err);
