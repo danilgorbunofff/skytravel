@@ -172,9 +172,9 @@ export const PublicTourCard = memo(function PublicTourCard({
                 {tour.nights} {t("nights")}
               </span>
             )}
-            {tour.stars && (
+            {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
               <span className="tour-card__meta-item tour-card__stars">
-                {"★".repeat(Number(tour.stars))}
+                {"★".repeat(Math.min(5, Math.max(1, Math.round(Number(tour.stars)))))}
               </span>
             )}
           </div>
@@ -256,8 +256,8 @@ export const PublicTourCard = memo(function PublicTourCard({
         <div className="tour-card__list-top">
           <div className="tour-card__destination">{tour.destination}</div>
           <h3 className="tour-card__title">{tour.title}</h3>
-          {tour.stars && (
-            <span className="tour-card__stars">{"★".repeat(Number(tour.stars))}</span>
+          {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
+            <span className="tour-card__stars">{"★".repeat(Math.min(5, Math.max(1, Math.round(Number(tour.stars)))))}</span>
           )}
           {providerLabel && (
             <span className="tour-card__provider-inline">{providerLabel}</span>
