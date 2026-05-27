@@ -49,7 +49,7 @@ pkill -9 -f "node|esbuild" 2>/dev/null || true
 sleep 5
 
 echo "▸ Cleaning node_modules …"
-rm -rf node_modules client/node_modules server/node_modules
+rm -rf node_modules client/node_modules server/node_modules 2>/dev/null || true
 npm cache clean --force 2>/dev/null || true
 
 echo "▸ Installing dependencies …"
