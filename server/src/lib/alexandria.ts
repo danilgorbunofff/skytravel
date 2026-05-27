@@ -164,7 +164,11 @@ function selectCenaPrice(
       (left, right) =>
         right.score - left.score || left.price - right.price || left.index - right.index,
     );
-  return candidates[0]?.price ?? 0;
+  const best = candidates[0];
+  if (!best) return 0;
+  // Reject if best candidate is a child/surcharge-only price (negative score)
+  if (best.score < 0) return 0;
+  return best.price;
 }
 
 export function extractPrice(termin: Record<string, unknown>): number {

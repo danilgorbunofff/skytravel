@@ -5,6 +5,7 @@ import {
   extractToursFromParsed,
   type AlexandriaTourInput,
 } from "../lib/alexandria.js";
+import { isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
 
 const router = Router();
 
@@ -54,8 +55,8 @@ router.get(
     const items = await getCachedFeed(countryId);
 
     const now = new Date();
-    // Only future departures
-    const upcoming = items.filter((t) => t.startDate > now);
+    // Only future departures with plausible prices
+    const upcoming = items.filter((t) => t.startDate > now && isPlausibleProviderPriceCzk(t.price));
 
     // Sort by price ascending (cheapest first = best last-minute deals)
     upcoming.sort((a, b) => a.price - b.price);
