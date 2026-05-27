@@ -739,7 +739,7 @@ function mapClaimToTour(
   const externalId = `orex-${routeTown}-${routeState}-${claim.inc}`;
 
   // packet_type: 0 = full package (flight+hotel), 1 = transport only, 2 = hotel only
-  const transport = claim.packetType === 2 ? "bus" : "plane";
+  const transport = claim.packetType === 2 ? "car" : "plane";
 
   return {
     externalId,

@@ -106,7 +106,6 @@ export default function SearchPage() {
   // ─── Transient UI state ──────────────────────────────────────────────
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [heroExpanded, setHeroExpanded] = useState(() => !filters.activeQuery);
   const [pastHero, setPastHero] = useState(false);
   const [shareConfirmation, setShareConfirmation] = useState<"copied" | "failed" | null>(null);
   const shareTimeoutRef = useRef<number | null>(null);
@@ -440,7 +439,6 @@ export default function SearchPage() {
           transport={filters.transport}
           adults={filters.adults}
           children={filters.children}
-          heroExpanded={heroExpanded}
           dateError={filters.dateError}
           validationError={filters.validationError}
           destinations={bootstrap.destinations}
@@ -460,13 +458,8 @@ export default function SearchPage() {
             filters.setValidationError(null);
             filters.setTransport(v);
           }}
-          onAdultsChange={(delta) =>
-            filters.setAdults((a) => Math.min(9, Math.max(1, a + delta)))
-          }
-          onChildrenChange={(delta) =>
-            filters.setChildren((c) => Math.min(6, Math.max(0, c + delta)))
-          }
-          onToggleExpanded={() => setHeroExpanded((v) => !v)}
+          onAdultsChange={(v) => filters.setAdults(v)}
+          onChildrenChange={(v) => filters.setChildren(v)}
           onSubmit={filters.submitSearch}
           onDestinationSelect={(slug, label) => {
             filters.setQuery(label);

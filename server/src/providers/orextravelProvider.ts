@@ -256,6 +256,7 @@ export class OrextravelProvider implements TourProvider {
           ? pf.stars
           : "";
     const transport = typeof pf.transport === "string" ? pf.transport : "";
+    const excludeTransport = typeof pf.excludeTransport === "string" ? pf.excludeTransport : "";
     const nightsRange = parseNightsRange(filters.nights);
 
     // Build Prisma where clause
@@ -283,6 +284,7 @@ export class OrextravelProvider implements TourProvider {
 
     if (board) where.board = board;
     if (transport) where.transport = transport;
+    else if (excludeTransport) where.transport = { not: excludeTransport };
     if (stars) {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {

@@ -113,6 +113,16 @@ export function SearchFilters({
           value={filters.activeTransport}
           onChange={(value) => filters.updateParams({ transport: value || null, page: 1 })}
         />
+        <label className="hotel-only-toggle">
+          <input
+            type="checkbox"
+            checked={filters.activeHotelOnly}
+            onChange={(e) =>
+              filters.updateParams({ hotelOnly: e.target.checked ? "1" : null, page: 1 })
+            }
+          />
+          <span>{t("sFilterHotelOnly")}</span>
+        </label>
       </div>
 
       {/* Price range */}

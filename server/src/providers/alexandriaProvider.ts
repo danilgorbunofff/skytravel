@@ -258,7 +258,9 @@ export class AlexandriaProvider implements TourProvider {
       where.OR = [{ destination: { startsWith: q } }, { title: { contains: q } }];
     }
 
+    const excludeTransport = typeof pf.excludeTransport === "string" ? pf.excludeTransport : "";
     if (transport) where.transport = transport;
+    else if (excludeTransport) where.transport = { not: excludeTransport };
     if (board) where.board = board;
     if (stars) {
       const minStars = Number(stars);

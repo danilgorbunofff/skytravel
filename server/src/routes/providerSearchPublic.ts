@@ -28,6 +28,7 @@ const SHARED_KEYS = new Set([
   "adults",
   "children",
   "transport",
+  "hotelOnly",
   "sortBy",
   "sortDir",
   "page",
@@ -280,6 +281,9 @@ router.get(
       return;
     }
 
+    // hotelOnly=1 includes hotel-only (car) tours; otherwise exclude them by default
+    const hotelOnly = firstQueryValue(req.query.hotelOnly) === "1";
+
     const destinationContext = destinationSlugs.length === 1
       ? await getDestinationSearchContext(destinationSlugs[0])
       : null;
@@ -322,6 +326,7 @@ router.get(
             const provider = getProvider(meta.id);
             const providerFilters: Record<string, unknown> = {};
             if (transport) providerFilters.transport = transport;
+            else if (!hotelOnly) providerFilters.excludeTransport = "car";
 
             // Single destination
             const mapping = destinationContext?.mappings.find(
