@@ -13,13 +13,9 @@ interface Props {
 
 export function DestinationMultiSelect({ t, value, onChange, destinations }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const activeSlugs = value ? value.split(",").filter(Boolean) : [];
+  const activeSlug = value || "";
 
   const sorted = [...destinations].sort((a, b) => {
-    const aActive = activeSlugs.includes(a.slug);
-    const bActive = activeSlugs.includes(b.slug);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
     if (a.count !== b.count) return b.count - a.count;
     return a.czechName.localeCompare(b.czechName, "cs-CZ");
   });
@@ -28,11 +24,10 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
   const hiddenCount = Math.max(sorted.length - 6, 0);
 
   function toggle(slug: string) {
-    if (activeSlugs.includes(slug)) {
-      const next = activeSlugs.filter((s) => s !== slug);
-      onChange(next.join(","));
+    if (activeSlug === slug) {
+      onChange("");
     } else {
-      onChange([...activeSlugs, slug].join(","));
+      onChange(slug);
     }
   }
 
@@ -42,23 +37,17 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
 
   return (
     <div className="destination-multi-select">
-      {/* Selected chips */}
-      {activeSlugs.length > 0 && (
+      {/* Selected chip */}
+      {activeSlug && (
         <div className="destination-multi-select__chips">
-          {activeSlugs.map((slug) => {
-            const dest = destinations.find((d) => d.slug === slug);
-            return (
-              <button
-                key={slug}
-                type="button"
-                className="destination-multi-select__chip"
-                onClick={() => toggle(slug)}
-              >
-                {dest?.czechName ?? slug}
-                <X size={12} aria-hidden="true" />
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            className="destination-multi-select__chip"
+            onClick={() => toggle(activeSlug)}
+          >
+            {destinations.find((d) => d.slug === activeSlug)?.czechName ?? activeSlug}
+            <X size={12} aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -66,13 +55,13 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
       <div className="search-region-list">
         <button
           type="button"
-          className={activeSlugs.length === 0 ? "is-active" : ""}
+          className={!activeSlug ? "is-active" : ""}
           onClick={clearAll}
         >
           {t("sFilterAllDestinations")}
         </button>
         {visible.map((d) => {
-          const isActive = activeSlugs.includes(d.slug);
+          const isActive = activeSlug === d.slug;
           return (
             <button
               key={d.slug}
@@ -81,9 +70,6 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
               onClick={() => toggle(d.slug)}
               aria-pressed={isActive}
             >
-              <span className="destination-multi-select__check">
-                {isActive ? "☑" : "☐"}
-              </span>
               {d.czechName}
               {d.count > 0 && <span className="region-count">({d.count})</span>}
             </button>
