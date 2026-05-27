@@ -49,14 +49,12 @@ pkill -9 -f "node|esbuild" 2>/dev/null || true
 sleep 5
 
 echo "▸ Cleaning node_modules …"
-find node_modules client/node_modules server/node_modules -mindepth 1 -delete 2>/dev/null || true
-rm -rf node_modules client/node_modules server/node_modules 2>/dev/null || true
+sudo rm -rf node_modules client/node_modules server/node_modules
 npm cache clean --force 2>/dev/null || true
 
 echo "▸ Installing dependencies …"
-# Root npm install covers all workspaces. vite is now a root devDep so
-# @vitejs/plugin-react can resolve it from root node_modules.
-npm install --legacy-peer-deps
+# npm ci ensures we install exactly what's in the lockfile.
+npm ci --legacy-peer-deps
 export PATH="$REMOTE_PATH/node_modules/.bin:$PATH"
 
 echo "▸ Building server …"
