@@ -21,13 +21,9 @@ async function ensureAdminUser() {
   logger.info(`Admin user '${login}' created.`);
 }
 
-Promise.allSettled([ensureAdminUser(), ensureKnownDestinations()])
-  .then((results) => {
-    for (const result of results) {
-      if (result.status === "rejected") {
-        logger.error({ err: result.reason }, "Startup task failed");
-      }
-    }
+ensureAdminUser()
+  .catch((error) => {
+    logger.error({ err: error }, "Failed to ensure admin user");
   })
   .finally(() => {
     app.listen(config.port, () => {
@@ -35,6 +31,13 @@ Promise.allSettled([ensureAdminUser(), ensureKnownDestinations()])
 
       // Signal PM2 that the app is ready to accept connections
       if (process.send) process.send("ready");
+
+      // ── Warm destination mapping (fire-and-forget) ──────────────
+      // Ensures ProviderTour rows have correct destinationId before
+      // the first search request hits the lazy path.
+      ensureKnownDestinations().catch((err) =>
+        logger.error({ err }, "ensureKnownDestinations failed"),
+      );
 
       // ── Cache warming (fire-and-forget) ───────────────────────────
       const warmOnStartup = process.env.PROVIDERS_WARM_ON_STARTUP !== "false";
