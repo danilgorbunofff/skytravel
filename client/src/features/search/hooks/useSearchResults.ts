@@ -5,6 +5,8 @@ import { isPlausibleTourPrice, MIN_PUBLIC_TOUR_PRICE_CZK } from "../../../lib/pr
 import { parsePriceParam } from "./useSearchFilters";
 import { useDebounce } from "./useDebounce";
 
+const FULL_PRICE_RANGE = { min: MIN_PUBLIC_TOUR_PRICE_CZK, max: 200_000 };
+
 export interface SearchResultsState {
   result: ToursResult | null;
   resultsLoading: boolean;
@@ -98,16 +100,7 @@ export function useSearchResults(
     }
   }, [result, activePriceMin, activePriceMax]);
 
-  // Computed price range from current results
-  const priceRange = useMemo(() => {
-    if (!result?.items.length) return naturalPriceRange;
-    const prices = result.items.map((t) => t.price).filter(isPlausibleTourPrice);
-    if (prices.length === 0) return naturalPriceRange;
-    return {
-      min: Math.floor(Math.min(...prices) / 500) * 500,
-      max: Math.ceil(Math.max(...prices) / 500) * 500,
-    };
-  }, [result, naturalPriceRange]);
+  const priceRange = FULL_PRICE_RANGE;
 
   // Clamped price values for slider
   const requestedPriceMin = parsePriceParam(activePriceMin);
@@ -115,11 +108,11 @@ export function useSearchResults(
   const priceMin =
     requestedPriceMin === null
       ? naturalPriceRange.min
-      : Math.min(Math.max(requestedPriceMin, naturalPriceRange.min), naturalPriceRange.max);
+      : Math.min(Math.max(requestedPriceMin, FULL_PRICE_RANGE.min), FULL_PRICE_RANGE.max);
   const priceMax =
     requestedPriceMax === null
       ? naturalPriceRange.max
-      : Math.min(Math.max(requestedPriceMax, naturalPriceRange.min), naturalPriceRange.max);
+      : Math.min(Math.max(requestedPriceMax, FULL_PRICE_RANGE.min), FULL_PRICE_RANGE.max);
 
   // Filter displayed tours (favorites-only toggle)
   const displayedTours = useMemo(() => {

@@ -25,7 +25,6 @@ export default memo(function TourCard({ tour, onClick }: Props) {
       <div className="destination-card__body">
         <h3>{tour.i18n?.[lang]?.destination || tour.destination}</h3>
         <div className="destination-card__meta">
-          <span className="own-badge">{tour.i18n?.[lang]?.title || tour.title}</span>
           <span className="price-pill">
             {t("from")} {formatPrice(tour.price)}
           </span>
