@@ -9,8 +9,6 @@ import { fetchWithRetry } from "./fetchWithRetry.js";
 const BASE_URL = config.orextravel.url;
 const TOKEN = config.orextravel.token;
 
-const IMAGE_BASE_URL = "https://www.orextravel.cz";
-
 const DELAY_MS = 50;
 const CONCURRENCY = 6;
 const OREX_EUR_TO_CZK = Number(process.env.OREX_EUR_TO_CZK || 25.5);
@@ -718,8 +716,7 @@ function mapClaimToTour(
   const hotelName = hotelEntry
     ? hotelEntry.name || hotelEntry.lname || `Hotel ${claim.hotel}`
     : `Hotel ${claim.hotel}`;
-  const rawImage = hotelEntry?.pic || "";
-  const hotelImage = rawImage && rawImage.startsWith("/") ? `${IMAGE_BASE_URL}${rawImage}` : rawImage;
+  const hotelImage = hotelEntry?.pic || "";
   const mealName = resolveLabel(refCache.meals, claim.meal, "");
   const roomName = resolveLabel(refCache.rooms, claim.room, "");
   const htplaceName = resolveLabel(refCache.htplaces, claim.htplace, "");

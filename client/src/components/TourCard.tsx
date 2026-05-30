@@ -15,12 +15,19 @@ export default memo(function TourCard({ tour, onClick }: Props) {
     <article className="destination-card" onClick={onClick}>
       <img
         className="destination-card__bg"
-        src={tour.image}
+        src={tour.image || "/placeholder-tour.svg"}
         alt={tour.i18n?.[lang]?.destination || tour.destination}
         loading="lazy"
         decoding="async"
         width={640}
         height={400}
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (!img.dataset.fallback) {
+            img.dataset.fallback = "1";
+            img.src = "/placeholder-tour.svg";
+          }
+        }}
       />
       <div className="destination-card__body">
         <h3>{tour.i18n?.[lang]?.destination || tour.destination}</h3>

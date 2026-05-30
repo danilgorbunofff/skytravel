@@ -7,6 +7,22 @@ export function isResizableImage(url: string): boolean {
   return /images\.unsplash\.com/.test(url);
 }
 
+const KNOWN_IMAGE_HOSTS = [
+  "images.alexandria.cz",
+  "images.unsplash.com",
+];
+
+export function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname;
+    if (KNOWN_IMAGE_HOSTS.some((host) => hostname.includes(host))) return true;
+  } catch {
+    return false;
+  }
+  return /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(url);
+}
+
 export function withWidth(url: string, width: number): string {
   try {
     const parsed = new URL(url);

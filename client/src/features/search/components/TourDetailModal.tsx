@@ -11,6 +11,7 @@ import { OfferComparisonTable } from "./OfferComparisonTable";
 import { TourInquiryForm } from "./TourInquiryForm";
 import { RelatedTours } from "./RelatedTours";
 import { getTourFallbackImage } from "./PublicTourCard";
+import { isValidImageUrl } from "../../../lib/images";
 
 const TRANSPORT_ICONS: Record<string, typeof Plane> = {
   plane: Plane,
@@ -135,8 +136,8 @@ export function TourDetailModal({
     tour;
 
   const photos = selectedOffer.photos?.length
-    ? selectedOffer.photos
-    : [selectedOffer.image || getTourFallbackImage(selectedOffer.destination)];
+    ? selectedOffer.photos.filter(isValidImageUrl)
+    : [isValidImageUrl(selectedOffer.image) ? selectedOffer.image : getTourFallbackImage(selectedOffer.destination)];
 
   const nights =
     selectedOffer.nights ??

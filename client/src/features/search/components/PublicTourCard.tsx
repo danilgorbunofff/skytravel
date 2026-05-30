@@ -3,7 +3,7 @@ import { Heart, Search, Plane, Bus, Car, Calendar, Layers } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
-import { buildSrcSet } from "../../../lib/images";
+import { buildSrcSet, isValidImageUrl } from "../../../lib/images";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { fmtDate } from "../../../lib/formatters";
 import { favorites as popularDestinations } from "../../../data";
@@ -91,7 +91,7 @@ export const PublicTourCard = memo(function PublicTourCard({
     onOpenDetail();
   }
 
-  const imageSrc = tour.image || getTourFallbackImage(tour.destination);
+  const imageSrc = isValidImageUrl(tour.image) ? tour.image : getTourFallbackImage(tour.destination);
   const srcSet = buildSrcSet(imageSrc);
   const discount = getDiscount(tour);
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
