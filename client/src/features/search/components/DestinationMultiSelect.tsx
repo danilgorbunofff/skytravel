@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
 
@@ -37,20 +37,6 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
 
   return (
     <div className="destination-multi-select">
-      {/* Selected chip */}
-      {activeSlug && (
-        <div className="destination-multi-select__chips">
-          <button
-            type="button"
-            className="destination-multi-select__chip"
-            onClick={() => toggle(activeSlug)}
-          >
-            {destinations.find((d) => d.slug === activeSlug)?.czechName ?? activeSlug}
-            <X size={12} aria-hidden="true" />
-          </button>
-        </div>
-      )}
-
       {/* List */}
       <div className="search-region-list">
         <button
