@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { createApp } from "./app.js";
 import { logger } from "./lib/logger.js";
 import prisma from "./prisma.js";
+import { ensureKnownDestinations } from "./providers/destinationStore.js";
 
 const app = createApp();
 
@@ -20,9 +21,13 @@ async function ensureAdminUser() {
   logger.info(`Admin user '${login}' created.`);
 }
 
-ensureAdminUser()
-  .catch((error) => {
-    logger.error({ err: error }, "Failed to ensure admin user");
+Promise.allSettled([ensureAdminUser(), ensureKnownDestinations()])
+  .then((results) => {
+    for (const result of results) {
+      if (result.status === "rejected") {
+        logger.error({ err: result.reason }, "Startup task failed");
+      }
+    }
   })
   .finally(() => {
     app.listen(config.port, () => {
