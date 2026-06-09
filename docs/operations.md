@@ -3,7 +3,7 @@
 ## Server Details
 
 - **Host:** `<PRODUCTION_SERVER_IP>`
-- **User:** `root`
+- **User:** `root` (default in deploy script; overridable via SSH_USER env var)
 - **SSH key:** `<SSH_KEY_FILE>` (in repo root)
 - **Remote path:** `/home/ubuntu/skytravel`
 - **Process Manager:** PM2 (`ecosystem.config.cjs`)

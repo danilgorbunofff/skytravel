@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ── Remote deploy script for SkyTravel ────────────────────────────────
 # Required env vars: SSH_HOST, SSH_KEY_PATH
-SSH_USER="${SSH_USER:-ubuntu}"
+SSH_USER="${SSH_USER:-root}"
 SSH_HOST="${SSH_HOST:-167.233.47.103}"
 SSH_PORT="${SSH_PORT:-22}"
 REMOTE_PATH="${REMOTE_PROJECT_PATH:-/home/ubuntu/skytravel}"
