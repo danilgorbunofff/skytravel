@@ -266,8 +266,3 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
 
   return results;
 }
-
-// Backward-compat alias
-export function mapAlexandriaItem(_item: Record<string, unknown>): AlexandriaTourInput | null {
-  return null; // no longer used — extractToursFromParsed walks the tree instead
-}

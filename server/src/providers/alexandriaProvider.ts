@@ -32,6 +32,8 @@ import {
 import { invalidatePublicSearchCache } from "./publicSearchCache.js";
 import { ensureProviderDestinationMapping } from "./destinationStore.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
+import { logger } from "../lib/logger.js";
+import { safeString, safeNumber } from "../lib/safeCast.js";
 
 // ── Hardcoded known countries (replaces 200-ID probe loop) ──────────
 const KNOWN_COUNTRIES: { id: number; name: string }[] = [
@@ -282,13 +284,13 @@ export class AlexandriaProvider implements TourProvider {
     }
 
     if (filters.dateStart) {
-      const ds = new Date(filters.dateStart);
+      const ds = new Date(`${filters.dateStart}T00:00:00.000Z`);
       if (!Number.isNaN(ds.getTime())) {
         where.startDate = { ...(where.startDate as object), gte: ds };
       }
     }
     if (filters.dateEnd) {
-      const de = new Date(filters.dateEnd);
+      const de = new Date(`${filters.dateEnd}T00:00:00.000Z`);
       if (!Number.isNaN(de.getTime())) {
         where.endDate = { ...(where.endDate as object), lte: de };
       }
@@ -426,27 +428,32 @@ export class AlexandriaProvider implements TourProvider {
 
   private rowToUnified(row: Record<string, unknown>): UnifiedTour {
     const nights =
-      (row.nights as number | null) ??
-      nightsFromDates(row.startDate as string | Date, row.endDate as string | Date) ??
+      safeNumber(row.nights) ??
+      nightsFromDates(safeString(row.startDate) || "", safeString(row.endDate) || "") ??
       undefined;
+    const startDateStr = row.startDate instanceof Date
+      ? row.startDate.toISOString()
+      : safeString(row.startDate);
+    const endDateStr = row.endDate instanceof Date
+      ? row.endDate.toISOString()
+      : safeString(row.endDate);
     return {
-      externalId: row.externalId as string,
-      destination: row.destination as string,
-      title: row.title as string,
-      price: row.price as number,
-      originalPrice: row.originalPrice as number,
-      startDate:
-        row.startDate instanceof Date ? row.startDate.toISOString() : (row.startDate as string),
-      endDate: row.endDate instanceof Date ? row.endDate.toISOString() : (row.endDate as string),
-      transport: row.transport as string,
-      image: row.image as string,
-      description: (row.description as string) ?? null,
-      photos: photosFromJson(row.photos, row.image as string),
-      url: (row.url as string) ?? "",
-      stars: row.stars as string,
-      board: row.board as string,
+      externalId: safeString(row.externalId, "unknown"),
+      destination: safeString(row.destination, "unknown"),
+      title: safeString(row.title, "unknown"),
+      price: safeNumber(row.price) ?? 0,
+      originalPrice: safeNumber(row.originalPrice) ?? 0,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      transport: safeString(row.transport),
+      image: safeString(row.image),
+      description: safeString(row.description) || null,
+      photos: photosFromJson(row.photos, safeString(row.image)),
+      url: safeString(row.url),
+      stars: safeString(row.stars),
+      board: safeString(row.board),
       source: this.id,
-      offersCount: (row.offersCount as number) ?? undefined,
+      offersCount: safeNumber(row.offersCount),
       nights,
     };
   }
@@ -539,12 +546,31 @@ export class AlexandriaProvider implements TourProvider {
     let created = 0;
     let updated = 0;
 
+    // Batch lookup all existing tours at once
+    const externalIds = providerRows.map((r) => r.externalId).filter(Boolean) as string[];
+    const existingTours = await prisma.tour.findMany({
+      where: { source: this.id, externalId: { in: externalIds } },
+      select: { id: true, externalId: true },
+    });
+    const existingMap = new Map(existingTours.map((t) => [t.externalId, t.id]));
+
+    const toCreate: Array<{
+      destination: string;
+      title: string;
+      price: number;
+      startDate: Date;
+      endDate: Date;
+      transport: string;
+      image: string;
+      description: string | null;
+      photos: Prisma.InputJsonValue | undefined;
+      source: "alexandria";
+      externalId: string;
+    }> = [];
+    const toUpdate: Array<{ id: number; data: typeof toCreate[0] }> = [];
+
     for (const row of providerRows) {
-      const existing = row.externalId
-        ? await prisma.tour.findFirst({
-            where: { source: "alexandria", externalId: row.externalId },
-          })
-        : null;
+      if (!row.externalId) continue;
 
       const data = {
         destination: row.destination,
@@ -560,16 +586,27 @@ export class AlexandriaProvider implements TourProvider {
         externalId: row.externalId,
       };
 
-      if (existing) {
-        await prisma.tour.update({ where: { id: existing.id }, data });
+      const existingId = existingMap.get(row.externalId);
+      if (existingId) {
+        toUpdate.push({ id: existingId, data });
         updated++;
       } else {
-        await prisma.tour.create({
-          data: { ...data, sortOrder: await prisma.tour.count() },
-        });
+        toCreate.push(data);
         created++;
       }
     }
+
+    // Parallel writes
+    await Promise.all([
+      ...toCreate.map((data) =>
+        prisma.tour.create({
+          data: { ...data, sortOrder: 0 },
+        }),
+      ),
+      ...toUpdate.map(({ id, data }) =>
+        prisma.tour.update({ where: { id }, data }),
+      ),
+    ]);
 
     return { ok: true, created, updated, total: providerRows.length };
   }
@@ -667,52 +704,58 @@ export class AlexandriaProvider implements TourProvider {
         const validItems = items.filter((item) => isPlausibleProviderPriceCzk(item.price));
         for (let i = 0; i < validItems.length; i += BATCH) {
           const batch = validItems.slice(i, i + BATCH);
+          // Add IDs before parallel upserts
           for (const item of batch) {
             seenIds.add(item.externalId);
-            await prisma.providerTour.upsert({
-              where: {
-                source_externalId: { source: this.id, externalId: item.externalId },
-              },
-              create: {
-                externalId: item.externalId,
-                source: this.id,
-                regionKey,
-                destination: item.destination,
-                title: item.title,
-                price: item.price,
-                originalPrice: item.originalPrice,
-                startDate: item.startDate,
-                endDate: item.endDate,
-                transport: item.transport,
-                image: item.image,
-                description: item.description,
-                photos: item.photos.length > 0 ? item.photos : undefined,
-                url: item.url,
-                stars: item.stars,
-                board: item.board,
-                destinationId,
-                syncedAt: new Date(),
-              },
-              update: {
-                regionKey,
-                destination: item.destination,
-                title: item.title,
-                price: item.price,
-                originalPrice: item.originalPrice,
-                startDate: item.startDate,
-                endDate: item.endDate,
-                transport: item.transport,
-                image: item.image,
-                description: item.description,
-                photos: item.photos.length > 0 ? item.photos : undefined,
-                url: item.url,
-                stars: item.stars,
-                board: item.board,
-                destinationId,
-                syncedAt: new Date(),
-              },
-            });
           }
+          // Parallel upserts within each batch
+          await Promise.all(
+            batch.map((item) =>
+              prisma.providerTour.upsert({
+                where: {
+                  source_externalId: { source: this.id, externalId: item.externalId },
+                },
+                create: {
+                  externalId: item.externalId,
+                  source: this.id,
+                  regionKey,
+                  destination: item.destination,
+                  title: item.title,
+                  price: item.price,
+                  originalPrice: item.originalPrice,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  transport: item.transport,
+                  image: item.image,
+                  description: item.description,
+                  photos: item.photos.length > 0 ? item.photos : undefined,
+                  url: item.url,
+                  stars: item.stars,
+                  board: item.board,
+                  destinationId,
+                  syncedAt: new Date(),
+                },
+                update: {
+                  regionKey,
+                  destination: item.destination,
+                  title: item.title,
+                  price: item.price,
+                  originalPrice: item.originalPrice,
+                  startDate: item.startDate,
+                  endDate: item.endDate,
+                  transport: item.transport,
+                  image: item.image,
+                  description: item.description,
+                  photos: item.photos.length > 0 ? item.photos : undefined,
+                  url: item.url,
+                  stars: item.stars,
+                  board: item.board,
+                  destinationId,
+                  syncedAt: new Date(),
+                },
+              }),
+            ),
+          );
         }
 
         // Delete stale rows for this region
@@ -736,7 +779,7 @@ export class AlexandriaProvider implements TourProvider {
         });
         await updateRegionTourCount(this.id, regionKey, count);
 
-        console.log(
+        logger.info(
           `[Alexandria] Synced ${count} tours for country ${country.name} (${country.id})`,
         );
       } catch (err) {
@@ -745,7 +788,7 @@ export class AlexandriaProvider implements TourProvider {
           where: { providerId_regionKey: { providerId: this.id, regionKey } },
           data: { status: "error", errorMessage: msg },
         });
-        console.error(`[Alexandria] Sync failed for country ${country.name}:`, err);
+        logger.error({ err }, `[Alexandria] Sync failed for country ${country.name}`);
       }
     }
     await this.loadCacheStatus();

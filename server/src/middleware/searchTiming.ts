@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { logger } from "../lib/logger.js";
 
 // Logs a single line per /api/search/* request with status, duration and
 // response bytes. Also injects Server-Timing on successful responses so we
@@ -13,8 +14,16 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
 
   const start = process.hrtime.bigint();
   let bytes = 0;
+  let closed = false;
   const originalWrite = res.write.bind(res);
   const originalEnd = res.end.bind(res);
+
+  const cleanup = (): void => {
+    if (closed) return;
+    closed = true;
+    res.write = originalWrite;
+    res.end = originalEnd;
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   res.write = function patchedWrite(chunk: any, ...rest: any[]): boolean {
@@ -32,11 +41,20 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
       res.setHeader("Server-Timing", existing ? `${existing}, ${total}` : total);
     }
     const cache = (res.getHeader("X-Cache") as string | undefined) ?? "-";
-    console.log(
+    logger.info(
       `[search] ${req.method} ${req.originalUrl} ${res.statusCode} ${durMs.toFixed(1)}ms ${bytes}B cache=${cache}`,
     );
+    cleanup();
     return originalEnd(chunk, ...rest);
   } as typeof res.end;
+
+  res.on("close", () => {
+    const durMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+    logger.info(
+      `[search] ${req.method} ${req.originalUrl} -(aborted) ${durMs.toFixed(1)}ms ${bytes}B`,
+    );
+    cleanup();
+  });
 
   next();
 }

@@ -74,4 +74,4 @@ Tailwind is configured via the `@tailwindcss/vite` plugin in `client/vite.config
 
 ## Deploy
 
-Push to `main` triggers `deploy.yml` → SSH into Oracle VM → `npm ci` → Prisma migrate → build → PM2 restart. Manual deploy: `bash scripts/deploy-remote.sh` (requires `ssh-key-2026-04-03.key` in repo root).
+Push to `main` triggers `deploy.yml` → SSH into Oracle VM → `npm ci` → Prisma migrate → build → PM2 restart. Manual deploy: `bash scripts/deploy-remote.sh` (requires `ssh-key-new.key` in repo root).

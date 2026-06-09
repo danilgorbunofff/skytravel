@@ -6,21 +6,10 @@ import { importToursSchema } from "../../validators/providers.js";
 import { getProvider, getAllProviders } from "../../providers/index.js";
 import { success, fail } from "../../lib/response.js";
 import type { UnifiedFilters } from "../../providers/types.js";
+import { validateProviderFilters, SHARED_KEYS } from "../../lib/validateProviderFilters.js";
+import { logger } from "../../lib/logger.js";
 
 const router = Router();
-
-const SHARED_KEYS = new Set([
-  "q",
-  "priceMin",
-  "priceMax",
-  "dateStart",
-  "dateEnd",
-  "sortBy",
-  "sortDir",
-  "page",
-  "limit",
-  "refresh",
-]);
 
 // ── GET / — list all providers ────────────────────────────────────────
 router.get(
@@ -43,7 +32,7 @@ router.get(
           const items = await provider.getRegions();
           return [meta.id, items] as const;
         } catch (err) {
-          console.warn(`[AdminProviders] bootstrap regions failed for ${meta.id}:`, err);
+          logger.warn({ err }, `[AdminProviders] bootstrap regions failed for ${meta.id}`);
           return [meta.id, []] as const;
         }
       }),
@@ -94,13 +83,11 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const provider = getProvider(req.params.id);
+      const fields = provider.getProviderFilters();
 
-      const providerFilters: Record<string, unknown> = {};
-      for (const key of Object.keys(req.query)) {
-        if (!SHARED_KEYS.has(key)) {
-          providerFilters[key] = req.query[key];
-        }
-      }
+      // Validate provider-specific filter params
+      const providerFilters = validateProviderFilters(req, res, fields, SHARED_KEYS);
+      if (!providerFilters) return; // validation sent error response
 
       const filters: UnifiedFilters = {
         q: req.query.q as string | undefined,
@@ -110,8 +97,8 @@ router.get(
         dateEnd: req.query.dateEnd as string | undefined,
         sortBy: req.query.sortBy as string | undefined,
         sortDir: req.query.sortDir as "asc" | "desc" | undefined,
-        page: req.query.page ? Number(req.query.page) : undefined,
-        limit: req.query.limit ? Number(req.query.limit) : undefined,
+        page: req.query.page ? Math.max(1, Number(req.query.page)) : undefined,
+        limit: req.query.limit ? Math.min(1000, Math.max(1, Number(req.query.limit))) : undefined,
         refresh: req.query.refresh === "true",
         providerFilters,
       };

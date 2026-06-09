@@ -443,28 +443,33 @@ async function mergeAliasDestinationRows(
 }
 
 export async function ensureKnownDestinations(): Promise<void> {
-  seedPromise ??= (async () => {
-    for (const destination of KNOWN_DESTINATIONS) {
-      const row = await findOrCreateCanonicalDestination(destination);
+  if (!seedPromise) {
+    seedPromise = (async () => {
+      for (const destination of KNOWN_DESTINATIONS) {
+        const row = await findOrCreateCanonicalDestination(destination);
 
-      for (const mapping of destination.mappings ?? []) {
-        await prisma.destinationMapping.upsert({
-          where: {
-            providerId_providerKey_providerValue: {
-              providerId: mapping.providerId,
-              providerKey: mapping.providerKey,
-              providerValue: mapping.providerValue,
+        for (const mapping of destination.mappings ?? []) {
+          await prisma.destinationMapping.upsert({
+            where: {
+              providerId_providerKey_providerValue: {
+                providerId: mapping.providerId,
+                providerKey: mapping.providerKey,
+                providerValue: mapping.providerValue,
+              },
             },
-          },
-          create: { ...mapping, destinationId: row.id },
-          update: { destinationId: row.id, providerLabel: mapping.providerLabel },
-        });
-        await moveProviderToursForMapping(mapping, row.id);
-      }
+            create: { ...mapping, destinationId: row.id },
+            update: { destinationId: row.id, providerLabel: mapping.providerLabel },
+          });
+          await moveProviderToursForMapping(mapping, row.id);
+        }
 
-      await mergeAliasDestinationRows(destination, row.id);
-    }
-  })();
+        await mergeAliasDestinationRows(destination, row.id);
+      }
+    })().catch((err) => {
+      seedPromise = null; // Allow retry on next call
+      throw err;
+    });
+  }
   return seedPromise;
 }
 

@@ -9,7 +9,7 @@ jobs:
   deploy:
     name: Deploy to remote server
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
 
     steps:
       - name: Deploy via SSH
@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          command_timeout: 8m
+          command_timeout: 10m
           script: |
             set -euo pipefail
 
@@ -30,26 +30,33 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "▸ Stopping running services …"
+            pm2 stop ecosystem.config.cjs 2>/dev/null || true
+
             echo "▸ Installing dependencies …"
-            npm ci --prefer-offline 2>/dev/null || npm install
+            npm ci --legacy-peer-deps
+
+            echo "▸ Ensuring workspace symlinks …"
+            for pkg in react react-dom react-router-dom class-variance-authority clsx tailwind-merge lucide-react zustand; do
+              if [ ! -e "client/node_modules/$pkg" ]; then
+                ln -s "../../node_modules/$pkg" "client/node_modules/$pkg"
+              fi
+            done
 
             echo "▸ Building server …"
-            npm --workspace server run build
+            cd server
+            npx prisma generate
+            NODE_OPTIONS="--max-old-space-size=512" npx tsc -p tsconfig.json
+            cd ..
 
             echo "▸ Running database migrations …"
-            cd server
-            npx prisma migrate deploy
-            cd ..
+            (cd server && npx prisma migrate deploy)
 
             echo "▸ Building client …"
             npm --workspace client run build
 
-            echo "▸ Restarting PM2 apps …"
-            if pm2 describe skytravel-api > /dev/null 2>&1; then
-              pm2 restart ecosystem.config.cjs --env production
-            else
-              pm2 start ecosystem.config.cjs --env production
-            fi
+            echo "▸ Starting PM2 apps …"
+            pm2 start ecosystem.config.cjs --env production
             pm2 save
 
             echo "▸ Refreshing Alexandria feed …"

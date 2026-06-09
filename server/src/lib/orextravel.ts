@@ -2,6 +2,8 @@ import { XMLParser } from "fast-xml-parser";
 import { config } from "../config.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "./providerPrice.js";
 import { fetchWithRetry } from "./fetchWithRetry.js";
+import { logger } from "./logger.js";
+import { delay } from "./delay.js";
 
 // ──────────────────────────────────────────────
 // Config
@@ -201,16 +203,10 @@ export function normalizeOrexPrice(
       : dividedPriceCzk;
 
   if (process.env.OREX_DEBUG_PRICE === "1" && normalizedPrice < MIN_PROVIDER_TOUR_PRICE_CZK) {
-    console.warn("[Orextravel] Suspicious normalized price", {
-      rawPrice: price,
-      peopleCount,
-      sanePeopleCount,
-      currencyId: options.currencyId,
-      currencyName,
-      dividedPriceCzk,
-      undividedPriceCzk,
-      normalizedPrice,
-    });
+    logger.warn(
+      { rawPrice: price, peopleCount, sanePeopleCount, currencyId: options.currencyId, currencyName, dividedPriceCzk, undividedPriceCzk, normalizedPrice },
+      "[Orextravel] Suspicious normalized price",
+    );
   }
 
   return normalizedPrice;
@@ -241,21 +237,21 @@ async function fetchSamoRaw(params: Record<string, string>): Promise<string> {
   return text;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function runConcurrent<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
   const results: T[] = [];
   let index = 0;
   async function worker() {
     while (index < tasks.length) {
       const i = index++;
-      results[i] = await tasks[i]();
+      try {
+        results[i] = await tasks[i]();
+      } catch {
+        // Worker task threw; caller handles errors individually
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()));
-  return results;
+  return results.filter((r): r is T => r != null);
 }
 
 // ──────────────────────────────────────────────
@@ -455,27 +451,28 @@ async function syncHotelAttributes(): Promise<void> {
   for (const [hotelId, parts] of grouped) {
     refCache.hotelDescriptions.set(hotelId, parts.join("; "));
   }
-  console.log(`[Orextravel]   hotelattributes: ${grouped.size} hotels with descriptions`);
+  logger.info(`[Orextravel]   hotelattributes: ${grouped.size} hotels with descriptions`);
 }
 
 export async function syncReferenceCache(): Promise<void> {
   if (refCache.ts > 0 && Date.now() - refCache.ts < REF_TTL) return;
 
-  console.log("[Orextravel] Syncing reference tables…");
+  logger.info("[Orextravel] Syncing reference tables…");
 
-  const types: { key: keyof typeof refCache; type: string }[] = [
-    { key: "states", type: "state" },
-    { key: "towns", type: "town" },
-    { key: "hotels", type: "hotel" },
-    { key: "stars", type: "star" },
-    { key: "rooms", type: "room" },
-    { key: "meals", type: "meal" },
-    { key: "htplaces", type: "htplace" },
-    { key: "currencies", type: "currency" },
-    { key: "tours", type: "tour" },
+  const types: { key: keyof typeof refCache; type: string; critical: boolean }[] = [
+    { key: "states", type: "state", critical: true },
+    { key: "towns", type: "town", critical: true },
+    { key: "hotels", type: "hotel", critical: true },
+    { key: "stars", type: "star", critical: false },
+    { key: "rooms", type: "room", critical: false },
+    { key: "meals", type: "meal", critical: false },
+    { key: "htplaces", type: "htplace", critical: false },
+    { key: "currencies", type: "currency", critical: false },
+    { key: "tours", type: "tour", critical: false },
   ];
 
-  for (const { key, type } of types) {
+  let criticalFailures = 0;
+  for (const { key, type, critical } of types) {
     try {
       const items = await fetchFullReference(type);
       const map = refCache[key] as Map<number, RefEntry>;
@@ -483,9 +480,10 @@ export async function syncReferenceCache(): Promise<void> {
       for (const item of items) {
         map.set(item.inc, item);
       }
-      console.log(`[Orextravel]   ${type}: ${items.length} entries`);
+      logger.info(`[Orextravel]   ${type}: ${items.length} entries`);
     } catch (err) {
-      console.warn(`[Orextravel]   ${type}: failed — ${err}`);
+      logger.warn(`[Orextravel]   ${type}: failed — ${err}`);
+      if (critical) criticalFailures++;
     }
     await delay(DELAY_MS);
   }
@@ -494,11 +492,16 @@ export async function syncReferenceCache(): Promise<void> {
   try {
     await syncHotelAttributes();
   } catch (err) {
-    console.warn(`[Orextravel]   hotelattributes: failed — ${err}`);
+    logger.warn(`[Orextravel]   hotelattributes: failed — ${err}`);
   }
 
-  refCache.ts = Date.now();
-  console.log("[Orextravel] Reference sync complete.");
+  // Only mark as synced if all critical types succeeded
+  if (criticalFailures === 0) {
+    refCache.ts = Date.now();
+    logger.info("[Orextravel] Reference sync complete.");
+  } else {
+    logger.warn(`[Orextravel] Reference sync incomplete (${criticalFailures} critical failures).`);
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -767,6 +770,7 @@ function mapClaimToTour(
 
 const MAX_SPO_PER_ROUTE = Number(process.env.OREX_MAX_SPO_PER_ROUTE || 20);
 const MAX_DATE_COMBOS_PER_SPO = Number(process.env.OREX_MAX_DATE_COMBOS_PER_SPO || 5);
+const MAX_TOURS_PER_FETCH = Number(process.env.OREX_MAX_TOURS_PER_FETCH || 5000);
 
 export type ProgressCallback = (info: {
   loaded: number;
@@ -794,6 +798,10 @@ export async function fetchOrextravelTours(
   const allTours: OrextravelTourInput[] = [];
 
   for (const route of filteredRoutes) {
+    if (allTours.length >= MAX_TOURS_PER_FETCH) {
+      logger.warn(`[Orextravel] Reached MAX_TOURS_PER_FETCH (${MAX_TOURS_PER_FETCH}), truncating.`);
+      break;
+    }
     const cacheKey = `${route.town}-${route.state}`;
     const cached = tourCacheMap.get(cacheKey);
     if (cached && Date.now() - cached.ts < TOUR_CACHE_TTL) {
@@ -843,7 +851,7 @@ export async function fetchOrextravelTours(
                 }
               }
             } catch (err) {
-              console.warn(
+              logger.warn(
                 `[Orextravel] Error fetching prices for SPO ${spo.inc}, ${combo.checkin}/${combo.nights}: ${err}`,
               );
             }
@@ -852,7 +860,7 @@ export async function fetchOrextravelTours(
 
           await runConcurrent(comboTasks, CONCURRENCY);
         } catch (err) {
-          console.warn(`[Orextravel] Error fetching date/nights for SPO ${spo.inc}: ${err}`);
+          logger.warn(`[Orextravel] Error fetching date/nights for SPO ${spo.inc}: ${err}`);
         }
         return spoTours;
       });
@@ -861,8 +869,12 @@ export async function fetchOrextravelTours(
       for (const batch of spoResults) {
         routeTours.push(...batch);
       }
+      if (routeTours.length >= MAX_TOURS_PER_FETCH) {
+        logger.warn(`[Orextravel] Route ${route.townName}→${route.stateName}: reached MAX_TOURS_PER_FETCH, truncating.`);
+        routeTours.length = MAX_TOURS_PER_FETCH;
+      }
     } catch (err) {
-      console.warn(
+      logger.warn(
         `[Orextravel] Error fetching SPO list for ${route.townName} → ${route.stateName}: ${err}`,
       );
     }

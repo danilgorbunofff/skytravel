@@ -18,6 +18,7 @@ import alertsRouter from "./routes/alerts.js";
 import erasureRouter from "./routes/erasure.js";
 import { searchTimingMiddleware } from "./middleware/searchTiming.js";
 import healthRoutes from "./routes/health.js";
+import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf.js";
 
 export function createApp() {
   const app = express();
@@ -93,12 +94,15 @@ export function createApp() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        sameSite: config.isProd ? "none" : "lax",
+        sameSite: "lax",
         secure: config.isProd,
         maxAge: 1000 * 60 * 60 * 8, // 8 hours
       },
     }),
   );
+
+  // ── CSRF token generation ────────────────────────────────────────────
+  app.use(csrfTokenMiddleware);
 
   // ── Rate limiters ─────────────────────────────────────────────────────
   const loginLimiter = rateLimit({
@@ -174,6 +178,7 @@ export function createApp() {
   app.use("/api", publicRoutes);
   app.use("/api/alexandria", alexandriaPublicRoutes);
   app.use("/api/search", providerSearchPublicRoutes);
+  app.use("/api/admin", csrfProtectionMiddleware);
   app.use("/api/admin", adminRoutes);
   app.use("/api/alerts", alertsRouter);
 

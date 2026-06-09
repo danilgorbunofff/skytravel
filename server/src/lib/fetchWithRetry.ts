@@ -2,6 +2,8 @@
  * Resilient fetch wrapper with timeout (AbortSignal) and exponential-backoff retry.
  */
 
+import { delay } from "./delay.js";
+
 export interface FetchRetryOptions extends RequestInit {
   /** Total timeout per attempt in ms (default 15 000). */
   timeout?: number;
@@ -47,8 +49,8 @@ export async function fetchWithRetry(
       lastError = err;
 
       // Don't retry on non-retryable errors (4xx will have been returned above)
-      const isAbort =
-        err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError");
+      const errName = (err as Error)?.name;
+      const isAbort = errName === "AbortError" || errName === "TimeoutError";
       const isNetwork = err instanceof TypeError; // fetch network errors
 
       if (!isAbort && !isNetwork) throw err;
@@ -61,6 +63,3 @@ export async function fetchWithRetry(
   throw lastError;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

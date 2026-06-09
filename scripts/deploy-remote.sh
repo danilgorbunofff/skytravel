@@ -2,19 +2,21 @@
 set -euo pipefail
 
 # ── Remote deploy script for SkyTravel ────────────────────────────────
+# Required env vars: SSH_HOST, SSH_KEY_PATH
 SSH_USER="${SSH_USER:-ubuntu}"
-SSH_HOST="${SSH_HOST:-141.147.40.156}"
+SSH_HOST="${SSH_HOST:-167.233.47.103}"
 SSH_PORT="${SSH_PORT:-22}"
 REMOTE_PATH="${REMOTE_PROJECT_PATH:-/home/ubuntu/skytravel}"
 
 # Resolve SSH key: env var → repo-local key → ~/.ssh default
 if [[ -n "${SSH_KEY_PATH:-}" ]]; then
   KEY_PATH="${SSH_KEY_PATH}"
-elif [[ -f "$(dirname "$0")/../ssh-key-2026-04-03.key" ]]; then
-  KEY_PATH="$(cd "$(dirname "$0")/.." && pwd)/ssh-key-2026-04-03.key"
+elif [[ -f "$(dirname "$0")/../ssh-key-new.key" ]]; then
+  KEY_PATH="$(cd "$(dirname "$0")/.." && pwd)/ssh-key-new.key"
   chmod 600 "$KEY_PATH"
 else
-  KEY_PATH=""
+  echo "ERROR: No SSH key found. Set SSH_KEY_PATH or place ssh-key-new.key in repo root."
+  exit 1
 fi
 
 if [[ -n "$KEY_PATH" ]]; then

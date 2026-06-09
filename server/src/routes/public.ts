@@ -3,7 +3,7 @@ import prisma from "../prisma.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { validateBody } from "../middleware/validate.js";
 import { createLeadSchema } from "../validators/leads.js";
-import { success, fail } from "../lib/response.js";
+import { success } from "../lib/response.js";
 
 const router = Router();
 
@@ -28,7 +28,8 @@ router.post(
     if (tourId !== undefined && tourId !== null && tourId !== "") {
       const parsed = Number(tourId);
       if (!Number.isFinite(parsed)) {
-        fail("INVALID_TOUR_ID", "Invalid tour id.", 400);
+        res.status(400).json({ ok: false, error: { code: "INVALID_TOUR_ID", message: "Invalid tour id." } });
+        return;
       }
       tourIdValue = parsed;
     }
@@ -54,7 +55,12 @@ router.post(
         } else {
           const destinations = newDestination.split(",").map((d: string) => d.trim());
           if (!destinations.includes(destinationValue)) {
-            newDestination += `, ${destinationValue}`;
+            destinations.push(destinationValue);
+            // Keep at most 10 most recent destinations
+            if (destinations.length > 10) {
+              destinations.splice(0, destinations.length - 10);
+            }
+            newDestination = destinations.join(", ");
           }
         }
       }
@@ -67,7 +73,6 @@ router.post(
           marketingConsent: existingLead.marketingConsent || Boolean(marketingConsent),
           gdprConsent: existingLead.gdprConsent || Boolean(gdprConsent),
           source: source ? String(source) : existingLead.source,
-          createdAt: new Date(),
         },
       });
     } else {

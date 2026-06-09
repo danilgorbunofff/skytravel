@@ -13,6 +13,7 @@
 // later (multi-process scale-out) without touching call sites.
 
 import { LRUCache } from "lru-cache";
+import { logger } from "../lib/logger.js";
 
 type CacheEntry = {
   data: unknown;
@@ -77,7 +78,7 @@ export async function getOrFetchPublicSearchResult<T>(
   if (entry && now < entry.hardExpiresAt) {
     // Serve stale, refresh in background (single-flight protected).
     void runSingleFlight(key, fetcher, ttlMs).catch((err) => {
-      console.warn(`[publicSearchCache] background refresh failed for ${key}:`, err);
+      logger.warn({ err }, `[publicSearchCache] background refresh failed for ${key}`);
     });
     return { data: entry.data as T, cache: "stale" };
   }

@@ -13,29 +13,10 @@ import type {
   UnifiedFilters,
   UnifiedTour,
 } from "../providers/types.js";
+import { validateProviderFilters, SHARED_KEYS } from "../lib/validateProviderFilters.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
-
-const SHARED_KEYS = new Set([
-  "q",
-  "priceMin",
-  "priceMax",
-  "dateStart",
-  "dateEnd",
-  "nights",
-  "stars",
-  "board",
-  "adults",
-  "children",
-  "transport",
-  "hotelOnly",
-  "sortBy",
-  "sortDir",
-  "page",
-  "limit",
-  "offerGroupKey",
-  "destinationSlug",
-]);
 
 const MAX_QUERY_LENGTH = 120;
 const MAX_PUBLIC_LIMIT = 60;
@@ -88,53 +69,6 @@ function parseOptionalDate(req: Request, res: Response, key: string): string | u
     return undefined;
   }
   return raw;
-}
-
-function validateProviderFilters(
-  req: Request,
-  res: Response,
-  fields: FilterFieldDescriptor[],
-): Record<string, unknown> | undefined {
-  const allowed = new Map(fields.map((field) => [field.key, field]));
-  const providerFilters: Record<string, unknown> = {};
-
-  for (const key of Object.keys(req.query)) {
-    if (SHARED_KEYS.has(key)) continue;
-    const field = allowed.get(key);
-    if (!field) {
-      res.status(400).json({ error: `Unsupported filter: ${key}.` });
-      return undefined;
-    }
-
-    const raw = firstQueryValue(req.query[key]);
-    if (!raw) continue;
-    if (raw.length > MAX_QUERY_LENGTH) {
-      res.status(400).json({ error: `${key} is too long.` });
-      return undefined;
-    }
-
-    if (field.type === "number") {
-      const numeric = Number(raw);
-      if (!Number.isFinite(numeric)) {
-        res.status(400).json({ error: `${key} must be a number.` });
-        return undefined;
-      }
-      providerFilters[key] = numeric;
-      continue;
-    }
-
-    if (field.options && field.options.length > 0) {
-      const valid = field.options.some((option) => String(option.value) === raw);
-      if (!valid) {
-        res.status(400).json({ error: `${key} has an unsupported value.` });
-        return undefined;
-      }
-    }
-
-    providerFilters[key] = raw;
-  }
-
-  return providerFilters;
 }
 
 function buildFilters(
@@ -375,7 +309,7 @@ router.get(
             const message =
               item.reason instanceof Error ? item.reason.message : String(item.reason);
             providerErrors.push({ providerId: meta.id, message });
-            console.warn(`[PublicSearch] all-provider search failed for ${meta.id}:`, item.reason);
+            logger.warn({ err: item.reason }, `[PublicSearch] all-provider search failed for ${meta.id}`);
           }
         }
 
@@ -431,7 +365,7 @@ router.get(
           const items = await provider.getRegions();
           return [meta.id, items] as const;
         } catch (err) {
-          console.warn(`[PublicSearch] bootstrap regions failed for ${meta.id}:`, err);
+          logger.warn({ err }, `[PublicSearch] bootstrap regions failed for ${meta.id}`);
           return [meta.id, []] as const;
         }
       }),
@@ -517,7 +451,7 @@ router.get(
         res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
         res.json({ items });
       } catch (err) {
-        console.warn(`[PublicSearch] Failed to load regions for ${req.params.id}:`, err);
+        logger.warn({ err }, `[PublicSearch] Failed to load regions for ${req.params.id}`);
         res.json({ items: [], degraded: true });
       }
     } catch (err: unknown) {

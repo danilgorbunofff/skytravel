@@ -1,7 +1,9 @@
 import session from "express-session";
 import MySQLStoreFactory from "express-mysql-session";
 
-const MySQLStore = MySQLStoreFactory(session as never);
+// The express-mysql-session types expect the express-session module type.
+// This works correctly at runtime; the types just don't align perfectly.
+const MySQLStore = MySQLStoreFactory(session as unknown as typeof import("express-session"));
 
 function parseDatabaseUrl(url: string) {
   const parsed = new URL(url);
@@ -16,7 +18,9 @@ function parseDatabaseUrl(url: string) {
 
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
-  throw new Error("DATABASE_URL is required for session store");
+  const msg = "FATAL: DATABASE_URL must be set in environment. The session store requires a MySQL connection URL (e.g., mysql://user:pass@localhost:3306/skytravel).";
+  console.error(msg);
+  throw new Error(msg);
 }
 
 export const sessionStore = new MySQLStore({
