@@ -13,7 +13,7 @@ import type {
   UnifiedFilters,
   UnifiedTour,
 } from "../providers/types.js";
-import { validateProviderFilters, SHARED_KEYS } from "../lib/validateProviderFilters.js";
+import { validateProviderFilters } from "../lib/validateProviderFilters.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -271,17 +271,20 @@ router.get(
             // Multi-destination: collect all mappings for this provider
             if (multiDestinationContexts.length > 0) {
               const mappings = multiDestinationContexts
-                .map((ctx) => ctx!.mappings.find((m) => m.providerId === meta.id))
+                .flatMap((ctx) => ctx?.mappings.find((m) => m.providerId === meta.id) ?? [])
                 .filter(Boolean);
               if (mappings.length > 0) {
                 // Use array of values for OR logic (provider must support this)
-                providerFilters[mappings[0]!.providerKey] = mappings.map((m) => m!.providerValue);
+                providerFilters[mappings[0].providerKey] = mappings.map((m) => m.providerValue);
               }
             }
 
             const fallbackQuery = destinationContext?.destination.czechName
               ?? (multiDestinationContexts.length > 0
-                ? multiDestinationContexts.map((ctx) => ctx!.destination.czechName).join("|")
+                ? multiDestinationContexts
+                    .filter((ctx) => ctx != null)
+                    .map((ctx) => ctx.destination.czechName)
+                    .join("|")
                 : undefined);
 
             const providerQuery: UnifiedFilters = {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
-import type { TranslationKey } from "../../../hooks/useLanguage";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { fmtDate, starsDisplay } from "../../../lib/formatters";
 import { TourGallery } from "./TourGallery";

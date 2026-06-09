@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 const STORAGE_KEY = "skytravel:recentlyViewed";
 const MAX_ITEMS = 20;

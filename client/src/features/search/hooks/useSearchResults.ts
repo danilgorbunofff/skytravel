@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchPublicAllProviderTours } from "../../../api/publicProviders";
 import type { ToursResult, UnifiedFilters, UnifiedTour } from "../../../types/providers";
 import { isPlausibleTourPrice, MIN_PUBLIC_TOUR_PRICE_CZK } from "../../../lib/prices";

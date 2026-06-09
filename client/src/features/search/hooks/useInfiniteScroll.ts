@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Infinite scroll: calls `onLoadMore` when sentinel element enters viewport.

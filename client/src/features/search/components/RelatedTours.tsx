@@ -10,7 +10,7 @@ interface Props {
   t: (key: TranslationKey) => string;
 }
 
-export function RelatedTours({ tours, currentTourId, onSelect, t }: Props) {
+export function RelatedTours({ tours, currentTourId, onSelect }: Props) {
   const related = tours
     .filter((tour) => `${tour.source}-${tour.externalId}` !== currentTourId)
     .slice(0, 4);

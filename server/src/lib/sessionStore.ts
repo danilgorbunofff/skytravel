@@ -3,6 +3,7 @@ import MySQLStoreFactory from "express-mysql-session";
 
 // The express-mysql-session types expect the express-session module type.
 // This works correctly at runtime; the types just don't align perfectly.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const MySQLStore = MySQLStoreFactory(session as unknown as typeof import("express-session"));
 
 function parseDatabaseUrl(url: string) {

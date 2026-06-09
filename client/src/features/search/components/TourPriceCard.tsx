@@ -14,8 +14,9 @@ interface Props {
 export function TourPriceCard({ tour, providerLabel, t, onInquiry }: Props) {
   const hasDiscount =
     tour.originalPrice && tour.originalPrice > tour.price && isPlausibleTourPrice(tour.price);
-  const savings = hasDiscount ? tour.originalPrice! - tour.price : 0;
-  const percent = hasDiscount ? Math.round((savings / tour.originalPrice!) * 100) : 0;
+  const originalPrice = tour.originalPrice ?? 0;
+  const savings = hasDiscount ? originalPrice - tour.price : 0;
+  const percent = hasDiscount && originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
   const totalPrice = tour.adults && tour.adults > 1 ? tour.price * tour.adults : null;
 
   return (

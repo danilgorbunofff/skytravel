@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -658,49 +658,55 @@ export default function SearchPage() {
               {!isMobile &&
                 !showFavoritesOnly &&
                 results.result &&
-                results.result.totalPages > 1 && (
-                  <div className="search-pagination">
-                    <button
-                      type="button"
-                      onClick={() => filters.pageTo(filters.page - 1, results.result!.totalPages)}
-                      disabled={filters.page <= 1 || results.resultsLoading}
-                    >
-                      <ArrowLeft size={16} aria-hidden="true" />
-                      {t("sPagePrev")}
-                    </button>
-                    <span>
-                      {t("sPageLabel")} {filters.page} {t("sPageOf")} {results.result.totalPages}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => filters.pageTo(filters.page + 1, results.result!.totalPages)}
-                      disabled={filters.page >= results.result.totalPages || results.resultsLoading}
-                    >
-                      {t("sPageNext")}
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                )}
+                results.result.totalPages > 1 && (() => {
+                  const r = results.result;
+                  return (
+                    <div className="search-pagination">
+                      <button
+                        type="button"
+                        onClick={() => filters.pageTo(filters.page - 1, r.totalPages)}
+                        disabled={filters.page <= 1 || results.resultsLoading}
+                      >
+                        <ArrowLeft size={16} aria-hidden="true" />
+                        {t("sPagePrev")}
+                      </button>
+                      <span>
+                        {t("sPageLabel")} {filters.page} {t("sPageOf")} {r.totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => filters.pageTo(filters.page + 1, r.totalPages)}
+                        disabled={filters.page >= r.totalPages || results.resultsLoading}
+                      >
+                        {t("sPageNext")}
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })()}
 
               {!isMobile &&
                 !showFavoritesOnly &&
                 results.result &&
                 results.result.totalPages > 1 &&
-                results.result.totalPages <= 10 && (
-                  <div className="pagination-pills">
-                    {Array.from({ length: results.result.totalPages }, (_, i) => i + 1).map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className={p === filters.page ? "is-active" : ""}
-                        onClick={() => filters.pageTo(p, results.result!.totalPages)}
-                        disabled={results.resultsLoading}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                results.result.totalPages <= 10 && (() => {
+                  const r = results.result;
+                  return (
+                    <div className="pagination-pills">
+                      {Array.from({ length: r.totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          className={p === filters.page ? "is-active" : ""}
+                          onClick={() => filters.pageTo(p, r.totalPages)}
+                          disabled={results.resultsLoading}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
             </section>
           </div>
         </section>

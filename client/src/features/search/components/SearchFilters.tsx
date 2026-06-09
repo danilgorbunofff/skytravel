@@ -39,7 +39,6 @@ export function SearchFilters({
   destinationsStatus,
   destinationsError,
   onRetryDestinations,
-  naturalPriceRange,
   priceRange,
   priceMin,
   priceMax,
