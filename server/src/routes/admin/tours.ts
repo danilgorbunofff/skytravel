@@ -4,6 +4,7 @@ import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { validateBody } from "../../middleware/validate.js";
 import { createTourSchema, updateTourSchema, reorderToursSchema } from "../../validators/tours.js";
 import { success, fail } from "../../lib/response.js";
+import { logAdminAction } from "../../middleware/auditLog.js";
 
 const router = Router();
 
@@ -139,6 +140,12 @@ router.delete(
       fail("INVALID_ID", "Invalid id.", 400);
     }
     await prisma.tour.delete({ where: { id } });
+    await logAdminAction({
+      action: "TOUR_DELETE",
+      target: `Tour#${id}`,
+      adminUser: req.session.adminLogin || "unknown",
+      ip: req.ip,
+    });
     res.status(204).send();
   }),
 );

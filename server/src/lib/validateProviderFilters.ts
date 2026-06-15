@@ -23,13 +23,9 @@ export const SHARED_KEYS = new Set([
   "refresh",
 ]);
 
-const MAX_QUERY_LENGTH = 120;
+import { firstQueryValue } from "../providers/shared/queryUtils.js";
 
-function firstQueryValue(value: unknown): string | undefined {
-  if (Array.isArray(value)) return firstQueryValue(value[0]);
-  if (typeof value !== "string") return undefined;
-  return value.trim();
-}
+const MAX_QUERY_LENGTH = 120;
 
 export function validateProviderFilters(
   req: Request,

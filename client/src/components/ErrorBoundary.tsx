@@ -3,6 +3,7 @@ import { Component, type ReactNode } from "react";
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onReset?: () => void;
 }
 
 interface State {
@@ -31,7 +32,10 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error?.message || "Došlo k neočekávané chybě."}
           </p>
           <button
-            onClick={() => this.setState({ hasError: false, error: undefined })}
+            onClick={() => {
+              this.props.onReset?.();
+              this.setState({ hasError: false, error: undefined });
+            }}
             className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
           >
             Zkusit znovu

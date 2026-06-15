@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { LayoutDashboard, BarChart3, Mail, Search, Settings, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -20,6 +20,17 @@ export default function AdminLayout({
   title?: string;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Prevent admin pages from being indexed
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[260px_1fr]">
@@ -112,7 +123,7 @@ export default function AdminLayout({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">{children}</main>
+        <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

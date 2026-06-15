@@ -1,7 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "../src/generated/prisma/client/client.js";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error("DATABASE_URL is required");
+}
+
+const adapter = new PrismaMariaDb(dbUrl);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   // Create default admin user (dev only)

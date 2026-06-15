@@ -8,14 +8,19 @@ interface Props {
   onClear: () => void;
 }
 
+const MAX_COMPARE = 4;
+
+function pluralize(count: number): string {
+  if (count === 1) return "1 zájezd";
+  if (count >= 2 && count <= 4) return `${count} zájezdy`;
+  return `${count} zájezdů`;
+}
+
 export function CompareTray({ tours, onExpand, onRemove, onClear }: Props) {
   if (tours.length === 0) return null;
 
-  const countText = tours.length === 1
-    ? "1 zájezd k porovnání"
-    : tours.length < 5
-      ? `${tours.length} zájezdy k porovnání`
-      : `${tours.length} zájezdů k porovnání`;
+  const isMaxed = tours.length >= MAX_COMPARE;
+  const countText = `${pluralize(tours.length)} k porovnání`;
 
   return (
     <div className="compare-tray" role="region" aria-label="Porovnání zájezdů">
@@ -41,6 +46,9 @@ export function CompareTray({ tours, onExpand, onRemove, onClear }: Props) {
             </button>
           );
         })}
+        {isMaxed && (
+          <div className="compare-tray__max-badge">max 4</div>
+        )}
       </div>
 
       <span className="compare-tray__count">{countText}</span>

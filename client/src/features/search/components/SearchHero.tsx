@@ -1,4 +1,4 @@
-import { CalendarDays, Plane, Search, Users } from "lucide-react";
+import { CalendarDays, Plane, Bus, Car, Train, Ship, Search, Users } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { getTransportOptions } from "../constants";
@@ -25,6 +25,14 @@ interface Props {
   onDestinationSelect: (slug: string | undefined, label: string) => void;
 }
 
+const TRANSPORT_ICON_MAP: Record<string, typeof Plane> = {
+  plane: Plane,
+  bus: Bus,
+  car: Car,
+  train: Train,
+  boat: Ship,
+};
+
 export function SearchHero({
   t,
   query,
@@ -46,6 +54,7 @@ export function SearchHero({
   onDestinationSelect,
 }: Props) {
   const TRANSPORT_OPTIONS = getTransportOptions(t);
+  const TransportIcon = TRANSPORT_ICON_MAP[transport] ?? Plane;
 
   return (
     <section className="search-hero-section">
@@ -80,8 +89,12 @@ export function SearchHero({
                 value={dateStart}
                 onChange={(e) => onDateStartChange(e.target.value)}
                 min={new Date().toISOString().slice(0, 10)}
+                aria-invalid={!!dateError}
               />
             </div>
+            {dateError && (
+              <span className="search-field-error" role="alert">{dateError}</span>
+            )}
           </label>
           <label className="search-field-end">
             <span>{t("sFormReturn")}</span>
@@ -92,8 +105,12 @@ export function SearchHero({
                 value={dateEnd}
                 onChange={(e) => onDateEndChange(e.target.value)}
                 min={dateStart || new Date().toISOString().slice(0, 10)}
+                aria-invalid={!!dateError}
               />
             </div>
+            {dateError && (
+              <span className="search-field-error" role="alert">{dateError}</span>
+            )}
           </label>
 
           {/* Row 2: Adults, Children */}
@@ -130,7 +147,7 @@ export function SearchHero({
           <label className="search-field-transport">
             <span>{t("sFormTransport")}</span>
             <div className="public-search-input">
-              <Plane size={18} aria-hidden="true" />
+              <TransportIcon size={18} aria-hidden="true" />
               <select value={transport} onChange={(event) => onTransportChange(event.target.value)}>
                 <option value="">{t("sFormTransportAny")}</option>
                 {TRANSPORT_OPTIONS.map((option) => (

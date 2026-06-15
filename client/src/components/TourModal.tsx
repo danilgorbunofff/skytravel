@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createInquiry } from "../api";
 import { useLanguage } from "../hooks/useLanguage";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export type ModalDetail = {
   type: string;
@@ -37,13 +38,7 @@ export default function TourModal({ detail, onClose }: Props) {
     setModalGdpr(false);
   }, [detail]);
 
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
+  const containerRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -80,7 +75,7 @@ export default function TourModal({ detail, onClose }: Props) {
   }
 
   return (
-    <div id="detailModal" className="detail-modal" role="dialog" aria-modal="true">
+    <div id="detailModal" ref={containerRef} className="detail-modal" role="dialog" aria-modal="true">
       <div className="detail-modal__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="detail-modal__content">
         <button className="detail-modal__close" type="button" onClick={onClose}>

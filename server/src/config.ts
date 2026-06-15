@@ -1,20 +1,47 @@
-const isProd = process.env.NODE_ENV === "production";
+import { z } from "zod";
 
-if (isProd && !process.env.SESSION_SECRET) {
-  console.error("FATAL: SESSION_SECRET must be set in production.");
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  SESSION_SECRET: z.string().optional().default("dev-secret"),
+  CLIENT_ORIGIN: z.string().optional().default("http://localhost:5173"),
+  ADMIN_LOGIN: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
+});
+
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  console.error("FATAL: Invalid environment configuration:");
+  for (const issue of parsed.error.issues) {
+    console.error(`  - ${issue.path.join(".")}: ${issue.message}`);
+  }
   process.exit(1);
 }
 
-if (!process.env.DATABASE_URL) {
-  console.error("FATAL: DATABASE_URL must be set.");
-  process.exit(1);
+const env = parsed.data;
+
+// Production-only checks
+if (env.NODE_ENV === "production") {
+  if (env.SESSION_SECRET === "dev-secret" || env.SESSION_SECRET.length < 32) {
+    console.error("FATAL: SESSION_SECRET must be at least 32 chars in production");
+    process.exit(1);
+  }
+}
+
+const isProd = env.NODE_ENV === "production";
+
+if (!isProd && env.SESSION_SECRET === "dev-secret") {
+  console.warn("[config] ⚠ Using default SESSION_SECRET 'dev-secret' in non-production. Set a strong secret for realistic security.");
 }
 
 export const config = {
   isProd,
-  port: Number(process.env.PORT) || 4000,
-  sessionSecret: process.env.SESSION_SECRET || "dev-secret",
-  clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  port: env.PORT,
+  sessionSecret: env.SESSION_SECRET,
+  databaseUrl: env.DATABASE_URL,
+  clientOrigin: env.CLIENT_ORIGIN,
   get allowedOrigins() {
     return this.clientOrigin
       .split(",")
@@ -23,8 +50,8 @@ export const config = {
   },
 
   admin: {
-    login: process.env.ADMIN_LOGIN,
-    password: process.env.ADMIN_PASSWORD,
+    login: env.ADMIN_LOGIN,
+    password: env.ADMIN_PASSWORD,
   },
 
   smtp: {
@@ -71,11 +98,6 @@ function validateConfig() {
 
   if (!config.orextravel.token) {
     warnings.push("OREXTRAVEL_TOKEN is not set — Orextravel provider will fail.");
-  }
-
-  if (Number.isNaN(config.port) || config.port < 1 || config.port > 65535) {
-    console.error("FATAL: PORT must be a valid number between 1 and 65535.");
-    process.exit(1);
   }
 
   for (const w of warnings) {

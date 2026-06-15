@@ -14,6 +14,7 @@ import type {
   UnifiedTour,
 } from "../providers/types.js";
 import { validateProviderFilters } from "../lib/validateProviderFilters.js";
+import { firstQueryValue } from "../providers/shared/queryUtils.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -21,12 +22,6 @@ const router = Router();
 const MAX_QUERY_LENGTH = 120;
 const MAX_PUBLIC_LIMIT = 60;
 const MAX_PRICE = 2_000_000;
-
-function firstQueryValue(value: unknown): string | undefined {
-  if (Array.isArray(value)) return firstQueryValue(value[0]);
-  if (typeof value !== "string") return undefined;
-  return value.trim();
-}
 
 function parseOptionalNumber(
   req: Request,

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { translations } from "../data";
 
-export type LanguageKey = keyof typeof translations;
-export type TranslationKey = keyof typeof translations.cs;
+export type LanguageKey = "cs" | "en" | "uk" | "ru";
+
+export type TranslationKey = string;
+
+type TranslationDict = Record<string, string>;
 
 export function useLanguage() {
   const [lang, setLang] = useState<LanguageKey>("cs");
+  const [dict, setDict] = useState<TranslationDict | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("skytravel-lang") as LanguageKey | null;
-    if (saved && translations[saved]) {
-      setLang(saved);
-    }
+    if (saved) setLang(saved);
   }, []);
 
   useEffect(() => {
@@ -19,11 +21,29 @@ export function useLanguage() {
     window.localStorage.setItem("skytravel-lang", lang);
   }, [lang]);
 
-  const dict = useMemo(() => translations[lang] || translations.cs, [lang]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    import(`../data/translations/${lang}.ts`)
+      .then((mod) => {
+        if (!cancelled) setDict(mod.default);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          import("../data/translations/cs.ts").then((m) => {
+            if (!cancelled) setDict(m.default);
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [lang]);
 
-  function t(key: keyof typeof translations.cs) {
-    return dict[key] ?? translations.cs[key];
+  function t(key: string): string {
+    return dict?.[key] ?? key;
   }
 
-  return { lang, setLang, t };
+  return { lang, setLang, t, loading };
 }

@@ -3,9 +3,10 @@ import prisma from "../../prisma.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { validateBody } from "../../middleware/validate.js";
 import { sendCampaignSchema, testCampaignSchema } from "../../validators/campaigns.js";
-import { transporter, EMAIL_RE } from "../../lib/mail.js";
+import { transporter, EMAIL_RE, sendBatchedEmail } from "../../lib/mail.js";
 import { config } from "../../config.js";
 import { success, fail } from "../../lib/response.js";
+import { logAdminAction } from "../../middleware/auditLog.js";
 
 const router = Router();
 
@@ -41,7 +42,7 @@ router.post(
       fail("INVALID_FROM", "Missing or invalid from email.", 400);
     }
 
-    await transporter.sendMail({
+    await sendBatchedEmail({
       from: fromValue,
       to: fromValue,
       bcc: leads.map((lead) => lead.email),
@@ -60,6 +61,14 @@ router.post(
         recipientCount: leads.length,
         sentAt: new Date(),
       },
+    });
+
+    await logAdminAction({
+      action: "CAMPAIGN_SEND",
+      target: `Campaign#${campaign.id}`,
+      details: `Sent to ${leads.length} recipients (segment: ${segmentValue})`,
+      adminUser: req.session.adminLogin || "unknown",
+      ip: req.ip,
     });
 
     success(res, { campaignId: campaign.id, recipients: leads.length });

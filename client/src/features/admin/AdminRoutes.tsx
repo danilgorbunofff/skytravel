@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import RequireAdmin from "../../components/RequireAdmin";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
 
 const AdminPage = lazy(() => import("../../pages/AdminPage"));
 const AdminStatisticsPage = lazy(() => import("../../pages/AdminStatisticsPage"));
@@ -21,11 +22,46 @@ export default function AdminRoutes() {
     <RequireAdmin>
       <Suspense fallback={<AdminFallback />}>
         <Routes>
-          <Route index element={<AdminPage />} />
-          <Route path="statistics" element={<AdminStatisticsPage />} />
-          <Route path="settings" element={<AdminSettingsPage />} />
-          <Route path="emails" element={<AdminEmailPage />} />
-          <Route path="search" element={<AdminSearchPage />} />
+          <Route
+            index
+            element={
+              <ErrorBoundary key="admin-page" onReset={() => window.location.reload()}>
+                <AdminPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="statistics"
+            element={
+              <ErrorBoundary key="admin-statistics" onReset={() => window.location.reload()}>
+                <AdminStatisticsPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ErrorBoundary key="admin-settings" onReset={() => window.location.reload()}>
+                <AdminSettingsPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="emails"
+            element={
+              <ErrorBoundary key="admin-emails" onReset={() => window.location.reload()}>
+                <AdminEmailPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="search"
+            element={
+              <ErrorBoundary key="admin-search" onReset={() => window.location.reload()}>
+                <AdminSearchPage />
+              </ErrorBoundary>
+            }
+          />
           <Route
             path="alexandria"
             element={<Navigate to="/admin/search?provider=alexandria" replace />}

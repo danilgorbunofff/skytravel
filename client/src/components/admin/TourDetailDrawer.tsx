@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { UnifiedTour } from "../../types/providers";
 import { formatPrice } from "../../utils";
 import { fmtDate, starsDisplay } from "../../lib/formatters";
+import ConfirmDialog from "../ConfirmDialog";
 
 // ── Labels ────────────────────────────────────────────────────────────────
 const boardLabel: Record<string, string> = {
@@ -36,6 +37,7 @@ type Props = {
 
 export default function TourDetailDrawer({ tour, onClose, onImport, importing }: Props) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [confirmImportOpen, setConfirmImportOpen] = useState(false);
 
   // Close on Esc
   useEffect(() => {
@@ -212,7 +214,7 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
               type="button"
               className="alex-drawer-btn alex-drawer-btn--import"
               disabled={importing}
-              onClick={() => onImport(tour.externalId)}
+              onClick={() => setConfirmImportOpen(true)}
             >
               {importing ? "Importuji…" : "Importovat tento zájezd"}
             </button>
@@ -229,6 +231,19 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
           </button>
         </div>
       )}
+
+      {/* Confirm import */}
+      <ConfirmDialog
+        isOpen={confirmImportOpen}
+        title="Importovat zájezd?"
+        message="Opravdu chcete importovat tento zájezd do databáze SkyTravel? Zájezd bude dostupný na hlavním webu."
+        confirmLabel="Importovat"
+        onConfirm={() => {
+          onImport?.(tour.externalId);
+          setConfirmImportOpen(false);
+        }}
+        onCancel={() => setConfirmImportOpen(false)}
+      />
     </>
   );
 }

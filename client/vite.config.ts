@@ -1,9 +1,15 @@
+import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),
@@ -21,6 +27,7 @@ export default defineConfig({
     allowedHosts: ["skytravel-client-production-dc5f.up.railway.app"],
   },
   build: {
+    chunkSizeWarningLimit: 200,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -36,6 +43,9 @@ export default defineConfig({
           }
           if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
             return "vendor-tiptap";
+          }
+          if (id.includes("node_modules/lucide-react")) {
+            return "vendor-icons";
           }
         },
       },

@@ -10,7 +10,6 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -35,16 +34,15 @@ import {
   VIEW_MODE_KEY,
 } from "../features/search";
 import {
-  PublicTourCard,
   SearchFilters,
   SearchHero,
-  SearchResultsToolbar,
+  SearchResultsSection,
   StickySearchBar,
   TrustBar,
   MobileFilterDrawer,
 } from "../features/search/components";
-import { TourCardSkeleton } from "../features/search/components/TourCardSkeleton";
 import { CompareTray } from "../features/search/components/CompareTray";
+import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
 
@@ -243,6 +241,77 @@ export default function SearchPage() {
     [],
   );
 
+  // ─── SEO: dynamic title + meta description + canonical URL ────────────
+  useEffect(() => {
+    const dest = filters.activeQuery || filters.activeDestinationSlug || "";
+    const count = results.result?.filtered;
+    if (dest && count != null) {
+      document.title = `${dest} — ${count} ${count === 1 ? "zájezd" : "zájezdy"} | SkyTravel`;
+    }
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      const meta = document.createElement("meta");
+      meta.name = "description";
+      meta.content = dest
+        ? `Prohlédněte si ${count ?? "všechny"} nabídky zájezdů do destinace ${dest}. Nejlepší ceny od všech partnerů na SkyTravel.`
+        : "SkyTravel — vyhledávač zájezdů. Porovnejte nabídky od všech českých cestovních kanceláří na jednom místě.";
+      document.head.appendChild(meta);
+    } else if (dest) {
+      metaDesc.setAttribute(
+        "content",
+        `Prohlédněte si ${count ?? "všechny"} nabídky zájezdů do destinace ${dest}. Nejlepší ceny od všech partnerů na SkyTravel.`,
+      );
+    }
+
+    // Canonical URL
+    const canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (canonicalEl) {
+      canonicalEl.setAttribute("href", window.location.href);
+    } else {
+      const link = document.createElement("link");
+      link.rel = "canonical";
+      link.href = window.location.href;
+      document.head.appendChild(link);
+    }
+  }, [filters.activeQuery, filters.activeDestinationSlug, results.result?.filtered]);
+
+  // ─── JSON‑LD structured data for search results ─────────────────────
+  useEffect(() => {
+    const items = results.result?.items ?? [];
+    if (items.length === 0) return;
+
+    const scriptId = "jsonld-search-results";
+    const existing = document.getElementById(scriptId);
+    if (existing) existing.remove();
+
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: `Zájezdy: ${filters.activeQuery || filters.activeDestinationSlug || "všechny nabídky"}`,
+      numberOfItems: items.length,
+      itemListElement: items.slice(0, 10).map((tour, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        item: {
+          "@type": "Product",
+          name: tour.title,
+          description: tour.description ?? undefined,
+          offers: {
+            "@type": "Offer",
+            price: tour.price,
+            priceCurrency: "CZK",
+            availability: "https://schema.org/InStock",
+          },
+          url: `${window.location.origin}/search?tourId=${tour.source}-${tour.externalId}`,
+        },
+      })),
+    });
+    document.head.appendChild(script);
+  }, [results.result?.items, filters.activeQuery, filters.activeDestinationSlug]);
+
   // ─── Handlers ────────────────────────────────────────────────────────
   const handleShare = useCallback(async () => {
     const url = window.location.href;
@@ -329,6 +398,7 @@ export default function SearchPage() {
   // ─── Render ──────────────────────────────────────────────────────────
   return (
     <div>
+      <SkipToContent />
       <StickySearchBar
         t={t}
         visible={pastHero}
@@ -353,6 +423,7 @@ export default function SearchPage() {
                 filters.setQuery(event.target.value);
               }}
               placeholder={t("searchPlaceholder")}
+              aria-label={t("sFormSearch")}
             />
             <button type="submit" aria-label={t("sFormSearch")}>
               GO
@@ -430,7 +501,7 @@ export default function SearchPage() {
         </div>
       </header>
 
-      <main className="search-page">
+      <main id="main-content" className="search-page">
         <SearchHero
           t={t}
           query={filters.query}
@@ -525,194 +596,48 @@ export default function SearchPage() {
               />
             </aside>
 
-            <section className="search-results-main">
-              <SearchResultsToolbar
-                t={t}
-                totalText={totalText}
-                toolbarDescription={toolbarDescription}
-                displayedCount={results.displayedTours.length}
-                totalCount={results.result?.total ?? null}
-                filteredCount={results.result?.filtered ?? null}
-                sortBy={filters.sortBy}
-                sortDir={filters.sortDir}
-                viewMode={viewMode}
-                shareConfirmation={shareConfirmation}
-                onToggleSort={filters.toggleSort}
-                onSetView={setView}
-                onShare={handleShare}
-              />
-
-              {results.error && <div className="search-error">{results.error}</div>}
-
-              {results.resultsLoading && !results.result && (
-                <TourCardSkeleton count={6} viewMode={viewMode} />
-              )}
-
-              {!results.resultsLoading && !results.error && results.result?.items.length === 0 && (
-                <div className="search-empty search-empty--results">
-                  <div className="search-empty__icon">🔍</div>
-                  <h3>{t("sNoResultsTitle")}</h3>
-                  <p>{t("sNoResultsBody")}</p>
-                  <ul className="search-empty__tips">
-                    <li>
-                      <button type="button" onClick={handleResetFilters}>
-                        {t("sNoResultsTipReset")}
-                      </button>
-                    </li>
-                    <li>{t("sNoResultsTipDates")}</li>
-                    <li>{t("sNoResultsTipRegion")}</li>
-                    <li>
-                      {t("sNoResultsTipCallPre")}{" "}
-                      <a href="tel:+420721163860">{t("sNoResultsTipCallLink")}</a>{" "}
-                      {t("sNoResultsTipCallPost")}
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-              {activeChips.length > 0 && (
-                <div className="active-chips">
-                  {activeChips.map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      className="active-chip"
-                      onClick={chip.onClear}
-                    >
-                      {chip.label} ✕
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!filters.hasUserFilters && (
-                <div className="preset-pills">
-                  {PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      className="preset-pill"
-                      onClick={() => filters.updateParams({ ...preset.params, page: 1 })}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div
-                className={viewMode === "grid" ? "tour-grid" : "tour-list"}
-                aria-busy={results.resultsLoading}
-                style={
-                  results.resultsLoading && results.result
-                    ? { opacity: 0.6, pointerEvents: "none", position: "relative" }
-                    : undefined
-                }
-              >
-                {toursToRender.map((tour, index) => {
-                  const tourId = `${tour.source}-${tour.externalId}`;
-                  return (
-                    <PublicTourCard
-                      t={t}
-                      key={tourId}
-                      tour={tour}
-                      viewMode={viewMode}
-                      isFavorite={isFavorite(tourId)}
-                      onToggleFavorite={() => toggleFavorite(tourId)}
-                      onOpenDetail={() => offerGroups.openTourDetail(tour)}
-                      providerLabel={bootstrap.providerLabels[tour.source]}
-                      animationIndex={index}
-                      isCompared={compare.isCompared(tourId)}
-                      onToggleCompare={() => compare.toggle(tour)}
-                      compareFull={compare.isFull}
-                    />
-                  );
-                })}
-              </div>
-
-              {results.resultsLoading && results.result && (
-                <p
-                  style={{ textAlign: "center", color: "#475569", marginTop: 12 }}
-                  aria-live="polite"
-                >
-                  {t("sStateUpdating")}
-                </p>
-              )}
-
-              {isMobile &&
-                !showFavoritesOnly &&
-                results.result &&
-                filters.page < results.result.totalPages && (
-                  <div className="mobile-load-more">
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => filters.updateParams({ page: filters.page + 1 })}
-                      disabled={results.resultsLoading}
-                    >
-                      {results.resultsLoading ? t("sLoadingMore") : t("sLoadMore")}
-                    </button>
-                  </div>
-                )}
-
-              {!isMobile &&
-                !showFavoritesOnly &&
-                results.result &&
-                results.result.totalPages > 1 && (() => {
-                  const r = results.result;
-                  return (
-                    <div className="search-pagination">
-                      <button
-                        type="button"
-                        onClick={() => filters.pageTo(filters.page - 1, r.totalPages)}
-                        disabled={filters.page <= 1 || results.resultsLoading}
-                      >
-                        <ArrowLeft size={16} aria-hidden="true" />
-                        {t("sPagePrev")}
-                      </button>
-                      <span>
-                        {t("sPageLabel")} {filters.page} {t("sPageOf")} {r.totalPages}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => filters.pageTo(filters.page + 1, r.totalPages)}
-                        disabled={filters.page >= r.totalPages || results.resultsLoading}
-                      >
-                        {t("sPageNext")}
-                        <ArrowRight size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  );
-                })()}
-
-              {!isMobile &&
-                !showFavoritesOnly &&
-                results.result &&
-                results.result.totalPages > 1 &&
-                results.result.totalPages <= 10 && (() => {
-                  const r = results.result;
-                  return (
-                    <div className="pagination-pills">
-                      {Array.from({ length: r.totalPages }, (_, i) => i + 1).map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          className={p === filters.page ? "is-active" : ""}
-                          onClick={() => filters.pageTo(p, r.totalPages)}
-                          disabled={results.resultsLoading}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-            </section>
+            <SearchResultsSection
+              t={t}
+              result={results.result}
+              loading={results.resultsLoading}
+              error={results.error}
+              viewMode={viewMode}
+              onSetView={setView}
+              page={filters.page}
+              totalPages={results.result?.totalPages ?? 1}
+              onPageChange={(p) => filters.pageTo(p, results.result?.totalPages ?? 1)}
+              sortBy={filters.sortBy}
+              sortDir={filters.sortDir}
+              onToggleSort={filters.toggleSort}
+              totalText={totalText}
+              toolbarDescription={toolbarDescription}
+              displayedCount={results.displayedTours.length}
+              totalCount={results.result?.total ?? null}
+              filteredCount={results.result?.filtered ?? null}
+              toursToRender={toursToRender}
+              chips={activeChips.map((c) => ({ key: c.label, ...c }))}
+              onResetFilters={handleResetFilters}
+              shareConfirmation={shareConfirmation}
+              onShare={handleShare}
+              providerLabels={bootstrap.providerLabels}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onOpenDetail={(tour) => offerGroups.openTourDetail(tour)}
+              isCompared={(id) => compare.isCompared(id)}
+              onToggleCompare={(tour) => compare.toggle(tour)}
+              compareFull={compare.isFull}
+              presets={PRESETS}
+              onPresetClick={(params) => filters.updateParams({ ...params, page: 1 })}
+              isMobile={isMobile}
+              showFavoritesOnly={showFavoritesOnly}
+              onLoadMore={() => filters.updateParams({ page: filters.page + 1 })}
+              hasUserFilters={filters.hasUserFilters}
+            />
           </div>
         </section>
 
         <div className="mobile-filter-fab mobile-only">
-          <button type="button" onClick={() => setMobileFiltersOpen(true)}>
+          <button type="button" onClick={() => setMobileFiltersOpen(true)} aria-label={t("sFilterFab")}>
             {t("sFilterFab")}
             {mobileFilterCount > 0 && (
               <span className="mobile-filter-fab__count">{mobileFilterCount}</span>

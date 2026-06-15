@@ -25,7 +25,7 @@ describe("isPlausibleTourPrice", () => {
 });
 
 describe("MIN_PUBLIC_TOUR_PRICE_CZK", () => {
-  it("equals 1000", () => {
-    expect(MIN_PUBLIC_TOUR_PRICE_CZK).toBe(1000);
+  it("equals 4990", () => {
+    expect(MIN_PUBLIC_TOUR_PRICE_CZK).toBe(4990);
   });
 });

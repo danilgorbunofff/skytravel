@@ -146,3 +146,27 @@ export async function sendTestCampaign(payload: {
   }
   return res.json();
 }
+
+// ── Statistics ────────────────────────────────────────────────────────────
+
+export interface StatisticsData {
+  totalVisits: number;
+  inquiries: number;
+  conversionRate: number;
+  topDestination: string;
+  visitsTrend: { label: string; value: number }[];
+  inquiriesTrend: { label: string; value: number }[];
+  channels: { label: string; pct: number }[];
+  destinationBreakdown: { label: string; value: number }[];
+  perDestination: { destination: string; inquiries: number }[];
+  period: string;
+}
+
+export async function fetchStatistics(period: string): Promise<StatisticsData> {
+  const res = await fetch(`${API_URL}/api/admin/statistics?period=${period}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to load statistics");
+  const body = await res.json();
+  return body.data as StatisticsData;
+}

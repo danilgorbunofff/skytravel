@@ -12,7 +12,25 @@ jobs:
     timeout-minutes: 12
 
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Build check
+        run: npm run build
+
       - name: Deploy via SSH
+        if: success()
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -35,13 +53,6 @@ jobs:
 
             echo "▸ Installing dependencies …"
             npm ci --legacy-peer-deps
-
-            echo "▸ Ensuring workspace symlinks …"
-            for pkg in react react-dom react-router-dom class-variance-authority clsx tailwind-merge lucide-react zustand; do
-              if [ ! -e "client/node_modules/$pkg" ]; then
-                ln -s "../../node_modules/$pkg" "client/node_modules/$pkg"
-              fi
-            done
 
             echo "▸ Building server …"
             cd server

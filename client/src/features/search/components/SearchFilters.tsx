@@ -12,23 +12,39 @@ import { StarRatingPicker } from "./StarRatingPicker";
 import { BoardMultiSelect } from "./BoardMultiSelect";
 import { TransportFilter } from "./TransportFilter";
 
+/** Props for {@link SearchFilters}. */
 interface Props {
+  /** Translation function. */
   t: (key: TranslationKey) => string;
+  /** Reactive filter state and setters from `useSearchFilters`. */
   filters: SearchFilterState;
+  /** Available destination options from the bootstrap API. */
   destinations: PublicDestinationSummary[];
+  /** Loading/error/ready status of the destinations bootstrap. */
   destinationsStatus: "loading" | "error" | "ready";
+  /** Error message when destinations failed to load. */
   destinationsError: string | null;
+  /** Retry loading destinations. */
   onRetryDestinations: () => void;
+  /** The natural (unfiltered) price range across all results. */
   naturalPriceRange: { min: number; max: number };
+  /** The full configurable price range for the slider. */
   priceRange: { min: number; max: number };
+  /** Current min price slider value. */
   priceMin: number;
+  /** Current max price slider value. */
   priceMax: number;
+  /** Whether search results have been fetched (controls price slider visibility). */
   hasResults: boolean;
+  /** Number of saved favorites (controls favorites filter visibility). */
   favoritesCount: number;
+  /** Whether the "favorites only" filter is active. */
   showFavoritesOnly: boolean;
+  /** Toggle the favorites-only filter. */
   onToggleFavoritesOnly: () => void;
+  /** Reset all filters to defaults. */
   onReset: () => void;
-  /** Whether to show the sidebar contact CTA (hide in mobile drawer) */
+  /** Whether to show the sidebar contact CTA (hide in mobile drawer). */
   showContactCta?: boolean;
 }
 
@@ -59,8 +75,7 @@ export function SearchFilters({
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="skeleton-line"
-                style={{ height: 24, margin: "6px 0" }}
+                className="skeleton-line h-6 my-1.5"
               />
             ))}
           </div>
@@ -68,31 +83,22 @@ export function SearchFilters({
         {destinationsStatus === "error" && (
           <div
             role="alert"
-            className="search-error"
-            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+            className="search-error flex flex-col gap-2"
           >
             <span>{destinationsError}</span>
-            <button
-              type="button"
-              onClick={onRetryDestinations}
-              style={{
-                alignSelf: "flex-start",
-                textDecoration: "underline",
-                background: "none",
-                border: "none",
-                color: "inherit",
-                cursor: "pointer",
-                padding: 0,
-              }}
+              <button
+                type="button"
+                onClick={onRetryDestinations}
+                className="self-start underline bg-transparent border-none text-inherit cursor-pointer p-0"
             >
               {t("sFilterRetry")}
             </button>
           </div>
         )}
         {destinationsStatus === "ready" && destinations.length === 0 && (
-          <p style={{ fontSize: ".875rem", color: "#64748b" }}>
-            {t("sFilterNoDestinations")}
-          </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t("sFilterNoDestinations")}
+            </p>
         )}
         {destinationsStatus === "ready" && destinations.length > 0 && (
           <DestinationMultiSelect
@@ -115,6 +121,7 @@ export function SearchFilters({
         <label className="hotel-only-toggle">
           <input
             type="checkbox"
+            aria-label={t("sFilterHotelOnly")}
             checked={filters.activeHotelOnly}
             onChange={(e) =>
               filters.updateParams({ hotelOnly: e.target.checked ? "1" : null, page: 1 })
@@ -184,10 +191,12 @@ export function SearchFilters({
       )}
 
       {/* Reset */}
-      <button className="search-reset" type="button" onClick={onReset}>
-        <RotateCcw size={16} aria-hidden="true" />
-        {t("sFilterReset")}
-      </button>
+      <div className="search-filter-reset-wrapper">
+        <button className="search-reset search-reset--prominent" type="button" onClick={onReset}>
+          <RotateCcw size={16} aria-hidden="true" />
+          {t("sFilterReset")}
+        </button>
+      </div>
 
       {/* Sidebar contact */}
       {showContactCta && (

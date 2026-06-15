@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { config } from "./config.js";
 import { createApp } from "./app.js";
 import { logger } from "./lib/logger.js";
-import prisma from "./prisma.js";
+import prisma, { getPoolInfo } from "./prisma.js";
 import { ensureKnownDestinations } from "./providers/destinationStore.js";
 
 const app = createApp();
@@ -109,5 +109,10 @@ ensureAdminUser()
           );
         });
       })();
+
+      // ── DB pool stats logging (every 5 min) ──────────────────────
+      setInterval(() => {
+        logger.info({ pool: getPoolInfo(), memory: process.memoryUsage().rss }, "DB pool stats");
+      }, 5 * 60 * 1000);
     });
   });

@@ -1,10 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
 import { isPlausibleProviderPriceCzk } from "./providerPrice.js";
 import { fetchWithRetry } from "./fetchWithRetry.js";
+import { config } from "../config.js";
 
 const ALEXANDRIA_URL = process.env.ALEXANDRIA_API_URL || "https://export.alexandria.cz/export";
 const ALEXANDRIA_API_KEY = process.env.ALEXANDRIA_API_KEY || "";
-const ALEXANDRIA_COUNTRY = Number(process.env.ALEXANDRIA_COUNTRY || 107);
+const ALEXANDRIA_COUNTRY = config.alexandria.country;
 
 const IMAGE_BASE = "https://images.alexandria.cz/dataStorage/hotel-obrazky/orig";
 

@@ -13,9 +13,19 @@ interface Props {
   t: (key: TranslationKey) => string;
 }
 
+function getPrefillFromUrl(): { email: string; phone: string } {
+  if (typeof window === "undefined") return { email: "", phone: "" };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    email: params.get("email") ?? localStorage.getItem("inquiry_email") ?? "",
+    phone: params.get("phone") ?? "",
+  };
+}
+
 export function TourInquiryForm({ tour, providerLabel, t }: Props) {
-  const [email, setEmail] = useState(() => localStorage.getItem("inquiry_email") ?? "");
-  const [phone, setPhone] = useState("");
+  const prefill = getPrefillFromUrl();
+  const [email, setEmail] = useState(prefill.email);
+  const [phone, setPhone] = useState(prefill.phone);
   const [message, setMessage] = useState("");
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");

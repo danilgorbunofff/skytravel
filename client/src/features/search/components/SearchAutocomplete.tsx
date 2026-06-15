@@ -4,6 +4,7 @@ import type { PublicDestinationSummary } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
+import { favorites as popularDestinations } from "../../../data";
 
 const RECENT_SEARCHES_KEY = "skytravel:recentSearches";
 const MAX_RECENT = 10;
@@ -64,6 +65,15 @@ function normalize(text: string): string {
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .trim();
+}
+
+function getDestinationImage(destinationName: string): string | null {
+  const normalizedName = normalize(destinationName);
+  const match = popularDestinations.find((item) => {
+    const normalizedFavorite = normalize(item.destination);
+    return normalizedName.includes(normalizedFavorite) || normalizedFavorite.includes(normalizedName);
+  });
+  return match?.image ?? null;
 }
 
 export function SearchAutocomplete({
@@ -268,7 +278,20 @@ export function SearchAutocomplete({
               >
                 <span className="search-autocomplete__icon">
                   {s.type === "destination" ? (
-                    <MapPin size={14} aria-hidden="true" />
+                    (() => {
+                      const img = getDestinationImage(s.label);
+                      return img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          className="search-autocomplete__thumb"
+                          width={24}
+                          height={24}
+                        />
+                      ) : (
+                        <MapPin size={14} aria-hidden="true" />
+                      );
+                    })()
                   ) : s.type === "recent" ? (
                     <Clock size={14} aria-hidden="true" />
                   ) : (
@@ -297,6 +320,26 @@ export function SearchAutocomplete({
             );
           })}
         </ul>
+      )}
+
+      {/* Recent search chips shown on focus when input is empty */}
+      {open && !value && suggestions.filter((s) => s.type === "recent").length > 0 && (
+        <div className="search-autocomplete__chips">
+          {suggestions.filter((s) => s.type === "recent").slice(0, 4).map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              className="search-autocomplete__chip"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectItem(s);
+              }}
+            >
+              <Clock size={10} aria-hidden="true" />
+              {s.label}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

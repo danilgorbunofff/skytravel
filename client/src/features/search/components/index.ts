@@ -21,3 +21,5 @@ export { OfferComparisonTable } from "./OfferComparisonTable";
 export { TourInquiryForm } from "./TourInquiryForm";
 export { RelatedTours } from "./RelatedTours";
 export { TourDetailModal } from "./TourDetailModal";
+export { ActiveFilterChips } from "./ActiveFilterChips";
+export { SearchResultsSection } from "./SearchResultsSection";

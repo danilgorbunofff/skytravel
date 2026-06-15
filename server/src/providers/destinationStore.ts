@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client/client.js";
 import prisma from "../prisma.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK } from "../lib/providerPrice.js";
 

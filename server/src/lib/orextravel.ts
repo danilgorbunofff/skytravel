@@ -1,3 +1,4 @@
+import { LRUCache } from "lru-cache";
 import { XMLParser } from "fast-xml-parser";
 import { config } from "../config.js";
 import { MIN_PROVIDER_TOUR_PRICE_CZK, isPlausibleProviderPriceCzk } from "./providerPrice.js";
@@ -704,8 +705,10 @@ async function fetchPrices(
 // ──────────────────────────────────────────────
 // Orchestrator — fetch all tours for a route
 // ──────────────────────────────────────────────
-const tourCacheMap = new Map<string, { data: OrextravelTourInput[]; ts: number }>();
-const TOUR_CACHE_TTL = 60 * 60 * 1000; // 1h
+const tourCacheMap = new LRUCache<string, { data: OrextravelTourInput[]; ts: number }>({
+  max: 100,
+  ttl: 60 * 60 * 1000, // 1h
+});
 
 function mapClaimToTour(
   claim: CatClaim,
@@ -804,7 +807,7 @@ export async function fetchOrextravelTours(
     }
     const cacheKey = `${route.town}-${route.state}`;
     const cached = tourCacheMap.get(cacheKey);
-    if (cached && Date.now() - cached.ts < TOUR_CACHE_TTL) {
+    if (cached) {
       allTours.push(...cached.data);
       continue;
     }

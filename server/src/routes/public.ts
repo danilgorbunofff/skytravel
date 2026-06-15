@@ -4,6 +4,7 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { validateBody } from "../middleware/validate.js";
 import { createLeadSchema } from "../validators/leads.js";
 import { success } from "../lib/response.js";
+import { hashEmail } from "../lib/hash.js";
 
 const router = Router();
 
@@ -79,6 +80,7 @@ router.post(
       lead = await prisma.lead.create({
         data: {
           email,
+          hashedEmail: hashEmail(email),
           destination: destinationValue,
           tourId: tourIdValue,
           marketingConsent: Boolean(marketingConsent),

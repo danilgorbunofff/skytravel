@@ -12,12 +12,12 @@
   --color-secondary: #f1f5f9;
   --color-secondary-foreground: #0f172a;
   --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
+  --color-muted-foreground: #4b5563;
   --color-accent: #f1f5f9;
   --color-accent-foreground: #0f172a;
   --color-destructive: #dc2626;
   --color-destructive-foreground: #f8fafc;
-  --color-border: #e2e8f0;
+  --color-border: #d1d5db;
   --color-input: #e2e8f0;
   --color-ring: #3b82f6;
   --color-sidebar: #0f2f6d;
@@ -32,9 +32,14 @@
   --radius-xl: 1rem;
 }
 
+/* ── Better contrast for muted/disabled text ───────────────────────── */
+.text-muted-foreground {
+  color: #4b5563; /* gray-600 for 4.5:1 contrast on white */
+}
+
 /* ── Global focus ring ─────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--color-ring);
+  outline: 2px solid var(--color-ring, #3b82f6);
   outline-offset: 2px;
 }
 

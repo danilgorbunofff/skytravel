@@ -5,8 +5,8 @@ test.describe("Search page", () => {
     await page.goto("/search");
     // Should display the search/filter UI
     await expect(page.locator("body")).toBeVisible();
-    // Wait for the page to fully load (Suspense boundary resolved)
-    await page.waitForTimeout(1000);
+    // Wait for the search page content to render
+    await page.waitForSelector(".search-sidebar, .search-results-section, .top-search");
     const content = await page.textContent("body");
     expect(content?.length).toBeGreaterThan(50);
   });

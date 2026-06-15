@@ -6,11 +6,11 @@
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma/client"
 }
 
 model Tour {
@@ -52,6 +52,7 @@ model Lead {
   tourId           Int?
   marketingConsent Boolean  @default(false)
   gdprConsent      Boolean  @default(false)
+  hashedEmail      String?  @db.VarChar(64)
   source           String?  @default("web") @db.VarChar(50)
   createdAt        DateTime @default(now())
   tour             Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
@@ -74,6 +75,8 @@ model EmailCampaign {
   createdAt      DateTime @default(now())
 }
 
+// FULLTEXT index `provider_tour_search_idx` on (title, description)
+// added via manual migration server/prisma/migrations/manual_fulltext/migration.sql
 model ProviderTour {
   id            Int      @id @default(autoincrement())
   externalId    String   @db.VarChar(255)
@@ -176,9 +179,23 @@ model ProviderRegion {
   @@index([providerId])
 }
 
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // TOUR_IMPORT, TOUR_DELETE, CAMPAIGN_SEND, LEAD_DELETE, SETTINGS_CHANGE
+  target    String   // e.g., "Tour#123", "Lead#45"
+  details   String?  @db.Text
+  adminUser String?  // username or "system"
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
 model PriceAlert {
   id          Int       @id @default(autoincrement())
   email       String    @db.VarChar(255)
+  hashedEmail String?   @db.VarChar(64)
   providerId  String    @db.VarChar(50)
   externalId  String    @db.VarChar(255)
   tourTitle   String    @db.VarChar(500)

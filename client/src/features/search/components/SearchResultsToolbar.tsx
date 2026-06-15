@@ -2,19 +2,33 @@ import { LayoutGrid, LayoutList, Share2 } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { ViewMode, SortField } from "../types";
 
+/** Props for {@link SearchResultsToolbar}. */
 interface Props {
+  /** Translation function. */
   t: (key: TranslationKey) => string;
+  /** Primary status text shown as an `<h2>` (e.g. "Showing 1–12 of 48 tours"). */
   totalText: string;
+  /** Secondary description beneath the heading. */
   toolbarDescription: string;
+  /** Number of tours displayed on the current page. */
   displayedCount: number;
+  /** Total un-filtered count from the API (null whilst loading). */
   totalCount: number | null;
+  /** Filtered result count from the API (null whilst loading). */
   filteredCount: number | null;
+  /** Current sort field. */
   sortBy: SortField;
+  /** Current sort direction. */
   sortDir: "asc" | "desc";
+  /** Current view mode. */
   viewMode: ViewMode;
+  /** Transient share-feedback state. */
   shareConfirmation: "copied" | "failed" | null;
+  /** Toggle sort order for a given field (price or date). */
   onToggleSort: (field: SortField) => void;
+  /** Switch between grid and list views. */
   onSetView: (mode: ViewMode) => void;
+  /** Trigger the share action (native share or clipboard copy). */
   onShare: () => void;
 }
 
@@ -35,7 +49,7 @@ export function SearchResultsToolbar({
 }: Props) {
   return (
     <div className="search-results-toolbar">
-      <div>
+      <div aria-live="polite" aria-atomic="true">
         <h2>{totalText}</h2>
         <p>{toolbarDescription}</p>
         {filteredCount !== null && totalCount !== null && filteredCount !== totalCount && (
@@ -50,6 +64,7 @@ export function SearchResultsToolbar({
           type="button"
           className={sortBy === "price" ? "is-active" : ""}
           onClick={() => onToggleSort("price")}
+          aria-label={`${t("sSortPrice")} — ${sortBy === "price" && sortDir === "asc" ? "sestupně" : "vzestupně"}`}
         >
           {t("sSortPrice")}{" "}
           {sortBy === "price" && (
@@ -60,6 +75,7 @@ export function SearchResultsToolbar({
           type="button"
           className={sortBy === "date" ? "is-active" : ""}
           onClick={() => onToggleSort("date")}
+          aria-label={`${t("sSortDate")} — ${sortBy === "date" && sortDir === "asc" ? "sestupně" : "vzestupně"}`}
         >
           {t("sSortDate")}{" "}
           {sortBy === "date" && (

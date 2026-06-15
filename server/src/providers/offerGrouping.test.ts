@@ -202,4 +202,138 @@ describe("sortOfferRows", () => {
     const sorted = sortOfferRows(rows, "date", "desc");
     assert.equal(sorted[0].startDate, "2026-09-01");
   });
+
+  it("handles empty input", () => {
+    const sorted = sortOfferRows([], "price", "asc");
+    assert.deepEqual(sorted, []);
+  });
+});
+
+// ── Expanded tests ──────────────────────────
+
+describe("groupOfferRows — expanded", () => {
+  it("groups same destination with three different dates", () => {
+    const rows = [
+      { source: "a", title: "Hotel X", destination: "Egypt", price: 10000, startDate: "2026-06-01" },
+      { source: "a", title: "Hotel X", destination: "Egypt", price: 11000, startDate: "2026-06-08" },
+      { source: "a", title: "Hotel X", destination: "Egypt", price: 9000, startDate: "2026-06-15" },
+    ];
+    const groups = groupOfferRows(rows);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].offers.length, 3);
+  });
+
+  it("does not group same hotel from different providers", () => {
+    const rows = [
+      { source: "alex", title: "Beach Hotel", destination: "Egypt", price: 15000, startDate: "2026-07-01" },
+      { source: "orex", title: "Beach Hotel", destination: "Egypt", price: 14000, startDate: "2026-07-01" },
+    ];
+    const groups = groupOfferRows(rows);
+    assert.equal(groups.length, 2);
+  });
+
+  it("picks earlier start date when prices are equal", () => {
+    const rows = [
+      { source: "a", title: "Hotel Y", destination: "Greece", price: 12000, startDate: "2026-08-10" },
+      { source: "a", title: "Hotel Y", destination: "Greece", price: 12000, startDate: "2026-08-03" },
+    ];
+    const groups = groupOfferRows(rows);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].representative.startDate, "2026-08-03");
+  });
+
+  it("handles rows with identical data (no crash)", () => {
+    const row = { source: "a", title: "Hotel Z", destination: "Spain", price: 8000, startDate: "2026-09-01" };
+    const groups = groupOfferRows([row, row]);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].offers.length, 2);
+  });
+});
+
+describe("countOfferGroupsBy — expanded", () => {
+  it("returns empty map for empty input", () => {
+    const counts = countOfferGroupsBy<{ source: string; title: string; destination: string; price: number; startDate: string }>([], (r) => r.destination);
+    assert.equal(counts.size, 0);
+  });
+
+  it("handles single row", () => {
+    const rows = [
+      { source: "a", title: "Hotel A", destination: "Egypt", price: 10000, startDate: "2026-07-01" },
+    ];
+    const counts = countOfferGroupsBy(rows, (r) => r.destination);
+    assert.equal(counts.get("Egypt"), 1);
+  });
+
+  it("counts zero for bucket with no matching rows", () => {
+    const rows = [
+      { source: "a", title: "Hotel A", destination: "Egypt", price: 10000, startDate: "2026-07-01" },
+    ];
+    const counts = countOfferGroupsBy(rows, (r) => r.destination);
+    assert.equal(counts.get("Turkey"), undefined);
+  });
+});
+
+describe("sortOfferGroups — expanded", () => {
+  it("handles empty input", () => {
+    const sorted = sortOfferGroups([], "price", "asc");
+    assert.deepEqual(sorted, []);
+  });
+
+  it("handles single group", () => {
+    const groups = [
+      { key: "a", representative: { source: "x", title: "A", destination: "A", price: 10000, startDate: "2026-07-01" }, offers: [] },
+    ];
+    const sorted = sortOfferGroups(groups, "price", "asc");
+    assert.equal(sorted.length, 1);
+  });
+
+  it("does not mutate original array", () => {
+    const groups = [
+      { key: "a", representative: { source: "x", title: "A", destination: "A", price: 20000, startDate: "2026-08-01" }, offers: [] },
+      { key: "b", representative: { source: "x", title: "B", destination: "B", price: 10000, startDate: "2026-07-01" }, offers: [] },
+    ];
+    const sorted = sortOfferGroups(groups, "price", "asc");
+    assert.equal(sorted[0].key, "b");
+    // Original should still be in insertion order
+    assert.equal(groups[0].key, "a");
+  });
+});
+
+describe("normalizeOfferText — expanded", () => {
+  it("keeps non-diacritic characters unchanged", () => {
+    // normalizeOfferText only strips diacritics, lowercases,
+    // trims, and collapses whitespace — it does not remove punctuation
+    assert.equal(normalizeOfferText("Hotel #1 (Deluxe)"), "hotel #1 (deluxe)");
+  });
+
+  it("handles German umlauts", () => {
+    assert.equal(normalizeOfferText("Schöne Übernachtung"), "schone ubernachtung");
+  });
+
+  it("handles Spanish ñ", () => {
+    assert.equal(normalizeOfferText("España"), "espana");
+  });
+
+  it("handles strings with leading/trailing whitespace", () => {
+    assert.equal(normalizeOfferText("  Grand Hotel  "), "grand hotel");
+  });
+});
+
+describe("buildOfferGroupKey — expanded", () => {
+  it("produces different keys for different destinations", () => {
+    const key1 = buildOfferGroupKey({ source: "a", title: "Hotel", destination: "Egypt" });
+    const key2 = buildOfferGroupKey({ source: "a", title: "Hotel", destination: "Turkey" });
+    assert.notEqual(key1, key2);
+  });
+
+  it("produces different keys for different sources", () => {
+    const key1 = buildOfferGroupKey({ source: "alex", title: "Hotel", destination: "Egypt" });
+    const key2 = buildOfferGroupKey({ source: "orex", title: "Hotel", destination: "Egypt" });
+    assert.notEqual(key1, key2);
+  });
+
+  it("handles destination with diacritics", () => {
+    const key = buildOfferGroupKey({ source: "a", title: "Hotel", destination: "Řecko" });
+    assert.equal(key, "a|hotel|recko");
+  });
 });

@@ -167,6 +167,21 @@ export async function sendTestCampaign(payload: {
   return res.json();
 }
 
+export async function createAlert(data: {
+  email: string;
+  providerId: string;
+  externalId: string;
+  priceMax: number;
+}) {
+  const res = await fetch(`${API_URL}/api/alerts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create price alert");
+  return res.json();
+}
+
 // ──────────────────────────────────────────────────────────────
 // Public Alexandria last-minute feed (no auth)
 // ──────────────────────────────────────────────────────────────

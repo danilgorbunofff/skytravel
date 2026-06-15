@@ -17,3 +17,4 @@ Thumbs.db
 *.key*
 *.pem
 server-api-access.md
+server/src/generated/

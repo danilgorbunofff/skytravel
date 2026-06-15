@@ -59,15 +59,6 @@ echo "▸ Installing dependencies …"
 npm ci --legacy-peer-deps
 export PATH="$REMOTE_PATH/node_modules/.bin:$PATH"
 
-# npm 10+ workspace hoisting may skip symlinks in workspace node_modules.
-# Create symlinks for client deps that Rolldown (Vite 8) needs to resolve.
-echo "▸ Ensuring workspace symlinks …"
-for pkg in react react-dom react-router-dom class-variance-authority clsx tailwind-merge lucide-react zustand; do
-  if [ ! -e "client/node_modules/$pkg" ]; then
-    ln -s "../../node_modules/$pkg" "client/node_modules/$pkg"
-  fi
-done
-
 echo "▸ Building server …"
 cd server
 ../node_modules/.bin/prisma generate

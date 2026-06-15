@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { favorites, heroImages, partnerTours, type OwnTour, type PartnerTour } from "../data";
+import { favorites, heroImages, type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { fetchPublicDestinations } from "../api/publicProviders";
@@ -10,18 +10,15 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
+import { SkipToContent } from "../components/SkipToContent";
 import TourModal, { type ModalDetail } from "../components/TourModal";
-import TourCard from "../components/TourCard";
 import LeadPopup from "../components/LeadPopup";
 import CookieConsent from "../components/CookieConsent";
+import SearchHero from "../components/home/SearchHero";
+import TourGrid from "../components/home/TourGrid";
+import LastMinuteDeals from "../components/home/LastMinuteDeals";
+import FavoriteDestinations from "../components/home/FavoriteDestinations";
 import "../site.css";
-
-function inBudgetRange(price: number, activeBudget: number) {
-  if (activeBudget === 10000) return price <= 10000;
-  if (activeBudget === 15000) return price > 10000 && price <= 15000;
-  if (activeBudget === 20000) return price > 15000 && price <= 20000;
-  return price > 20000;
-}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -101,14 +98,6 @@ export default function HomePage() {
 
     indicatorRef.current.style.width = `${Math.max(activeRect.width - inset * 2, 12)}px`;
     indicatorRef.current.style.transform = `translateX(${left}px)`;
-  }, [activeBudget]);
-
-  const filteredPartners = useMemo(() => {
-    return partnerTours.filter((tour) => {
-      const budgetMatch = inBudgetRange(tour.price, activeBudget);
-
-      return budgetMatch;
-    });
   }, [activeBudget]);
 
   // ── Live Alexandria last-minute offers ──────────────────────
@@ -203,21 +192,6 @@ export default function HomePage() {
     });
   }
 
-  async function openPartnerModal(tour: PartnerTour) {
-    const apiInfo = await getPartnerTourDetailsFromApi(tour);
-    setModalDetail({
-      type: t("modalTypePartner"),
-      title: tour.hotel,
-      description: t("modalDescPartner"),
-      location: tour.destination,
-      term: `${tour.term} | ${tour.nights} ${t("nights")}`,
-      meta: `${t("from")} ${formatPrice(tour.price)}`,
-      source: `${tour.transport} | ${tour.departure} | ${tour.board} \u2022 ${apiInfo.source}`,
-      photos: [tour.image],
-      isOwnTour: false,
-    });
-  }
-
   function openFavoriteSearch(item: { destination: string }) {
     const params = new URLSearchParams();
     params.set("q", item.destination);
@@ -242,8 +216,18 @@ export default function HomePage() {
     window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
   }
 
+  function handleDateToggle() {
+    setIsDatePickerOpen((prev) => !prev);
+  }
+
+  function handleDateChange(field: "start" | "end", value: string) {
+    if (field === "start") setSearchDateStart(value);
+    else setSearchDateEnd(value);
+  }
+
   return (
     <div>
+      <SkipToContent />
       <header className="site-header">
         <div className="container header-top">
           <a
@@ -398,194 +382,35 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main>
-        <section id="home" className="hero">
-          <div id="heroCarousel" className="hero-carousel" aria-hidden="true">
-            {heroImages.map((url, index) => (
-              <div
-                key={url}
-                className={`hero-slide${index === heroIndex ? " is-active" : ""}`}
-                style={{ backgroundImage: `url('${url}')` }}
-              />
-            ))}
-          </div>
-          <div className="hero__overlay"></div>
-          <div className="container hero__content">
-            <h1>{t("heroTitle")}</h1>
-            <p>{t("heroSubtitle")}</p>
-            <a className="hero__btn" href="#vlastni" onClick={handleNavClick}>
-              {t("heroBtn")}
-            </a>
-          </div>
+      <main id="main-content">
+        <SearchHero
+          heroImages={heroImages}
+          heroIndex={heroIndex}
+          searchDestinationRef={searchDestinationRef}
+          searchTransportRef={searchTransportRef}
+          searchDateStart={searchDateStart}
+          searchDateEnd={searchDateEnd}
+          lang={lang}
+          isDatePickerOpen={isDatePickerOpen}
+          t={t}
+          onSearchSubmit={handleSearchSubmit}
+          onDateToggle={handleDateToggle}
+          onDateChange={handleDateChange}
+          onNavClick={handleNavClick}
+        />
 
-          <div className="container hero-search-wrap">
-            <form id="heroSearch" className="hero-search" onSubmit={handleSearchSubmit}>
-              <div className="hero-search__fields hero-search__fields--three">
-                <div className="hero-search__item">
-                  <label htmlFor="searchDestination">{t("searchWhere")}</label>
-                  <div className="hero-search__control">
-                    <input
-                      id="searchDestination"
-                      ref={searchDestinationRef}
-                      type="text"
-                      placeholder={t("searchPlaceholder")}
-                    />
-                    <span className="hero-search__icon">📍</span>
-                  </div>
-                </div>
-                <div
-                  className="hero-search__item"
-                  style={{ position: "relative", cursor: "pointer" }}
-                  onClick={() => {
-                    setIsDatePickerOpen(!isDatePickerOpen);
-                  }}
-                >
-                  <label style={{ pointerEvents: "none" }}>{t("searchDate")}</label>
-                  <div className="hero-search__control">
-                    <input
-                      id="searchDate"
-                      type="text"
-                      value={`${new Date(searchDateStart).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")} - ${new Date(searchDateEnd).toLocaleDateString(lang === "en" ? "en-US" : "cs-CZ")}`}
-                      readOnly
-                      style={{ pointerEvents: "none" }}
-                    />
-                    <span className="hero-search__icon">📅</span>
-                  </div>
-                  {isDatePickerOpen && (
-                    <div className="search-popover" onClick={(e) => e.stopPropagation()}>
-                      <div className="popover-row">
-                        <label>{t("searchDeparture")}</label>
-                        <input
-                          type="date"
-                          value={searchDateStart}
-                          onChange={(e) => setSearchDateStart(e.target.value)}
-                        />
-                      </div>
-                      <div className="popover-row">
-                        <label>{t("searchReturn")}</label>
-                        <input
-                          type="date"
-                          value={searchDateEnd}
-                          onChange={(e) => setSearchDateEnd(e.target.value)}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        className="popover-done"
-                        onClick={() => setIsDatePickerOpen(false)}
-                      >
-                        {t("searchDone")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="hero-search__item">
-                  <label htmlFor="searchTransport">{t("searchTransport")}</label>
-                  <div className="hero-search__control">
-                    <select id="searchTransport" ref={searchTransportRef}>
-                      <option value="">{t("transportAny")}</option>
-                      <option value="plane">{t("transportFlight")}</option>
-                      <option value="bus">{t("transportBus")}</option>
-                      <option value="car">{t("transportOwn")}</option>
-                    </select>
-                    <span className="hero-search__icon">✈</span>
-                  </div>
-                </div>
-              </div>
-              <div className="hero-search__footer">
-                <button type="submit">{t("searchBtn")}</button>
-              </div>
-            </form>
-          </div>
-        </section>
+        <TourGrid
+          ownTours={ownTours}
+          onTourClick={openOwnTourModal}
+          t={t}
+        />
 
-        <section id="vlastni" className="section section-white">
-          <div className="container">
-            <header className="section-head">
-              <h2>{t("sectionOwnTitle")}</h2>
-              <p className="section-subtitle">{t("sectionOwnSub")}</p>
-            </header>
-            <div id="ownGrid" className="destination-grid">
-              {ownTours.map((tour) => (
-                <TourCard
-                  key={`${tour.id ?? tour.destination}`}
-                  tour={tour}
-                  onClick={() => openOwnTourModal(tour)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="lastminute" className="section section-soft">
-          <div className="container dual-blocks">
-            <article className="stats-card">
-              <h3>{t("sectionTodayTitle")}</h3>
-              <div className="stats-card__inner">
-                <img
-                  src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80"
-                  alt="Background"
-                  loading="lazy"
-                  decoding="async"
-                  width={1200}
-                  height={800}
-                />
-                <div>
-                  <p>
-                    <strong>{t("sectionToday1")}</strong> {t("sectionToday1b")}
-                  </p>
-                  <p>
-                    <strong>{t("sectionToday2")}</strong> {t("sectionToday2b")}
-                  </p>
-                  <p className="stats-note">{t("sectionTodayNote")}</p>
-                </div>
-              </div>
-            </article>
-
-            <article className="last-minute-card">
-              <h3>{t("sectionLastMinute")}</h3>
-              <div id="lastMinuteList" className="last-minute-list">
-                {lastMinuteLoading && <p style={{ padding: "1rem", opacity: 0.6 }}>Načítání…</p>}
-                {!lastMinuteLoading && lastMinuteItems.length === 0 && (
-                  <p style={{ padding: "1rem", opacity: 0.6 }}>{t("emptyState")}</p>
-                )}
-                {lastMinuteItems.map((item) => {
-                  const starsNum = Number(item.stars) || 0;
-                  const startDate = new Date(item.startDate);
-                  const endDate = new Date(item.endDate);
-                  return (
-                    <article
-                      key={item.externalId}
-                      className="last-row"
-                      onClick={() => openLastMinuteModal(item)}
-                    >
-                      <div>
-                        <h4>{item.title}</h4>
-                        <p>{item.destination}</p>
-                      </div>
-                      <div>
-                        <p>
-                          {startDate.toLocaleDateString("cs-CZ")} –{" "}
-                          {endDate.toLocaleDateString("cs-CZ")}
-                        </p>
-                        <p>
-                          {starsNum > 0
-                            ? "\u2605".repeat(starsNum) + "\u2606".repeat(5 - starsNum)
-                            : ""}
-                        </p>
-                      </div>
-                      <div>
-                        <strong>
-                          {t("from")} {formatPrice(item.price)}
-                        </strong>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </article>
-          </div>
-        </section>
+        <LastMinuteDeals
+          lastMinuteItems={lastMinuteItems}
+          loading={lastMinuteLoading}
+          onItemClick={openLastMinuteModal}
+          t={t}
+        />
 
         <section id="allinclusive" className="section section-blue">
           <div className="container">
@@ -606,88 +431,16 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
-            <div id="partnerCards" className="hotel-grid">
-              {filteredPartners.map((tour) => (
-                <article
-                  key={tour.hotel}
-                  className="hotel-card"
-                  onClick={() => openPartnerModal(tour)}
-                >
-                  <img
-                    src={tour.image}
-                    alt={tour.hotel}
-                    loading="lazy"
-                    decoding="async"
-                    width={400}
-                    height={300}
-                  />
-                  <div className="hotel-card__body">
-                    <div className="hotel-topline">
-                      <div className="stars">
-                        {"★".repeat(tour.stars)}
-                        {"☆".repeat(5 - tour.stars)}
-                      </div>
-                      <span className="hotel-board-badge">{tour.board}</span>
-                    </div>
-                    <h3>{tour.hotel}</h3>
-                    <p className="hotel-meta">{tour.destination}</p>
-                    <div className="hotel-info">
-                      <span className="hotel-line">
-                        {tour.term} | {tour.nights} nocí
-                      </span>
-                      <span className="hotel-line">
-                        {tour.transport} | {tour.departure}
-                      </span>
-                    </div>
-                    <span className="hotel-price">od {formatPrice(tour.price)}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-            {filteredPartners.length === 0 && (
-              <p id="emptyState" className="empty-state">
-                {t("emptyState")}
-              </p>
-            )}
+
           </div>
         </section>
 
-        <section id="destinace" className="section section-white">
-          <div className="container">
-            <header className="section-head">
-              <h2>{t("sectionFavTitle")}</h2>
-            </header>
-            <div id="favoriteGrid" className="favorite-grid">
-              {favorites.map((item) =>
-                (() => {
-                  const liveDestination = destinationCounts[item.destination];
-                  const livePrice = liveDestination?.minPrice ?? item.price;
-                  const liveCount = liveDestination?.count ?? 0;
-                  return (
-                    <article
-                      key={item.destination}
-                      className="favorite-card"
-                      style={{ backgroundImage: `url('${item.image}')` }}
-                      onClick={() => openFavoriteSearch(item)}
-                    >
-                      <div className="favorite-card__body">
-                        <h3>{item.destination}</h3>
-                        <span className="price-pill">
-                          {t("from")} {formatPrice(livePrice)}
-                        </span>
-                        {liveCount > 0 && (
-                          <span className="favorite-card__count">
-                            {liveCount.toLocaleString("cs-CZ")} termínů
-                          </span>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })(),
-              )}
-            </div>
-          </div>
-        </section>
+        <FavoriteDestinations
+          favorites={favorites}
+          destinationCounts={destinationCounts}
+          onClick={openFavoriteSearch}
+          t={t}
+        />
 
         <section id="sluzby" className="section section-social">
           <div className="container social-banner">
@@ -731,13 +484,13 @@ export default function HomePage() {
       <footer id="kontakt" className="footer">
         <div className="container footer-main">
           <div>
-            <h5>{t("footerCity")}</h5>
+            <h4>{t("footerCity")}</h4>
             <p>SkyTravel</p>
             <p>Křižíkova 6, Praha</p>
             <p>{t("footerHours")}</p>
           </div>
           <div>
-            <h5>{t("footerContact")}</h5>
+            <h4>{t("footerContact")}</h4>
             <p>
               <a href="tel:+420721163860">+420 721 163 860</a>
             </p>
@@ -749,7 +502,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="newsletter">
-            <h5>{t("footerNewsTitle")}</h5>
+            <h4>{t("footerNewsTitle")}</h4>
             <input type="email" placeholder={t("modalEmailPlaceholder")} />
             <label>
               <input type="checkbox" /> {t("modalConsentGdpr")}{" "}
@@ -786,10 +539,3 @@ export default function HomePage() {
   );
 }
 
-function getPartnerTourDetailsFromApi(tour: PartnerTour) {
-  return new Promise<{ source: string }>((resolve) => {
-    window.setTimeout(() => {
-      resolve({ source: `Zdroj: API partnera (${tour.hotel}) - pouze pro čtení` });
-    }, 220);
-  });
-}

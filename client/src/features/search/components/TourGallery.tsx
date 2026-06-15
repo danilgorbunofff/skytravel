@@ -11,6 +11,7 @@ export function TourGallery({ photos, alt }: Props) {
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const thumbsRef = useRef<HTMLDivElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   const hasMultiple = photos.length > 1;
   const currentPhoto = photos[index] ?? "/placeholder-tour.svg";
@@ -23,6 +24,18 @@ export function TourGallery({ photos, alt }: Props) {
     setIndex((i) => (i + 1) % photos.length);
   }, [photos.length]);
 
+  // Arrow key navigation on main gallery
+  useEffect(() => {
+    const el = galleryRef.current;
+    if (!el || !hasMultiple) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+    }
+    el.addEventListener("keydown", handleKey);
+    return () => el.removeEventListener("keydown", handleKey);
+  }, [hasMultiple, prev, next]);
+
   // Scroll active thumb into view
   useEffect(() => {
     const el = thumbsRef.current?.children[index] as HTMLElement | undefined;
@@ -31,7 +44,7 @@ export function TourGallery({ photos, alt }: Props) {
 
   return (
     <>
-      <div className="tour-gallery">
+      <div className="tour-gallery" tabIndex={hasMultiple ? 0 : -1}>
         <div className="tour-gallery__main" onClick={() => setLightbox(true)}>
           <img
             src={currentPhoto}

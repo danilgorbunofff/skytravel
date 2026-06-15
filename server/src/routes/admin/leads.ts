@@ -2,6 +2,7 @@ import { Router } from "express";
 import prisma from "../../prisma.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { success, fail } from "../../lib/response.js";
+import { logAdminAction } from "../../middleware/auditLog.js";
 
 const router = Router();
 
@@ -32,6 +33,12 @@ router.delete(
       fail("INVALID_ID", "Invalid id.", 400);
     }
     await prisma.lead.delete({ where: { id } });
+    await logAdminAction({
+      action: "LEAD_DELETE",
+      target: `Lead#${id}`,
+      adminUser: req.session.adminLogin || "unknown",
+      ip: req.ip,
+    });
     res.status(204).send();
   }),
 );

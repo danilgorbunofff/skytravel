@@ -4,30 +4,30 @@ import { isPlausibleProviderPriceCzk, MIN_PROVIDER_TOUR_PRICE_CZK } from "./prov
 
 describe("isPlausibleProviderPriceCzk", () => {
   it("accepts prices above minimum", () => {
-    assert.equal(isPlausibleProviderPriceCzk(5000), true);
-    assert.equal(isPlausibleProviderPriceCzk(MIN_PROVIDER_TOUR_PRICE_CZK), true);
+    assert.strictEqual(isPlausibleProviderPriceCzk(5000), true);
+    assert.strictEqual(isPlausibleProviderPriceCzk(MIN_PROVIDER_TOUR_PRICE_CZK), true);
   });
 
   it("rejects prices below minimum", () => {
-    assert.equal(isPlausibleProviderPriceCzk(500), false);
-    assert.equal(isPlausibleProviderPriceCzk(0), false);
-    assert.equal(isPlausibleProviderPriceCzk(-100), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(500), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(0), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(-100), false);
   });
 
   it("rejects null and undefined", () => {
-    assert.equal(isPlausibleProviderPriceCzk(null), false);
-    assert.equal(isPlausibleProviderPriceCzk(undefined), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(null), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(undefined), false);
   });
 
   it("rejects NaN and Infinity", () => {
-    assert.equal(isPlausibleProviderPriceCzk(NaN), false);
-    assert.equal(isPlausibleProviderPriceCzk(Infinity), false);
-    assert.equal(isPlausibleProviderPriceCzk(-Infinity), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(NaN), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(Infinity), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(-Infinity), false);
   });
 });
 
 describe("MIN_PROVIDER_TOUR_PRICE_CZK", () => {
-  it("defaults to 1000", () => {
-    assert.equal(MIN_PROVIDER_TOUR_PRICE_CZK, 1000);
+  it("defaults to 4990", () => {
+    assert.strictEqual(MIN_PROVIDER_TOUR_PRICE_CZK, 4990);
   });
 });

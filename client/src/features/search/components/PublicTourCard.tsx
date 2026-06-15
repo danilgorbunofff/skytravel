@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Heart, Search, Plane, Bus, Car, Calendar, Layers } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
+import { Heart, Search, Plane, Bus, Car, Train, Ship, Layers, Moon, Utensils, Coffee } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
@@ -51,19 +51,43 @@ const TRANSPORT_ICONS: Record<string, typeof Plane> = {
   plane: Plane,
   bus: Bus,
   car: Car,
+  train: Train,
+  boat: Ship,
 };
 
+const BOARD_ICONS: Record<string, typeof Moon> = {
+  AI: Moon,
+  UAI: Moon,
+  FB: Utensils,
+  HB: Utensils,
+  BB: Coffee,
+  RO: Coffee,
+  SC: Coffee,
+};
+
+/** Props for {@link PublicTourCard}. */
 interface Props {
+  /** Translation function. */
   t: (key: TranslationKey) => string;
+  /** Tour data to display. */
   tour: UnifiedTour;
+  /** Layout mode: grid card or list row. */
   viewMode: "grid" | "list";
+  /** Whether the tour is saved in the user's favorites. */
   isFavorite: boolean;
+  /** Toggle favorite status. */
   onToggleFavorite: () => void;
+  /** Open the detail modal for this tour. */
   onOpenDetail: () => void;
+  /** Human-readable provider name shown as a badge. */
   providerLabel?: string;
+  /** Index for staggered entrance animation delay. */
   animationIndex?: number;
+  /** Whether this tour is in the comparison tray. */
   isCompared?: boolean;
+  /** Add or remove from the comparison list. */
   onToggleCompare?: () => void;
+  /** Whether the comparison list has reached its capacity. */
   compareFull?: boolean;
 }
 
@@ -97,6 +121,25 @@ export const PublicTourCard = memo(function PublicTourCard({
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
   const transportLabels = getTransportLabel(t);
 
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setImageLoaded(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [viewMode]);
+
   const staggerStyle = {
     "--card-index": animationIndex,
     animationDelay: `${Math.min(animationIndex * 50, 300)}ms`,
@@ -104,6 +147,8 @@ export const PublicTourCard = memo(function PublicTourCard({
 
   // Grid view
   if (viewMode === "grid") {
+    const BoardIcon = tour.board ? BOARD_ICONS[tour.board] ?? null : null;
+
     return (
       <article
         className="tour-card tour-card--grid"
@@ -114,23 +159,33 @@ export const PublicTourCard = memo(function PublicTourCard({
         style={staggerStyle}
       >
         <div className="tour-card__image">
-          <img
-            src={imageSrc}
-            srcSet={srcSet}
-            sizes={srcSet ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" : undefined}
-            alt={tour.title}
-            loading="lazy"
-            decoding="async"
-            width={640}
-            height={400}
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if (!img.dataset.fallback) {
-                img.dataset.fallback = "1";
-                img.src = "/placeholder-tour.svg";
-              }
-            }}
-          />
+          {imageLoaded ? (
+            <img
+              src={imageSrc}
+              srcSet={srcSet}
+              sizes={srcSet ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" : undefined}
+              alt={tour.title}
+              loading="lazy"
+              decoding="async"
+              width={640}
+              height={400}
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.dataset.fallback) {
+                  img.dataset.fallback = "1";
+                  img.src = "/placeholder-tour.svg";
+                }
+              }}
+            />
+          ) : (
+            <div
+              ref={imgRef}
+              aria-hidden="true"
+              className="w-full h-full bg-slate-200 dark:bg-slate-700"
+            />
+          )}
+
+          {/* Favorite heart button */}
           <button
             type="button"
             className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
@@ -139,6 +194,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           >
             <Heart size={16} aria-hidden="true" />
           </button>
+
           {onToggleCompare && (
             <button
               type="button"
@@ -150,11 +206,29 @@ export const PublicTourCard = memo(function PublicTourCard({
               <Layers size={14} aria-hidden="true" />
             </button>
           )}
+
+          {/* Discount badge */}
           {discount && (
             <span className="tour-card__discount">-{discount.percent}%</span>
           )}
+
+          {/* Duration badge (X nocí) */}
+          {tour.nights != null && (
+            <span className="tour-card__nights-badge">
+              {tour.nights} {t("nights")}
+            </span>
+          )}
+
+          {/* Provider label */}
           {providerLabel && (
             <span className="tour-card__provider">{providerLabel}</span>
+          )}
+
+          {/* Offers count badge */}
+          {(tour.offersCount ?? 0) > 1 && (
+            <span className="tour-card__offers-badge">
+              {tour.offersCount} {t("sStateTerms")}
+            </span>
           )}
         </div>
 
@@ -167,11 +241,6 @@ export const PublicTourCard = memo(function PublicTourCard({
               <TransportIcon size={14} aria-hidden="true" />
               {transportLabels[tour.transport] ?? tour.transport}
             </span>
-            {tour.nights != null && (
-              <span className="tour-card__meta-item">
-                {tour.nights} {t("nights")}
-              </span>
-            )}
             {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
               <span className="tour-card__meta-item tour-card__stars">
                 {"★".repeat(Math.min(5, Math.max(1, Math.round(Number(tour.stars)))))}
@@ -179,13 +248,18 @@ export const PublicTourCard = memo(function PublicTourCard({
             )}
           </div>
 
+          {/* Board with icon */}
           {tour.board && (
-            <div className="tour-card__board">{tour.board}</div>
+            <div className="tour-card__board">
+              {BoardIcon && <BoardIcon size={12} aria-hidden="true" />}
+              <span>{tour.board}</span>
+            </div>
           )}
 
+          {/* Dates with transport icon */}
           {tour.startDate && (
             <div className="tour-card__dates">
-              <Calendar size={12} aria-hidden="true" />
+              <TransportIcon size={12} aria-hidden="true" />
               {fmtDate(tour.startDate)}
               {tour.endDate && ` – ${fmtDate(tour.endDate)}`}
             </div>
@@ -208,18 +282,14 @@ export const PublicTourCard = memo(function PublicTourCard({
               </div>
             )}
           </div>
-
-          {(tour.offersCount ?? 0) > 1 && (
-            <div className="tour-card__offers-count">
-              {tour.offersCount} {t("sStateTerms")} →
-            </div>
-          )}
         </div>
       </article>
     );
   }
 
   // List view
+  const BoardIcon = tour.board ? BOARD_ICONS[tour.board] ?? null : null;
+
   return (
     <article
       className="tour-card tour-card--list"
@@ -230,25 +300,58 @@ export const PublicTourCard = memo(function PublicTourCard({
       style={staggerStyle}
     >
       <div className="tour-card__image tour-card__image--list">
-        <img
-          src={imageSrc}
-          srcSet={srcSet}
-          sizes="200px"
-          alt={tour.title}
-          loading="lazy"
-          decoding="async"
-          width={200}
-          height={140}
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = "1";
-              img.src = "/placeholder-tour.svg";
-            }
-          }}
-        />
+        {imageLoaded ? (
+          <img
+            src={imageSrc}
+            srcSet={srcSet}
+            sizes="200px"
+            alt={tour.title}
+            loading="lazy"
+            decoding="async"
+            width={200}
+            height={140}
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallback) {
+                img.dataset.fallback = "1";
+                img.src = "/placeholder-tour.svg";
+              }
+            }}
+          />
+        ) : (
+          <div
+            ref={imgRef}
+            aria-hidden="true"
+            className="w-full h-full bg-slate-200 dark:bg-slate-700"
+          />
+        )}
+
+        {/* Favorite heart button on image */}
+        <button
+          type="button"
+          className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
+          aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
+          onClick={(event) => stopCardAction(event, onToggleFavorite)}
+        >
+          <Heart size={16} aria-hidden="true" />
+        </button>
+
         {discount && (
           <span className="tour-card__discount">-{discount.percent}%</span>
+        )}
+
+        {/* Duration badge (X nocí) */}
+        {tour.nights != null && (
+          <span className="tour-card__nights-badge">
+            {tour.nights} {t("nights")}
+          </span>
+        )}
+
+        {/* Offers count badge */}
+        {(tour.offersCount ?? 0) > 1 && (
+          <span className="tour-card__offers-badge">
+            {tour.offersCount} {t("sStateTerms")}
+          </span>
         )}
       </div>
 
@@ -269,14 +372,15 @@ export const PublicTourCard = memo(function PublicTourCard({
             <TransportIcon size={14} aria-hidden="true" />
             {transportLabels[tour.transport] ?? tour.transport}
           </span>
-          {tour.nights != null && (
-            <span className="tour-card__meta-item">{tour.nights} {t("nights")}</span>
-          )}
           {tour.board && (
-            <span className="tour-card__meta-item">{tour.board}</span>
+            <span className="tour-card__meta-item">
+              {BoardIcon && <BoardIcon size={12} aria-hidden="true" />}
+              {tour.board}
+            </span>
           )}
           {tour.startDate && (
             <span className="tour-card__meta-item">
+              <TransportIcon size={12} aria-hidden="true" />
               {fmtDate(tour.startDate)}
               {tour.endDate && `–${fmtDate(tour.endDate)}`}
             </span>
@@ -285,21 +389,10 @@ export const PublicTourCard = memo(function PublicTourCard({
 
         <div className="tour-card__list-actions">
           <div className="tour-card__price-row">
-            <strong>{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}</strong>
+            <strong className="tour-card__price-strong">{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}</strong>
             {discount && <s className="tour-card__original-price">{formatPrice(tour.originalPrice)}</s>}
             {discount && <span className="tour-card__discount-inline">-{discount.percent}%</span>}
           </div>
-          {(tour.offersCount ?? 0) > 1 && (
-            <span className="tour-card__offers-count">{tour.offersCount} {t("sStateTerms")}</span>
-          )}
-          <button
-            type="button"
-            className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
-            aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
-            onClick={(event) => stopCardAction(event, onToggleFavorite)}
-          >
-            <Heart size={16} aria-hidden="true" />
-          </button>
           <button
             type="button"
             className="tour-card__detail-btn"

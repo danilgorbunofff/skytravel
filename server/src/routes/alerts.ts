@@ -4,6 +4,7 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { validateBody } from "../middleware/validate.js";
 import { createAlertSchema } from "../validators/alerts.js";
 import { success } from "../lib/response.js";
+import { hashEmail } from "../lib/hash.js";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -38,6 +39,7 @@ router.post(
     await prisma.priceAlert.create({
       data: {
         email,
+        hashedEmail: hashEmail(email),
         providerId,
         externalId,
         tourTitle: tourTitle ?? "",

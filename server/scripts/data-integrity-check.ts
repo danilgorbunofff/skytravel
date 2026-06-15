@@ -5,9 +5,16 @@
  * Reports orphaned records and optionally cleans them up.
  * Pass --fix to actually delete orphans (default: dry-run).
  */
-import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "../src/generated/prisma/client/client.js";
 
-const prisma = new PrismaClient();
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error("DATABASE_URL is required");
+}
+
+const adapter = new PrismaMariaDb(dbUrl);
+const prisma = new PrismaClient({ adapter });
 const fix = process.argv.includes("--fix");
 
 async function main() {

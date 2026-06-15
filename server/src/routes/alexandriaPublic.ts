@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { LRUCache } from "lru-cache";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import {
   fetchAlexandriaParsed,
@@ -6,21 +7,26 @@ import {
   type AlexandriaTourInput,
 } from "../lib/alexandria.js";
 import { isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
+import { config } from "../config.js";
 
 const router = Router();
 
-// ── Shared in-memory cache (same TTL as admin route) ────────────────
-const feedCacheMap = new Map<number, { data: AlexandriaTourInput[]; ts: number }>();
+// ── Shared in-memory LRU cache (same TTL as admin route) ────────────
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
-const ALEXANDRIA_COUNTRY = Number(process.env.ALEXANDRIA_COUNTRY || 107);
+
+const feedCache = new LRUCache<number, { data: AlexandriaTourInput[]; ts: number }>({
+  max: 10,          // max 10 countries cached
+  ttl: CACHE_TTL,   // auto-expire entries after TTL
+});
+const ALEXANDRIA_COUNTRY = config.alexandria.country;
 
 async function getCachedFeed(countryId?: number): Promise<AlexandriaTourInput[]> {
   const zeme = countryId ?? ALEXANDRIA_COUNTRY;
-  const cached = feedCacheMap.get(zeme);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data;
+  const cached = feedCache.get(zeme);
+  if (cached) return cached.data;
   const parsed = await fetchAlexandriaParsed(zeme);
   const mapped = extractToursFromParsed(parsed);
-  feedCacheMap.set(zeme, { data: mapped, ts: Date.now() });
+  feedCache.set(zeme, { data: mapped, ts: Date.now() });
   return mapped;
 }
 

@@ -8,7 +8,9 @@ import session from "express-session";
 import path from "node:path";
 import { config } from "./config.js";
 import { ApiError } from "./lib/ApiError.js";
+import pinoHttp from "pino-http";
 import { logger } from "./lib/logger.js";
+import { Prisma } from "./generated/prisma/client/client.js";
 import { sessionStore } from "./lib/sessionStore.js";
 import publicRoutes from "./routes/public.js";
 import alexandriaPublicRoutes from "./routes/alexandriaPublic.js";
@@ -18,7 +20,13 @@ import alertsRouter from "./routes/alerts.js";
 import erasureRouter from "./routes/erasure.js";
 import { searchTimingMiddleware } from "./middleware/searchTiming.js";
 import healthRoutes from "./routes/health.js";
+import sitemapRouter from "./routes/sitemap.xml.js";
 import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf.js";
+
+// Sentry — disabled unless SENTRY_DSN is configured
+if (process.env.SENTRY_DSN) {
+  console.warn("[sentry] SENTRY_DSN is set but Sentry SDK is not installed. Install @sentry/node to enable error tracking.");
+}
 
 export function createApp() {
   const app = express();
@@ -48,24 +56,32 @@ export function createApp() {
   // ── Response compression ──────────────────────────────────────────────
   app.use(compression());
 
-  // ── Request ID + logging ──────────────────────────────────────────────
-  app.use((req, res, next) => {
-    const requestId = crypto.randomUUID();
-    (req as unknown as Record<string, unknown>).id = requestId;
-    const start = Date.now();
-    res.on("finish", () => {
-      if (req.path === "/api/health") return; // skip noisy health polls
-      logger.info(
-        {
-          req: { method: req.method, url: req.originalUrl, id: requestId },
+  // ── Structured request logging (pino-http) ──────────────────────────
+  app.use(
+    pinoHttp({
+      logger,
+      genReqId: () => crypto.randomUUID(),
+      autoLogging: {
+        ignore: (req) => req.url?.startsWith("/api/health"),
+      },
+      serializers: {
+        req: (req) => ({
+          method: req.method,
+          url: req.url,
+          id: req.id,
+        }),
+        res: (res) => ({
           statusCode: res.statusCode,
-          duration: Date.now() - start,
-        },
-        "request",
-      );
-    });
-    next();
-  });
+        }),
+      },
+      customLogLevel: (res, err) => {
+        const code = res.statusCode ?? 500;
+        if (code >= 500) return "error";
+        if (code >= 400) return "warn";
+        return "info";
+      },
+    }),
+  );
 
   // ── CORS ──────────────────────────────────────────────────────────────
   app.use(
@@ -94,7 +110,7 @@ export function createApp() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: config.isProd ? "strict" : "lax",
         secure: config.isProd,
         maxAge: 1000 * 60 * 60 * 8, // 8 hours
       },
@@ -149,6 +165,17 @@ export function createApp() {
     },
   });
 
+  const toursLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: config.isProd ? 30 : 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      ok: false,
+      error: { code: "RATE_LIMITED", message: "Too many tour requests. Try again later." },
+    },
+  });
+
   app.use("/api/admin/login", loginLimiter);
   app.use("/api/inquiries", inquiryLimiter);
   app.use("/api/search", publicSearchLimiter);
@@ -165,19 +192,24 @@ export function createApp() {
     }),
   );
 
-  app.get("/api/test-ip", async (_req, res) => {
-    try {
-      const response = await fetch("https://api64.ipify.org?format=json");
-      const data = (await response.json()) as { ip: string };
-      res.json({ outboundIp: data.ip });
-    } catch {
-      res.status(500).json({ error: "Failed to discover outbound IP" });
-    }
-  });
+  if (!config.isProd) {
+    app.get("/api/test-ip", async (_req, res) => {
+      try {
+        const response = await fetch("https://api64.ipify.org?format=json");
+        const data = (await response.json()) as { ip: string };
+        res.json({ outboundIp: data.ip });
+      } catch {
+        res.status(500).json({ error: "Failed to discover outbound IP" });
+      }
+    });
+  }
 
   app.use("/api", publicRoutes);
   app.use("/api/alexandria", alexandriaPublicRoutes);
-  app.use("/api/search", providerSearchPublicRoutes);
+  app.use("/api/search", (req, res, next) => {
+    if (req.path === "/bootstrap") return next();
+    toursLimiter(req, res, next);
+  }, providerSearchPublicRoutes);
   app.use("/api/admin", csrfProtectionMiddleware);
   app.use("/api/admin", adminRoutes);
   app.use("/api/alerts", alertsRouter);
@@ -193,6 +225,9 @@ export function createApp() {
     },
   });
   app.use("/api/erasure", erasureLimiter, erasureRouter);
+
+  // ── Sitemap ───────────────────────────────────────────────────────────
+  app.use(sitemapRouter);
 
   // ── 404 handler ───────────────────────────────────────────────────────
   app.use((_req: express.Request, res: express.Response) => {
@@ -214,7 +249,7 @@ export function createApp() {
         return;
       }
 
-      if (err.constructor.name === "PrismaClientKnownRequestError") {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
         logger.error({ err }, "Prisma error");
         res
           .status(409)
