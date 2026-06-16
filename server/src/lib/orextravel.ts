@@ -67,7 +67,13 @@ function parseSamoXml(xml: string): Record<string, unknown> {
 /** Safely extract Response.Data from parsed SAMO XML. */
 function samoData(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
   const response = parsed.Response as Record<string, unknown> | undefined;
-  return response?.Data as Record<string, unknown> | undefined;
+  if (!response) return undefined;
+  // Check for API-level error (e.g. invalid key, blacklisted IP)
+  const error = response.Error as string | undefined;
+  if (typeof error === "string" && error.length > 0) {
+    throw new Error(`Orextravel API error: ${error}`);
+  }
+  return response.Data as Record<string, unknown> | undefined;
 }
 
 /** Ensure value is an array (like ensureArray for XML nodes). */
