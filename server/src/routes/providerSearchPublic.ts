@@ -352,7 +352,14 @@ router.get(
 // ── Bootstrap: providers + all regions in a single response ──────────
 // Reduces SearchPage init from 1+N HTTP round-trips (providers + regions
 // per provider) to a single round-trip that the browser can ETag-cache.
-const BOOTSTRAP_REGION_TIMEOUT_MS = 8000;
+const BOOTSTRAP_REGION_TIMEOUT_MS = 5000;
+const BOOTSTRAP_CACHE_TTL_MS = 60_000;
+
+let bootstrapCache: {
+  body: string;
+  etag: string;
+  cachedAt: number;
+} | null = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -363,32 +370,48 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
+async function fetchRegionsByProvider(): Promise<Record<string, readonly unknown[]>> {
+  const providers = getAllProviders();
+  const entries = await Promise.all(
+    providers.map(async (meta) => {
+      try {
+        const provider = getProvider(meta.id);
+        const items = await withTimeout(
+          provider.getRegions(),
+          BOOTSTRAP_REGION_TIMEOUT_MS,
+          `bootstrap regions ${meta.id}`,
+        );
+        return [meta.id, items] as const;
+      } catch (err) {
+        logger.warn({ err }, `[PublicSearch] bootstrap regions failed for ${meta.id}`);
+        return [meta.id, []] as const;
+      }
+    }),
+  );
+  const regionsByProvider: Record<string, readonly unknown[]> = {};
+  for (const [id, items] of entries) regionsByProvider[id] = items;
+  return regionsByProvider;
+}
+
 router.get(
   "/bootstrap",
   asyncHandler(async (req: Request, res: Response) => {
-    const providers = getAllProviders();
-    const entries = await Promise.all(
-      providers.map(async (meta) => {
-        try {
-          const provider = getProvider(meta.id);
-          const items = await withTimeout(
-            provider.getRegions(),
-            BOOTSTRAP_REGION_TIMEOUT_MS,
-            `bootstrap regions ${meta.id}`,
-          );
-          return [meta.id, items] as const;
-        } catch (err) {
-          logger.warn({ err }, `[PublicSearch] bootstrap regions failed for ${meta.id}`);
-          return [meta.id, []] as const;
-        }
-      }),
-    );
-    const regionsByProvider: Record<string, readonly unknown[]> = {};
-    for (const [id, items] of entries) regionsByProvider[id] = items;
+    // Serve from in-memory cache if fresh (<60s old)
+    const now = Date.now();
+    if (bootstrapCache && now - bootstrapCache.cachedAt < BOOTSTRAP_CACHE_TTL_MS) {
+      if (req.headers["if-none-match"] === bootstrapCache.etag) {
+        res.status(304).end();
+        return;
+      }
+      res.setHeader("ETag", bootstrapCache.etag);
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+      res.type("json").send(bootstrapCache.body);
+      return;
+    }
 
-    // Version derived from the most recent ProviderSync.lastSyncAt across
-    // all providers. Used as an ETag so the browser returns 304 until the
-    // server-side cache actually changes.
+    const providers = getAllProviders();
+    const regionsByProvider = await fetchRegionsByProvider();
+
     const versionParts = providers.map((p) => p.cacheStatus?.lastRefresh ?? 0).join(":");
     const etag = `W/"bootstrap-${Buffer.from(versionParts).toString("base64").slice(0, 24)}"`;
 
@@ -397,9 +420,12 @@ router.get(
       return;
     }
 
+    const body = JSON.stringify({ providers, regionsByProvider, version: etag });
+    bootstrapCache = { body, etag, cachedAt: now };
+
     res.setHeader("ETag", etag);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-    res.json({ providers, regionsByProvider, version: etag });
+    res.type("json").send(body);
   }),
 );
 
