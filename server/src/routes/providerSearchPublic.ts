@@ -352,6 +352,17 @@ router.get(
 // ── Bootstrap: providers + all regions in a single response ──────────
 // Reduces SearchPage init from 1+N HTTP round-trips (providers + regions
 // per provider) to a single round-trip that the browser can ETag-cache.
+const BOOTSTRAP_REGION_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`timeout: ${label}`)), ms),
+    ),
+  ]);
+}
+
 router.get(
   "/bootstrap",
   asyncHandler(async (req: Request, res: Response) => {
@@ -360,7 +371,11 @@ router.get(
       providers.map(async (meta) => {
         try {
           const provider = getProvider(meta.id);
-          const items = await provider.getRegions();
+          const items = await withTimeout(
+            provider.getRegions(),
+            BOOTSTRAP_REGION_TIMEOUT_MS,
+            `bootstrap regions ${meta.id}`,
+          );
           return [meta.id, items] as const;
         } catch (err) {
           logger.warn({ err }, `[PublicSearch] bootstrap regions failed for ${meta.id}`);
