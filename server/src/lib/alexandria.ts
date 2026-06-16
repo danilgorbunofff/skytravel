@@ -163,7 +163,14 @@ function selectCenaPrice(
     .filter((candidate) => Number.isFinite(candidate.price) && candidate.price > 0)
     .sort(
       (left, right) =>
-        right.score - left.score || left.price - right.price || left.index - right.index,
+        // Sort by score descending, then by price (ascending when labels
+        // exist for cheaper base price; descending when no labels so the
+        // highest price — most likely the base adult fare — wins).
+        right.score - left.score ||
+        (left.score === 0 && right.score === 0
+          ? right.price - left.price
+          : left.price - right.price) ||
+        left.index - right.index,
     );
   const best = candidates[0];
   if (!best) return 0;
