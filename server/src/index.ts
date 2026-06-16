@@ -58,8 +58,8 @@ ensureAdminUser()
                   (provider as Record<string, unknown>).loadCacheStatus as () => Promise<void>
                 )();
               }
-            } catch {
-              /* ignore */
+            } catch (err) {
+              logger.warn({ err, provider: meta.id }, '[Cache] loadCacheStatus failed');
             }
           }),
         );
@@ -100,8 +100,8 @@ ensureAdminUser()
             }, provider.refreshIntervalMs);
             // Trigger one immediate refresh after the stagger so cold deploys
             // don't have to wait the full interval.
-            provider.warmCache().catch(() => {
-              /* logged elsewhere */
+            provider.warmCache().catch((err) => {
+              logger.error({ err }, `[Cache] ${meta.id} background refresh failed`);
             });
           }, initialDelay);
           logger.info(

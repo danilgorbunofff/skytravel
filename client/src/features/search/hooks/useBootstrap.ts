@@ -61,7 +61,7 @@ export function useBootstrap(): BootstrapState {
     if (cached) {
       setDestinationsState({
         status: "ready",
-        items: cached.items.filter((item) => item.count > 0),
+        items: cached.items,
         message: null,
       });
     } else {
@@ -73,7 +73,7 @@ export function useBootstrap(): BootstrapState {
         if (cancelled) return;
         setDestinationsState({
           status: "ready",
-          items: data.items.filter((item) => item.count > 0),
+          items: data.items,
           message: null,
         });
       })
