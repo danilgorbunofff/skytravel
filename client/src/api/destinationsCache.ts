@@ -6,6 +6,7 @@
 // ──────────────────────────────────────────────
 
 import type { PublicDestinationSummary } from "../types/providers";
+import { safeParseJSON } from "./safeParseJSON";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const STORAGE_PREFIX = "skytravel:destinations:v1:";
@@ -91,13 +92,13 @@ export function loadDestinations(providerId?: string): {
         return { items: cached.items, fromCache: true };
       }
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = (await safeParseJSON(res).catch(() => ({}))) as Record<string, string>;
         throw new Error(
           (body as Record<string, string>)?.error || `Request failed with status ${res.status}`,
         );
       }
       const etag = res.headers.get("ETag");
-      const data = (await res.json()) as { items: PublicDestinationSummary[] };
+      const data = await safeParseJSON<{ items: PublicDestinationSummary[] }>(res, "destinace");
       writeCache(providerId, data.items, etag);
       return { items: data.items, fromCache: false };
     });

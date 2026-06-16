@@ -6,6 +6,7 @@ import type {
   UnifiedFilters,
   UnifiedTour,
 } from "../types/providers";
+import { safeParseJSON } from "./safeParseJSON";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -21,7 +22,7 @@ function filtersToParams(filters: UnifiedFilters): URLSearchParams {
 
 async function throwIfNotOk(res: Response): Promise<void> {
   if (res.ok) return;
-  const body = await res.json().catch(() => ({}));
+  const body = (await safeParseJSON(res).catch(() => ({}))) as Record<string, unknown>;
   const rawError = (body as Record<string, unknown>)?.error;
   const message =
     typeof rawError === "string"
@@ -35,7 +36,7 @@ async function throwIfNotOk(res: Response): Promise<void> {
 export async function fetchPublicProviders(): Promise<ProviderMeta[]> {
   const res = await fetch(`${API_URL}/api/search/providers`);
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ providers: ProviderMeta[] }>(res, "poskytovatelé");
   return data.providers as ProviderMeta[];
 }
 
@@ -48,7 +49,7 @@ export type PublicBootstrap = {
 export async function fetchPublicBootstrap(): Promise<PublicBootstrap> {
   const res = await fetch(`${API_URL}/api/search/bootstrap`);
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<PublicBootstrap>(res, "inicializační data");
   return {
     providers: data.providers as ProviderMeta[],
     regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
@@ -64,7 +65,7 @@ export async function fetchPublicDestinations(
   const query = params.toString();
   const res = await fetch(`${API_URL}/api/search/destinations${query ? `?${query}` : ""}`);
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ items: PublicDestinationSummary[] }>(res, "destinace");
   return data.items as PublicDestinationSummary[];
 }
 
@@ -78,7 +79,7 @@ export async function fetchPublicProviderRegions(
     `${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/regions${query ? `?${query}` : ""}`,
   );
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ items: ProviderRegion[] }>(res, "regiony poskytovatele");
   return data.items as ProviderRegion[];
 }
 
@@ -91,7 +92,7 @@ export async function fetchPublicProviderTours(
     `${API_URL}/api/search/providers/${encodeURIComponent(providerId)}/tours?${params}`,
   );
   await throwIfNotOk(res);
-  return res.json() as Promise<ToursResult>;
+  return safeParseJSON<ToursResult>(res, "zájezdy poskytovatele");
 }
 
 export async function fetchPublicAllProviderTours(
@@ -101,7 +102,7 @@ export async function fetchPublicAllProviderTours(
   const params = filtersToParams(filters);
   const res = await fetch(`${API_URL}/api/search/all/tours?${params}`, { signal });
   await throwIfNotOk(res);
-  return res.json() as Promise<ToursResult>;
+  return safeParseJSON<ToursResult>(res, "všechny zájezdy");
 }
 
 export async function fetchPublicProviderOfferGroup(
@@ -117,7 +118,7 @@ export async function fetchPublicProviderOfferGroup(
     { signal },
   );
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ items: UnifiedTour[] }>(res, "skupina nabídek");
   return data.items as UnifiedTour[];
 }
 
@@ -129,6 +130,6 @@ export async function fetchPublicSingleTour(
     `${API_URL}/api/search/tour/${encodeURIComponent(providerId)}/${encodeURIComponent(externalId)}`,
   );
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ tour: UnifiedTour }>(res, "detail zájezdu");
   return data.tour as UnifiedTour;
 }

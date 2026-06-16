@@ -6,6 +6,7 @@ import type {
   ToursResult,
   UnifiedFilters,
 } from "../types/providers";
+import { safeParseJSON } from "./safeParseJSON";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -23,7 +24,7 @@ function filtersToParams(filters: UnifiedFilters): URLSearchParams {
 
 async function throwIfNotOk(res: Response): Promise<void> {
   if (res.ok) return;
-  const body = await res.json().catch(() => ({}));
+  const body = (await safeParseJSON(res).catch(() => ({}))) as Record<string, string>;
   throw new Error(
     (body as Record<string, string>)?.error || `Request failed with status ${res.status}`,
   );
@@ -36,7 +37,7 @@ export async function fetchProviders(): Promise<ProviderMeta[]> {
     credentials: "include",
   });
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ providers: ProviderMeta[] }>(res, "poskytovatelé");
   return data.providers as ProviderMeta[];
 }
 
@@ -46,7 +47,7 @@ export async function fetchProviderRegions(providerId: string): Promise<Provider
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<{ items: ProviderRegion[] }>(res, "regiony poskytovatele");
   return data.items as ProviderRegion[];
 }
 
@@ -60,7 +61,7 @@ export async function fetchProviderTours(
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  return res.json() as Promise<ToursResult>;
+  return safeParseJSON<ToursResult>(res, "zájezdy poskytovatele");
 }
 
 export async function importProviderTours(
@@ -78,7 +79,7 @@ export async function importProviderTours(
     },
   );
   await throwIfNotOk(res);
-  return res.json() as Promise<ImportResult>;
+  return safeParseJSON<ImportResult>(res, "import zájezdů");
 }
 
 export async function refreshProviderCache(providerId: string): Promise<void> {
@@ -95,7 +96,7 @@ export async function fetchProviderCacheStatus(providerId: string): Promise<Cach
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  return res.json() as Promise<CacheStatus>;
+  return safeParseJSON<CacheStatus>(res, "stav cache");
 }
 
 export type AdminBootstrap = {
@@ -108,7 +109,7 @@ export async function fetchAdminBootstrap(): Promise<AdminBootstrap> {
     credentials: "include",
   });
   await throwIfNotOk(res);
-  const data = await res.json();
+  const data = await safeParseJSON<AdminBootstrap>(res, "admin inicializace");
   return {
     providers: data.providers as ProviderMeta[],
     regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
