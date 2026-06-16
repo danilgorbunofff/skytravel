@@ -31,11 +31,17 @@ import {
   type TourQuery,
 } from "./BaseProvider.js";
 
-// ── Hardcoded known countries (replaces 200-ID probe loop) ──────────
+// ── Alexandria country IDs (validated 2026-06-16 via API probe) ──────
+// zeme=0 returns a 153MB global XML — use per-country requests instead.
 const KNOWN_COUNTRIES: { id: number; name: string }[] = [
   { id: 53, name: "Bulharsko" },
   { id: 107, name: "Chorvatsko" },
-  { id: 147, name: "Itálie" },
+  { id: 2338, name: "Itálie" },       // was incorrectly 147
+  { id: 971, name: "Španělsko" },
+  { id: 976, name: "Řecko" },
+  { id: 5613, name: "Turecko" },
+  { id: 10475, name: "Albánie" },
+  { id: 11387, name: "Černá Hora" },
 ];
 
 export class AlexandriaProvider extends BaseProvider {

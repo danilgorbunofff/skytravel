@@ -111,8 +111,36 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
       {
         providerId: "alexandria",
         providerKey: "zeme",
-        providerValue: "147",
+        providerValue: "2338",
         providerLabel: "Itálie",
+      },
+    ],
+  },
+  {
+    slug: "albanie",
+    czechName: "Albánie",
+    canonicalName: "Albania",
+    aliases: ["albanie", "albánie", "albania"],
+    mappings: [
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "10475",
+        providerLabel: "Albánie",
+      },
+    ],
+  },
+  {
+    slug: "cerna-hora",
+    czechName: "Černá Hora",
+    canonicalName: "Montenegro",
+    aliases: ["cerna hora", "černá hora", "montenegro", "crna gora"],
+    mappings: [
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "11387",
+        providerLabel: "Černá Hora",
       },
     ],
   },
@@ -143,6 +171,12 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
         providerValue: "16",
         providerLabel: "Řecko",
       },
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "976",
+        providerLabel: "Řecko",
+      },
     ],
   },
   {
@@ -155,6 +189,12 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
         providerId: "orextravel",
         providerKey: "stateId",
         providerValue: "9",
+        providerLabel: "Turecko",
+      },
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "5613",
         providerLabel: "Turecko",
       },
     ],
@@ -175,6 +215,12 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
         providerId: "orextravel",
         providerKey: "stateId",
         providerValue: "15",
+        providerLabel: "Španělsko",
+      },
+      {
+        providerId: "alexandria",
+        providerKey: "zeme",
+        providerValue: "971",
         providerLabel: "Španělsko",
       },
     ],
