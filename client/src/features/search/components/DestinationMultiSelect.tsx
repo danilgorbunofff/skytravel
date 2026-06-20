@@ -38,11 +38,13 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
   return (
     <div className="destination-multi-select">
       {/* List */}
-      <div className="search-region-list">
+      <div className="search-region-list" role="radiogroup" aria-label={t("sDestination")}>
         <button
           type="button"
           className={!activeSlug ? "is-active" : ""}
           onClick={clearAll}
+          role="radio"
+          aria-checked={!activeSlug}
         >
           {t("sFilterAllDestinations")}
         </button>
@@ -54,7 +56,8 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
               type="button"
               className={isActive ? "is-active" : ""}
               onClick={() => toggle(d.slug)}
-              aria-pressed={isActive}
+              role="radio"
+              aria-checked={isActive}
             >
               {d.czechName}
               {d.count > 0 && <span className="region-count">({d.count})</span>}

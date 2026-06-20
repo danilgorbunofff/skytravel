@@ -43,7 +43,7 @@ export type UnifiedFilters = {
   dateEnd?: string;
   nights?: string;
   stars?: string;
-  board?: string;
+  board?: string | string[];
   adults?: number;
   children?: number;
   sortBy?: string;

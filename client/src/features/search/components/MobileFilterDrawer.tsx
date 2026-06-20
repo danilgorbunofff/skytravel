@@ -4,6 +4,7 @@ import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { SearchFilterState } from "../hooks/useSearchFilters";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { SearchFilters } from "./SearchFilters";
+import { useFocusTrap, useEscapeKey } from "../hooks/useFocusTrap";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -46,7 +47,8 @@ export function MobileFilterDrawer({
   onReset,
   filteredCount,
 }: Props) {
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useFocusTrap(open);
+  useEscapeKey(() => onClose(), open);
   const startY = useRef(0);
   const currentTranslate = useRef(0);
   const isDragging = useRef(false);

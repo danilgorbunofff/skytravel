@@ -18,6 +18,7 @@ export function NightsFilter({ t, value, onChange }: Props) {
           type="button"
           className={`nights-filter__btn${value === o.value ? " is-active" : ""}`}
           onClick={() => onChange(o.value)}
+          aria-pressed={value === o.value}
         >
           {o.label}
         </button>

@@ -151,7 +151,7 @@ function buildFilters(
     dateEnd,
     nights,
     stars,
-    board,
+    board: board ? board.split(",") : undefined,
     adults,
     children,
     sortBy,

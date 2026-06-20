@@ -207,12 +207,12 @@ export abstract class BaseProvider implements TourProvider {
   ): Prisma.ProviderTourWhereInput {
     const pf = filters.providerFilters;
     const transport = typeof pf.transport === "string" ? pf.transport : "";
-    const board =
-      typeof filters.board === "string"
-        ? filters.board
-        : typeof pf.board === "string"
-          ? pf.board
-          : "";
+    const boardArr: string[] =
+      Array.isArray(filters.board) ? filters.board :
+      typeof filters.board === "string" ? filters.board.split(",").filter(Boolean) :
+      Array.isArray(pf.board) ? pf.board :
+      typeof pf.board === "string" ? pf.board.split(",").filter(Boolean) :
+      [];
     const stars =
       typeof filters.stars === "string"
         ? filters.stars
@@ -237,7 +237,11 @@ export abstract class BaseProvider implements TourProvider {
 
     if (transport) where.transport = transport;
     else if (excludeTransport) where.transport = { not: excludeTransport };
-    if (board) where.board = board;
+    if (boardArr.length === 1) {
+      where.board = boardArr[0];
+    } else if (boardArr.length > 1) {
+      where.board = { in: boardArr };
+    }
     if (stars) {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {
@@ -272,6 +276,13 @@ export abstract class BaseProvider implements TourProvider {
       }
     }
 
+    if (filters.nights) {
+      const nightsRange = parseNightsRange(filters.nights);
+      if (nightsRange) {
+        where.nights = { gte: nightsRange.min, lte: nightsRange.max };
+      }
+    }
+
     return where;
   }
 
@@ -298,7 +309,13 @@ export abstract class BaseProvider implements TourProvider {
       prisma.providerTour.count({ where }),
     ]);
 
-    const filteredRows = this.filterRowsByNights(allFiltered, nightsRange);
+    const filteredRows = nightsRange
+      ? allFiltered.filter((row) => {
+          if (row.nights != null) return true; // already filtered by DB WHERE
+          const computedNights = nightsFromDates(row.startDate, row.endDate);
+          return computedNights != null && computedNights >= nightsRange.min && computedNights <= nightsRange.max;
+        })
+      : allFiltered;
     const rawFilteredOffers = nightsRange
       ? filteredRows.length
       : rawFilteredDb;

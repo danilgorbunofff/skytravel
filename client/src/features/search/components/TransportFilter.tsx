@@ -26,6 +26,7 @@ export function TransportFilter({ t, value, onChange }: Props) {
         type="button"
         className={`transport-filter__btn${!value ? " is-active" : ""}`}
         onClick={() => onChange("")}
+        aria-pressed={!value}
       >
         {t("sFilterAll")}
       </button>
@@ -38,6 +39,7 @@ export function TransportFilter({ t, value, onChange }: Props) {
             type="button"
             className={`transport-filter__btn${isActive ? " is-active" : ""}`}
             onClick={() => onChange(isActive ? "" : o.value)}
+            aria-pressed={isActive}
             title={o.label}
           >
             <Icon size={16} aria-hidden="true" />

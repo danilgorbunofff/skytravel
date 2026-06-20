@@ -173,10 +173,21 @@ export function useSearchFilters(
   );
 
   const resetFilters = useCallback(() => {
-    const next = new URLSearchParams();
+    const current = new URLSearchParams(searchParams);
+    const preserved: [string, string][] = [];
+    // Preserve search query
+    const q = current.get("q");
+    if (q) preserved.push(["q", q]);
+    // Preserve adults and children from hero section
+    const adults = current.get("adults");
+    if (adults) preserved.push(["adults", adults]);
+    const children = current.get("children");
+    if (children) preserved.push(["children", children]);
+
+    const next = new URLSearchParams(preserved);
     setSearchParams(next);
     setValidationError(null);
-  }, [setSearchParams]);
+  }, [setSearchParams, searchParams]);
 
   const toggleSort = useCallback(
     (nextSortBy: "price" | "date") => {
