@@ -33,7 +33,7 @@ Use conventional commits:
 
 ```
 feat: add price alert email notifications
-fix: correct date parsing for Orextravel provider
+fix: correct date parsing for Alexandria provider
 chore: update dependencies
 docs: add API endpoint reference
 ```

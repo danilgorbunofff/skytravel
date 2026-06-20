@@ -32,7 +32,6 @@ export default tseslint.config(
   {
     files: [
       "server/src/index.ts",
-      "server/src/lib/orextravel.ts",
       "server/src/providers/**/*.ts",
       "server/src/middleware/searchTiming.ts",
     ],

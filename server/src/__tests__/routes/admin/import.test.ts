@@ -84,19 +84,5 @@ describe("Admin import — provider dispatch", { skip: skipWithoutDb }, () => {
     },
   );
 
-  it("verifies import result contains created/updated counts", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/providers/orextravel/import")
-      .send({ ids: ["test-id-2"], regionCtx: {} });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.body.ok, true);
-    assert.equal(typeof res.body.data.created, "number");
-    assert.equal(typeof res.body.data.updated, "number");
-    assert.equal(typeof res.body.data.total, "number");
-    // Non-existent external IDs should result in 0 created/updated
-    assert.equal(res.body.data.created, 0);
-    assert.equal(res.body.data.updated, 0);
-    assert.equal(res.body.data.total, 0);
-  });
 });

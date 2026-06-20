@@ -157,7 +157,7 @@ Required in production:
 - `SESSION_SECRET` — min 32 chars, random
 - `CLIENT_ORIGIN` — e.g. `http://<PRODUCTION_SERVER_IP>:4173`
 - `ALEXANDRIA_API_KEY` — provider API key
-- `OREXTRAVEL_TOKEN` — provider token
+
 
 ---
 

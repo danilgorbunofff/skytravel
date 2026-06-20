@@ -110,7 +110,7 @@ import { PrismaClient } from "./generated/prisma/client/index.js";
 Search for all `from "@prisma/client"` imports and replace them. This affects:
 - `server/src/prisma.ts`
 - `server/src/providers/alexandriaProvider.ts` (line 6: `import { type Prisma } from "@prisma/client"`)
-- `server/src/providers/orextravelProvider.ts` (line 5: `import { type Prisma } from "@prisma/client"`)
+
 - Any other files importing from `@prisma/client`
 
 **New import pattern:**

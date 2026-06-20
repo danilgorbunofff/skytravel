@@ -70,26 +70,6 @@ ALEXANDRIA_COUNTRY=107
 
 ---
 
-## Orextravel Provider
-
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `OREXTRAVEL_API_URL` | Orextravel JSON REST endpoint | `https://search.orextravel.cz/export/default.php` | No |
-| `OREXTRAVEL_TOKEN` | Bearer token for API auth | — | **Yes** for provider to work |
-| `OREXTRAVEL_TOWN_FROM` | Default departure town ID | `0` | No |
-
-The provider logs a warning at startup if `OREXTRAVEL_TOKEN` is not set, but the server still starts.
-
-### Example
-
-```env
-OREXTRAVEL_API_URL=https://search.orextravel.cz/export/default.php
-OREXTRAVEL_TOKEN=your-bearer-token
-OREXTRAVEL_TOWN_FROM=0
-```
-
----
-
 ## SMTP (Email)
 
 | Variable | Description | Default | Required |
@@ -158,7 +138,7 @@ Before deploying to production, verify these variables:
 - [ ] `CLIENT_ORIGIN` matches the production UI URL
 - [ ] `ADMIN_PASSWORD` is a strong random password
 - [ ] `ALEXANDRIA_API_KEY` is set to the real API key
-- [ ] `OREXTRAVEL_TOKEN` is set to the real bearer token
+
 - [ ] SMTP variables are configured if email features are needed
 
 ---
@@ -193,6 +173,6 @@ export const config = {
   admin: { login: env.ADMIN_LOGIN, password: env.ADMIN_PASSWORD },
   smtp: { host, port, user, pass, from },
   alexandria: { url, apiKey, country },
-  orextravel: { url, token, townFrom },
+
 } as const;
 ```

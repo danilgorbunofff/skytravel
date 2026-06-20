@@ -71,11 +71,6 @@ export const config = {
     country: Number(process.env.ALEXANDRIA_COUNTRY || 107),
   },
 
-  orextravel: {
-    url: process.env.OREXTRAVEL_API_URL || "https://search.orextravel.cz/export/default.php",
-    token: process.env.OREXTRAVEL_TOKEN || "",
-    townFrom: Number(process.env.OREXTRAVEL_TOWN_FROM || 0),
-  },
 } as const;
 
 // ── Startup warnings for optional but important config ────────────────
@@ -94,10 +89,6 @@ function validateConfig() {
 
   if (!config.alexandria.apiKey) {
     warnings.push("ALEXANDRIA_API_KEY is not set — Alexandria provider will fail.");
-  }
-
-  if (!config.orextravel.token) {
-    warnings.push("OREXTRAVEL_TOKEN is not set — Orextravel provider will fail.");
   }
 
   for (const w of warnings) {

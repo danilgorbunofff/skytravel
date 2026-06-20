@@ -22,10 +22,10 @@ Enhance existing `docs/architecture.md` with comprehensive content.
 │   Browser     │  HTTP  │   Express 4 API    │  HTTP  │  Alexandria   │
 │  (React 18)   │◄──────►│   (TypeScript)     │◄──────►│  API Export   │
 │  Vite SPA     │  REST  │   Prisma 5 + MySQL │       └───────────────┘
-└──────────────┘       │                    │       ┌───────────────┐
-                       │  Provider Registry │◄──────►│  Orextravel   │
-                       │  (TourProvider)    │       │  API          │
-                       └────────┬──────────┘       └───────────────┘
+└──────────────┘       │                    │
+                        │  Provider Registry │
+                        │  (TourProvider)    │
+                        └────────┬──────────┘
                                 │
                        ┌────────▼──────────┐
                        │   MySQL 8.0       │
@@ -907,9 +907,7 @@ jobs:
 | `ALEXANDRIA_API_URL` | Alexandria export API base URL | `http://export.alexandria.cz/export` | No |
 | `ALEXANDRIA_API_KEY` | Alexandria API key | — | Yes (for Alexandria provider) |
 | `ALEXANDRIA_COUNTRY` | Default country ID for Alexandria | `107` | No |
-| `OREXTRAVEL_API_URL` | Orextravel export API URL | `https://search.orextravel.cz/export/default.php` | No |
-| `OREXTRAVEL_TOKEN` | Orextravel API token | — | Yes (for Orextravel provider) |
-| `OREXTRAVEL_TOWN_FROM` | Default departure town ID | `0` | No |
+
 
 ## Email (SMTP)
 
@@ -958,9 +956,7 @@ CLIENT_ORIGIN=http://localhost:5173
 ALEXANDRIA_API_URL=http://export.alexandria.cz/export
 ALEXANDRIA_API_KEY=
 ALEXANDRIA_COUNTRY=107
-OREXTRAVEL_API_URL=https://search.orextravel.cz/export/default.php
-OREXTRAVEL_TOKEN=
-OREXTRAVEL_TOWN_FROM=0
+
 
 # SMTP
 SMTP_HOST=

@@ -62,13 +62,13 @@ describe("invalidatePublicSearchCache", () => {
   it("clears provider-prefixed entries", () => {
     resetCache();
     setCachedPublicSearchResult("alexandria:list", "v1");
-    setCachedPublicSearchResult("orextravel:list", "v2");
+    setCachedPublicSearchResult("another:list", "v2");
     setCachedPublicSearchResult("other:key", "v3");
 
     invalidatePublicSearchCache("alexandria");
 
     assert.equal(getCachedPublicSearchResult("alexandria:list"), null);
-    assert.equal(getCachedPublicSearchResult("orextravel:list"), "v2");
+    assert.equal(getCachedPublicSearchResult("another:list"), "v2");
     assert.equal(getCachedPublicSearchResult("other:key"), "v3");
   });
 

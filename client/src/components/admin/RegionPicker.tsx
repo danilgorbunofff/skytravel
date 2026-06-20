@@ -59,13 +59,13 @@ export default function RegionPicker({
         </div>
       ) : (
         /* Two-level: departure → destination dropdowns */
-        <div className="orex-route-selects">
-          <div className="orex-route-select-group">
-            <label htmlFor="orexDeparture">
+        <div className="route-selects">
+          <div className="route-select-group">
+            <label htmlFor="region-departure">
               <strong>Odletové město:</strong>
             </label>
             <select
-              id="orexDeparture"
+              id="region-departure"
               value={selectedRegion?.id ?? ""}
               onChange={(e) => {
                 const id = e.target.value ? Number(e.target.value) : null;
@@ -82,12 +82,12 @@ export default function RegionPicker({
               ))}
             </select>
           </div>
-          <div className="orex-route-select-group">
-            <label htmlFor="orexDestination">
+          <div className="route-select-group">
+            <label htmlFor="region-destination">
               <strong>Destinace:</strong>
             </label>
             <select
-              id="orexDestination"
+              id="region-destination"
               value={selectedSubRegion?.id ?? ""}
               onChange={(e) => {
                 const id = e.target.value ? Number(e.target.value) : null;

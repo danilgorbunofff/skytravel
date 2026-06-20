@@ -7,7 +7,7 @@ SkyTravel aggregates tours from external travel providers via their APIs. Each p
 | ID           | Label      | Data Format     | Auth                  |
 | ------------ | ---------- | --------------- | --------------------- |
 | `alexandria` | Alexandria | XML export feed | API key (query param) |
-| `orextravel` | Orextravel | JSON REST       | Token (header)        |
+
 
 ## Provider Contract
 
@@ -82,14 +82,6 @@ interface TourProvider {
 - **Cache:** In-memory LRU, warmed on startup
 - **Refresh script:** `tsx server/scripts/refresh-alexandria.ts`
 
-## Orextravel
-
-- **API type:** JSON REST endpoint
-- **Auth:** Bearer token in header
-- **Data returned:** Tour summaries with booking URLs
-- **Sync strategy:** On-demand search with caching
-- **Cache:** In-memory LRU, stale-while-revalidate
-
 ## Caching
 
 Each provider manages its own cache with:
@@ -105,9 +97,7 @@ Each provider manages its own cache with:
 Providers use different identifiers for the same destination. The `Destination` + `DestinationMapping` tables provide canonical mapping:
 
 ```
-Alexandria "Egypt" (regionKey: "EG") ──┐
-                                        ├── Destination(slug: "egypt", czechName: "Egypt")
-Orextravel "Egypt" (regionKey: "1042") ─┘
+Alexandria "Egypt" (regionKey: "EG") ───→ Destination(slug: "egypt", czechName: "Egypt")
 ```
 
 This enables unified cross-provider search by destination.

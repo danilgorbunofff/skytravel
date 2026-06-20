@@ -26,7 +26,7 @@ export type UnifiedTour = {
   // Public grouped-search metadata
   offerGroupKey?: string;
 
-  // Orextravel-specific
+  // Provider-specific
   nights?: number;
   adults?: number;
   children?: number;

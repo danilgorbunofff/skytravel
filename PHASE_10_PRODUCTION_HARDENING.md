@@ -56,16 +56,6 @@ router.get("/health/ready", async (_req, res) => {
     if (overallStatus === "ok") overallStatus = "degraded";
   }
 
-  // 3. Orextravel API reachability
-  try {
-    const orexResp = await fetch(config.orextravel.url, { method: "HEAD", signal: AbortSignal.timeout(3000) });
-    checks.orextravel = orexResp.ok ? "ok" : "degraded";
-    if (!orexResp.ok && overallStatus === "ok") overallStatus = "degraded";
-  } catch {
-    checks.orextravel = "failed";
-    if (overallStatus === "ok") overallStatus = "degraded";
-  }
-
   // 4. Memory
   const mem = process.memoryUsage();
   const memRssMB = Math.round(mem.rss / 1024 / 1024);
@@ -617,9 +607,7 @@ const envSchema = z.object({
   ALEXANDRIA_API_URL: z.string().url().default("http://export.alexandria.cz/export"),
   ALEXANDRIA_API_KEY: z.string().optional(),
   ALEXANDRIA_COUNTRY: z.coerce.number().int().default(107),
-  OREXTRAVEL_API_URL: z.string().url().default("https://search.orextravel.cz/export/default.php"),
-  OREXTRAVEL_TOKEN: z.string().optional(),
-  OREXTRAVEL_TOWN_FROM: z.coerce.number().int().default(0),
+
   ADMIN_LOGIN: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
   SENTRY_DSN: z.string().optional(),

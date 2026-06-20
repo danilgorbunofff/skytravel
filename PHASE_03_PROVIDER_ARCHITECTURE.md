@@ -2,22 +2,22 @@
 
 ## Overview
 
-Refactor the ~60% duplicated code between `AlexandriaProvider` (798 lines) and `OrextravelProvider` (799 lines) into a shared `BaseProvider` abstract class. Extract 10 shared methods, add LRU caches to Orextravel reference data, add batch processing to `fetchOrextravelTours`, and extract duplicate `firstQueryValue` to a shared utility.
+Refactor `AlexandriaProvider` (798 lines) to use a shared `BaseProvider` abstract class. Extract shared methods, add batch processing, and extract duplicate `firstQueryValue` to a shared utility.
 
 ## Shared Methods to Extract (with source line ranges)
 
-| # | Method | Alexandria lines | Orextravel lines | Notes |
-|---|--------|-----------------|-----------------|-------|
-| 1 | `buildTourSelect(omitHeavy)` | 72–98 | 64–90 | Identical |
-| 2 | `parseNightsRange(nightsRaw)` | 47–52 | 40–45 | Identical |
-| 3 | `nightsFromDates(from, to)` | 54–59 | 47–52 | Identical |
-| 4 | `photosFromJson(photosRaw, image)` | 61–66 | 54–59 | Identical |
-| 5 | `rowToUnified(row)` | 429–459 | 403–436 | 90% identical (Orextravel has `nights/adults/children/roomType/currency`) |
-| 6 | `fetchGroupedByOffer(filters)` | 461–503 | 438–480 | Near-identical |
-| 7 | `fetchOfferGroup(filters, offerGroupKey)` | 505–530 | 482–507 | Near-identical |
-| 8 | `importTours(ids, regionCtx)` | 537–612 | 514–589 | Near-identical (source string differs) |
-| 9 | `loadCacheStatus()` | 636–658 | 613–635 | Near-identical |
-| 10 | `_syncToDbImpl()` | 670–796 | 645–797 | **Abstract** — region iteration pattern differs significantly |
+| # | Method | Alexandria lines | Notes |
+|---|--------|-----------------|-------|
+| 1 | `buildTourSelect(omitHeavy)` | 72–98 | |
+| 2 | `parseNightsRange(nightsRaw)` | 47–52 | |
+| 3 | `nightsFromDates(from, to)` | 54–59 | |
+| 4 | `photosFromJson(photosRaw, image)` | 61–66 | |
+| 5 | `rowToUnified(row)` | 429–459 | Includes nights/adults/children/roomType/currency |
+| 6 | `fetchGroupedByOffer(filters)` | 461–503 | |
+| 7 | `fetchOfferGroup(filters, offerGroupKey)` | 505–530 | |
+| 8 | `importTours(ids, regionCtx)` | 537–612 | |
+| 9 | `loadCacheStatus()` | 636–658 | |
+| 10 | `_syncToDbImpl()` | 670–796 | **Abstract** — region iteration pattern differs per provider |
 
 ## Files to Create
 
@@ -33,9 +33,8 @@ Refactor the ~60% duplicated code between `AlexandriaProvider` (798 lines) and `
 | `server/src/providers/BaseProvider.ts` | **create** | Abstract class with shared implementations |
 | `server/src/providers/shared/queryUtils.ts` | **create** | `firstQueryValue()` and optionally `parseOptionalNumber()`, `parseOptionalDate()` |
 | `server/src/providers/alexandriaProvider.ts` | modify | Extend `BaseProvider`, keep only Alexandria-specific logic |
-| `server/src/providers/orextravelProvider.ts` | modify | Extend `BaseProvider`, keep only Orextravel-specific logic |
 | `server/src/providers/types.ts` | modify | Update `TourProvider` interface if needed for BaseProvider pattern |
-| `server/src/providers/index.ts` | modify | No change expected (still imports `AlexandriaProvider` and `OrextravelProvider`) |
+| `server/src/providers/index.ts` | modify | No change expected (still imports `AlexandriaProvider`) |
 | `server/src/routes/providerSearchPublic.ts` | modify | Import `firstQueryValue` from shared utility instead of local definition |
 | `server/src/lib/validateProviderFilters.ts` | modify | Import `firstQueryValue` from shared utility instead of local definition |
 
@@ -509,83 +508,7 @@ Actually, `syncToDb` CAN be shared (the mutex pattern is identical). The `_syncT
 
 **Target size:** ~400 lines (from 798)
 
-### Step 4: Refactor OrextravelProvider
 
-**File:** `server/src/providers/orextravelProvider.ts`
-
-**Before:** `class OrextravelProvider implements TourProvider`
-**After:** `class OrextravelProvider extends BaseProvider`
-
-**Remove** (same as Alexandria — now inherited from BaseProvider):
-- Lines 40–45: `parseNightsRange` function
-- Lines 47–52: `nightsFromDates` function (wait, these are module-level functions, not methods)
-- Lines 54–59: `photosFromJson` function
-- Lines 64–90: `buildTourSelect` function
-- Lines 325–333: `filterRowsByNights` method
-- Lines 438–480: `fetchGroupedByOffer` method
-- Lines 482–507: `fetchOfferGroup` method
-- Lines 509–512: `streamTours` method
-- Lines 514–589: `importTours` method
-- Lines 591–593: `warmCache` method
-- Lines 601–635: `getCacheStatus` and `loadCacheStatus` methods
-- Lines 637–643: `syncToDb` method
-
-**Keep** (Orextravel-specific):
-- `fetchTownState`, `fetchOrextravelTours`, `clearOrextravelCache` imports
-- `feedCacheMap` and `CACHE_TTL`
-- `getCachedFeed` method (uses different key: `townFrom-stateId`)
-- `serializeItem` method (Orextravel-specific: includes nights/adults/children/roomType/currency)
-- `getRegions` method (two-level town→state selection)
-- `withGroupedRegionCounts` method (Orextravel-specific: departureId in key)
-- `getProviderFilters` method (`townFrom` + `stateId`)
-- `buildTourQuery` method (Orextravel-specific: regionKey from town-state pairs)
-- `fetchTours` method (Orextravel-specific: town/state region filtering + `countDistinctDestinations`)
-- `countDistinctDestinations` method (Orextravel-specific)
-- `_syncToDbImpl` method (iterates routes, not countries)
-
-**Add LRU cache with max size:**
-Replace `Map<string, { data: OrextravelTourInput[]; ts: number }>` with `LRUCache`:
-```typescript
-import { LRUCache } from "lru-cache";
-
-private feedCache = new LRUCache<string, { data: OrextravelTourInput[]; ts: number }>({
-  max: 20,        // max 20 cached route combinations
-  ttl: this.CACHE_TTL,
-});
-```
-
-**Update `getCachedFeed`:**
-```typescript
-private async getCachedFeed(townFrom?: number, stateId?: number): Promise<OrextravelTourInput[]> {
-  const key = `${townFrom ?? "all"}-${stateId ?? "all"}`;
-  const cached = this.feedCache.get(key);
-  if (cached) return cached.data;
-  const data = await fetchOrextravelTours(townFrom, stateId);
-  this.feedCache.set(key, { data, ts: Date.now() });
-  return data;
-}
-```
-
-Note: `LRUCache` with `ttl` option handles both max size and TTL expiration. `ttl` in constructor sets the default TTL.
-
-**Add batch processing to `fetchOrextravelTours`:**
-
-In `server/src/lib/orextravel.ts`, wrap the existing `fetchOrextravelTours` to accept batching parameters, or add a new exported function:
-
-```typescript
-export async function fetchOrextravelToursBatched(
-  townFrom?: number,
-  stateId?: number,
-  batchSize = 100,
-): Promise<OrextravelTourInput[]> {
-  // Check if the upstream supports pagination
-  // If not, just call fetchOrextravelTours normally
-  // (the provider endpoint may limit results)
-  return fetchOrextravelTours(townFrom, stateId);
-}
-```
-
-**Target size:** ~450 lines (from 799)
 
 ### Step 5: Update imports in refactored providers
 
@@ -607,29 +530,11 @@ import { logger } from "../lib/logger.js";
 import { safeString, safeNumber } from "../lib/safeCast.js";
 ```
 
-**OrextravelProvider imports after refactor:**
-```typescript
-import { type Prisma } from "@prisma/client";
-import prisma from "../prisma.js";
-import {
-  fetchTownState,
-  fetchOrextravelTours,
-  clearOrextravelCache,
-  type OrextravelTourInput,
-} from "../lib/orextravel.js";
-import type { UnifiedTour, ToursResult, CacheStatus, ProviderRegion, FilterFieldDescriptor } from "./types.js";
-import { BaseProvider, type NightsRange } from "./BaseProvider.js";
-import { ensureProviderDestinationMapping } from "./destinationStore.js";
-import { isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
-import { logger } from "../lib/logger.js";
-import { safeString, safeNumber } from "../lib/safeCast.js";
-```
-
 ### Step 6: Verify registry and index
 
-**File:** `server/src/providers/index.ts` — no changes needed, since both providers still export the same class names.
+**File:** `server/src/providers/index.ts` — no changes needed, since the provider still exports the same class name.
 
-**File:** `server/src/providers/registry.ts` — no changes needed; `registerProvider` still accepts `TourProvider` and both subclasses implement it.
+**File:** `server/src/providers/registry.ts` — no changes needed; `registerProvider` still accepts `TourProvider` and the subclass implements it.
 
 ## Verification
 
@@ -643,26 +548,21 @@ npm --workspace server run test
 # Alexandria sync works
 npx tsx server/scripts/refresh-alexandria.ts
 
-# Orextravel sync works
-# (check if a similar script exists, or verify via admin API)
-
-# Search endpoint returns data from both providers
+# Search endpoint returns data from the provider
 curl http://localhost:4000/api/search/providers | json
 ```
 
 ## Edge Cases to Test
 
-1. **Both providers return data** after refactor — verify search results are identical to pre-refactor
-2. **One provider fails sync** — the other should still work
-3. **LRU cache eviction** — Orextravel feed cache shouldn't grow unbounded
-4. **BaseProvider method overrides** — if a provider needs different behavior (e.g., Orextravel's `rowToUnified` handles more fields), ensure the override is correct
-5. **Import tours** — verify `importTours` still works from admin panel
+1. **Provider returns data** after refactor — verify search results are identical to pre-refactor
+2. **Provider fails sync** — handle gracefully
+3. **BaseProvider method overrides** — if a provider needs different behavior, ensure the override is correct
+4. **Import tours** — verify `importTours` still works from admin panel
 
 ## Risk Assessment
 
 | Change | Risk | Mitigation |
 |--------|------|------------|
 | Extracting shared methods | **MEDIUM** — behavioral differences between providers | Run full test suite; compare search results before/after |
-| BaseProvider `rowToUnified` | **MEDIUM** — Orextravel has extra fields (nights/adults/children/roomType/currency) | Override in OrextravelProvider if BaseProvider's version misses fields; design BaseProvider version to include all fields with `undefined` fallbacks |
-| LRU cache for Orextravel | **LOW** — replacing Map with LRUCache, same API | Verify `get()` / `set()` with `ttl` works correctly |
+| BaseProvider `rowToUnified` | **MEDIUM** — different providers may have extra fields | Design BaseProvider version to include all fields with `undefined` fallbacks |
 | `firstQueryValue` extraction | **LOW** — mechanical move, same function | Verify both call sites still import correctly |

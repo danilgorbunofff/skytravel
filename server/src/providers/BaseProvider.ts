@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────────
 // BaseProvider — abstract class for all tour providers.
 // Extracting ~60% duplicated code from AlexandriaProvider
-// and OrextravelProvider into a shared base.
+// into a shared base.
 // ──────────────────────────────────────────────
 
 import { type Prisma } from "../generated/prisma/client/client.js";
@@ -149,7 +149,7 @@ export abstract class BaseProvider implements TourProvider {
 
   /**
    * Convert a DB row (Record) into a UnifiedTour.
-   * Includes all Orextravel-specific fields (nights, adults, children,
+   * Includes provider-specific fields (nights, adults, children,
    * roomType, currency) with undefined fallbacks so subclasses can
    * override with real values.
    */
@@ -455,7 +455,7 @@ export abstract class BaseProvider implements TourProvider {
   /**
    * Stream tours via callback. Default implementation calls fetchTours
    * and delivers the whole page in one batch. Providers that support
-   * true streaming (e.g., Orextravel) override this.
+    * true streaming override this.
    */
   async streamTours(
     filters: UnifiedFilters,

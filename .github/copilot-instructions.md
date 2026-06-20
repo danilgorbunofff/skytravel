@@ -4,7 +4,7 @@ These instructions apply workspace-wide. Follow them when generating, refactorin
 
 ## Project overview
 
-SkyTravel is a Czech travel-aggregation site (`sky-travel.tours`). It exposes tours from third-party providers (Alexandria, Orextravel) through a unified search UI plus an admin back-office for leads, statistics, email campaigns, and price alerts.
+SkyTravel is a Czech travel-aggregation site (`sky-travel.tours`). It exposes tours from third-party providers (Alexandria) through a unified search UI plus an admin back-office for leads, statistics, email campaigns, and price alerts.
 
 Monorepo layout (npm workspaces, Node ≥ 20):
 

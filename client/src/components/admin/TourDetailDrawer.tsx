@@ -25,7 +25,6 @@ const transportLabel: Record<string, string> = {
 
 const SOURCE_COLORS: Record<string, string> = {
   alexandria: "#2563eb",
-  orextravel: "#16a34a",
 };
 
 type Props = {

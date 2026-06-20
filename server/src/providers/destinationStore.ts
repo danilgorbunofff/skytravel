@@ -80,12 +80,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
         providerValue: "53",
         providerLabel: "Bulharsko",
       },
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "17",
-        providerLabel: "Bulharsko",
-      },
     ],
   },
   {
@@ -150,14 +144,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     czechName: "Tunisko",
     canonicalName: "Tunisia",
     aliases: ["tunisko", "tunisia", "tunezja"],
-    mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "14",
-        providerLabel: "Tunezja",
-      },
-    ],
   },
   {
     slug: "recko",
@@ -165,12 +151,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     canonicalName: "Greece",
     aliases: ["recko", "řecko", "greece", "rhodos", "santorini"],
     mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "16",
-        providerLabel: "Řecko",
-      },
       {
         providerId: "alexandria",
         providerKey: "zeme",
@@ -185,12 +165,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     canonicalName: "Turkey",
     aliases: ["turecko", "turkey", "alanya"],
     mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "9",
-        providerLabel: "Turecko",
-      },
       {
         providerId: "alexandria",
         providerKey: "zeme",
@@ -211,12 +185,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     canonicalName: "Spain",
     aliases: ["spanelsko", "španělsko", "spain", "mallorca"],
     mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "15",
-        providerLabel: "Španělsko",
-      },
       {
         providerId: "alexandria",
         providerKey: "zeme",
@@ -248,14 +216,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
       "dominic republic",
       "punta cana",
     ],
-    mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "26",
-        providerLabel: "Dominic Republic",
-      },
-    ],
   },
   {
     slug: "portugalsko",
@@ -268,42 +228,18 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     czechName: "Indie",
     canonicalName: "India",
     aliases: ["indie", "india"],
-    mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "33",
-        providerLabel: "India",
-      },
-    ],
   },
   {
     slug: "maledivy",
     czechName: "Maledivy",
     canonicalName: "Maldives",
     aliases: ["maledivy", "maldives"],
-    mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "50",
-        providerLabel: "Maldives",
-      },
-    ],
   },
   {
     slug: "spojene-arabske-emiraty",
     czechName: "Spojené arabské emiráty",
     canonicalName: "United Arab Emirates",
     aliases: ["spojene arabske emiraty", "spojené arabské emiráty", "united arab emirates", "uae"],
-    mappings: [
-      {
-        providerId: "orextravel",
-        providerKey: "stateId",
-        providerValue: "13",
-        providerLabel: "UAE",
-      },
-    ],
   },
 ];
 

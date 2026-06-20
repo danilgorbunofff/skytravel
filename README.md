@@ -1,6 +1,6 @@
 # SkyTravel
 
-Czech travel aggregation platform — unified tour search from multiple providers (Alexandria, Orextravel) with admin back-office for leads, email campaigns, and price alerts.
+Czech travel aggregation platform — unified tour search from multiple providers (Alexandria) with admin back-office for leads, email campaigns, and price alerts.
 
 **Live:** [sky-travel.tours](https://sky-travel.tours)
 

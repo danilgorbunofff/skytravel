@@ -81,27 +81,6 @@ function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
 }
 
-function findOrextravelDefaults(regionData: ProviderRegion[]): {
-  region: ProviderRegion | null;
-  subRegion: ProviderRegion | null;
-} {
-  const depMap = new Map<number, string>();
-  for (const r of regionData) {
-    const depId = r.meta?.departureId as number | undefined;
-    const depName = r.meta?.departureName as string | undefined;
-    if (depId != null && depName) depMap.set(depId, depName);
-  }
-  const pragueEntry = [...depMap.entries()].find(([, name]) => /prah|prag/i.test(name));
-  if (!pragueEntry) return { region: null, subRegion: null };
-  const region: ProviderRegion = { id: pragueEntry[0], name: pragueEntry[1] };
-  const dests = regionData.filter((r) => (r.meta?.departureId as number) === pragueEntry[0]);
-  const destMap = new Map<number, string>();
-  for (const r of dests) destMap.set(r.id, r.name);
-  const turkeyEntry = [...destMap.entries()].find(([, name]) => /turecko|turkey|türk/i.test(name));
-  const subRegion = turkeyEntry ? { id: turkeyEntry[0], name: turkeyEntry[1] } : null;
-  return { region, subRegion };
-}
-
 // ── Store ────────────────────────────────────────────────────
 
 /** AbortController for the latest loadTours fetch — lets us cancel stale requests. */
@@ -199,11 +178,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       let selectedRegion: ProviderRegion | null = null;
       let selectedSubRegion: ProviderRegion | null = null;
 
-      if (twoLevel) {
-        const defs = findOrextravelDefaults(regionData);
-        selectedRegion = defs.region;
-        selectedSubRegion = defs.subRegion;
-      } else if (regionData.length > 0) {
+      if (regionData.length > 0) {
         selectedRegion = regionData[0];
       }
 

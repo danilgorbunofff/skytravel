@@ -38,15 +38,6 @@ export function getTourFallbackImage(destination: string): string {
   return resolved;
 }
 
-function getDiscount(tour: UnifiedTour): { amount: number; percent: number } | null {
-  if (!tour.originalPrice || tour.originalPrice <= tour.price) return null;
-  if (!isPlausibleTourPrice(tour.price)) return null;
-  const amount = tour.originalPrice - tour.price;
-  const percent = Math.round((amount / tour.originalPrice) * 100);
-  if (percent < 5) return null;
-  return { amount, percent };
-}
-
 const TRANSPORT_ICONS: Record<string, typeof Plane> = {
   plane: Plane,
   bus: Bus,
@@ -117,7 +108,6 @@ export const PublicTourCard = memo(function PublicTourCard({
 
   const imageSrc = isValidImageUrl(tour.image) ? tour.image : getTourFallbackImage(tour.destination);
   const srcSet = buildSrcSet(imageSrc);
-  const discount = getDiscount(tour);
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
   const transportLabels = getTransportLabel(t);
 
@@ -207,11 +197,6 @@ export const PublicTourCard = memo(function PublicTourCard({
             </button>
           )}
 
-          {/* Discount badge */}
-          {discount && (
-            <span className="tour-card__discount">-{discount.percent}%</span>
-          )}
-
           {/* Duration badge (X nocí) */}
           {tour.nights != null && (
             <span className="tour-card__nights-badge">
@@ -276,11 +261,6 @@ export const PublicTourCard = memo(function PublicTourCard({
                 <span className="tour-card__price-request">{t("sPriceOnRequest")}</span>
               )}
             </div>
-            {discount && (
-              <div className="tour-card__original-price">
-                <s>{formatPrice(tour.originalPrice)}</s>
-              </div>
-            )}
           </div>
         </div>
       </article>
@@ -336,10 +316,6 @@ export const PublicTourCard = memo(function PublicTourCard({
           <Heart size={16} aria-hidden="true" />
         </button>
 
-        {discount && (
-          <span className="tour-card__discount">-{discount.percent}%</span>
-        )}
-
         {/* Duration badge (X nocí) */}
         {tour.nights != null && (
           <span className="tour-card__nights-badge">
@@ -390,8 +366,6 @@ export const PublicTourCard = memo(function PublicTourCard({
         <div className="tour-card__list-actions">
           <div className="tour-card__price-row">
             <strong className="tour-card__price-strong">{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}</strong>
-            {discount && <s className="tour-card__original-price">{formatPrice(tour.originalPrice)}</s>}
-            {discount && <span className="tour-card__discount-inline">-{discount.percent}%</span>}
           </div>
           <button
             type="button"

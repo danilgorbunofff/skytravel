@@ -1,6 +1,6 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "@server/generated/prisma/client/client.js";
-import { logger } from "@server/lib/logger.js";
+import { PrismaClient } from "./generated/prisma/client/client.js";
+import { logger } from "./lib/logger.js";
 
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {

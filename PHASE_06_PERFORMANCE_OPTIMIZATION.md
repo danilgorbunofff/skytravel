@@ -361,55 +361,6 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
 
 ---
 
-## Step 6: LRU Cache Limits for Orextravel Ref Data
-
-### File to Modify: `server/src/providers/orextravelProvider.ts`
-
-Wrap existing in-memory caches in LRU with explicit max entries:
-
-```typescript
-import { LRUCache } from "lru-cache";
-
-// In OrextravelProvider class or module scope
-
-const departureCache = new LRUCache<string, Departure[]>({
-  max: 500,
-  ttl: 30 * 60_000, // 30 minutes
-});
-
-const destinationCache = new LRUCache<string, Destination[]>({
-  max: 200,
-  ttl: 30 * 60_000,
-});
-
-const routeGroupCache = new LRUCache<string, RouteGroup[]>({
-  max: 100,
-  ttl: 30 * 60_000,
-});
-
-// Replace any Map-based caches with these LRU instances
-// For example:
-// async getDepartures(): Promise<Departure[]> {
-//   const cached = departureCache.get("all");
-//   if (cached) return cached;
-//   const data = await this.fetchDepartures();
-//   departureCache.set("all", data);
-//   return data;
-// }
-```
-
-### Also Verify: `server/src/providers/publicSearchCache.ts`
-- Already has `LRUCache` with `max: 2_000` (line 30-31)
-- No changes needed, but verify the limit is appropriate
-- Cache stores search results, not individual rows
-
-### Acceptance
-- Memory bounded per cache
-- Old entries evicted by LRU
-- TTL ensures data freshness
-
----
-
 ## Step 7: Parallelize Alexandria Sync
 
 ### File to Modify: `server/src/providers/alexandriaProvider.ts`
@@ -560,7 +511,7 @@ Add to `client/package.json`:
 
 1. **Step 4** — Prisma connection limit (quick, high impact)
 2. **Step 5** — searchTimingMiddleware optimization (quick, reduces overhead)
-3. **Step 6** — Orextravel LRU cache limits (bounded memory)
+
 4. **Step 7** — Alexandria parallel sync (faster syncs)
 5. **Step 8** — Bundle budget + Brotli (build config, no runtime risk)
 6. **Step 1** — Translation splitting (major bundle reduction, test carefully)
@@ -590,7 +541,7 @@ Add to `client/package.json`:
 | `client/src/components/admin/TourDataTable.tsx` | Virtualization with @tanstack/react-virtual |
 | `server/src/prisma.ts` | connection_limit=5 |
 | `server/src/middleware/searchTiming.ts` | Conditional patching |
-| `server/src/providers/orextravelProvider.ts` | LRU cache limits |
+
 | `server/src/providers/alexandriaProvider.ts` | Parallel sync with p-limit |
 | `client/vite.config.ts` | Bundle budget, manualChunks |
 | `server/src/app.ts` | Verify Brotli compression |

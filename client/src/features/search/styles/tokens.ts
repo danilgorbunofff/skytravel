@@ -45,8 +45,6 @@ export const colors = {
   warningBg: "bg-amber-50",
   error: "text-red-600",
   errorBg: "bg-red-50",
-  discount: "text-red-600 bg-red-50",
-
   // Neutral
   muted: "text-slate-500",
   mutedBg: "bg-slate-50",
@@ -60,7 +58,6 @@ export const typography = {
   body: "text-slate-600",
   caption: "text-sm text-slate-500",
   price: "font-bold text-slate-900",
-  priceOld: "text-sm text-slate-400 line-through",
 } as const;
 
 export const transitions = {

@@ -163,11 +163,9 @@ Edit `server/src/providers/index.ts`:
 ```typescript
 import { registerProvider } from "./registry.js";
 import { AlexandriaProvider } from "./alexandriaProvider.js";
-import { OrextravelProvider } from "./orextravelProvider.js";
 import { NewProvider } from "./newProvider.js";           // ← ADD
 
 registerProvider(new AlexandriaProvider());
-registerProvider(new OrextravelProvider());
 registerProvider(new NewProvider());                      // ← ADD
 
 export * from "./types.js";
@@ -248,13 +246,6 @@ Alexandria regionKey: "53" → Destination: Bulharsko
 Alexandria regionKey: "107" → Destination: Chorvatsko
 ```
 
-Orextravel uses a two-level system (stateId → regionKey):
-
-```
-Orextravel stateId: 17 → Destination: Bulharsko
-Orextravel stateId: 16 → Destination: Řecko
-```
-
 When adding a new provider, add both the `Destination` entry and the `DestinationMapping` entries. If you use a different key naming convention than the existing providers, ensure `moveProviderToursForMapping()` in `destinationStore.ts` handles it.
 
 ---
@@ -283,7 +274,7 @@ Use the existing test fixtures as reference. Test files for providers live next 
 ```
 server/src/providers/__fixtures__/  ← test data
 server/src/providers/alexandriaProvider.test.ts
-server/src/providers/orextravelProvider.test.ts
+server/src/providers/alexandriaProvider.test.ts
 ```
 
 To test a new provider:
@@ -391,6 +382,4 @@ export class MyProvider extends BaseProvider {
 | Provider | ID | Data Format | Auth | Regions | Cache |
 |---|---|---|---|---|---|
 | **Alexandria** | `alexandria` | XML export feed | API key (query param) | Single-level (`zeme` ID) | LRU, warmed on startup |
-| **Orextravel** | `orextravel` | JSON REST | Bearer token (header) | Two-level (stateId → region) | LRU, stale-while-revalidate |
-
-See `server/src/providers/alexandriaProvider.ts` and `orextravelProvider.ts` for full implementations.
+See `server/src/providers/alexandriaProvider.ts` for full implementation.

@@ -66,10 +66,6 @@ export default function AdminRoutes() {
             path="alexandria"
             element={<Navigate to="/admin/search?provider=alexandria" replace />}
           />
-          <Route
-            path="orextravel"
-            element={<Navigate to="/admin/search?provider=orextravel" replace />}
-          />
         </Routes>
       </Suspense>
     </RequireAdmin>

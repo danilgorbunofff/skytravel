@@ -35,13 +35,13 @@
                        │                  │                   │
                        │     ┌────────────┼────────────┐      │
                        │     ▼            ▼             │      │
-                       │  Alexandria   Orextravel      │      │
-                       │  (XML feed)   (JSON REST)     │      │
-                       │     │            │            │      │
-                       ▼     ▼            ▼            ▼      │
-                 External External   External          ───────┘
-                 APIs     APIs       APIs
-                 (Alexandria export) (Orextravel search)
+                       │  Alexandria                │      │
+                       │  (XML feed)                │      │
+                       │     │                      │      │
+                       ▼     ▼                      ▼      │
+                 External External             ───────┘
+                 APIs     APIs
+                 (Alexandria export)
 ```
 
 **Production architecture**: Oracle Cloud VPS → no nginx — services serve directly on ports 4000 (API) and 4173 (UI) via PM2. Both apps are managed by PM2 with `wait_ready` protocol.
@@ -87,7 +87,7 @@ skytravel/
 │   │   │   ├── registry.ts          Singleton provider Map
 │   │   │   ├── BaseProvider.ts      Abstract base class (~60% shared code)
 │   │   │   ├── alexandriaProvider.ts
-│   │   │   ├── orextravelProvider.ts
+
 │   │   │   ├── destinationStore.ts  Known destinations + mapping seeding
 │   │   │   ├── regionStore.ts       DB-backed region cache
 │   │   │   ├── offerGrouping.ts     Group/merge offers by title+destination
@@ -255,7 +255,7 @@ TourProvider (interface in types.ts)
 BaseProvider (abstract class in BaseProvider.ts)
   ▲            ▲
   │            │
-AlexandriaProvider    OrextravelProvider
+AlexandriaProvider
   │
   └── fetchTours()   — main search, returns UnifiedTour[]
   └── getRegions()    — available destinations
@@ -300,7 +300,7 @@ Centralized error middleware (app.ts, mounted last):
 - **Stale-while-revalidate**: expired entries served immediately + background refresh
 - **Hot keys** (bootstrap, destinations): 5 min TTL
 - **Filtered search**: 60s TTL
-- **Provider-specific caches**: Alexandria and Orextravel each manage their own cache
+- **Provider-specific caches**: Each provider manages its own cache
 - **Cache warming**: on startup via `warmCache()`, staggered background refresh intervals
 - **Memory constraint**: `--max-old-space-size=450` in PM2; 450MB RSS triggers restart
 

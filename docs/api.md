@@ -171,7 +171,7 @@ Single-request bootstrap for the search page. Returns all providers + regions. S
 ```json
 {
   "providers": [...],
-  "regions": { "alexandria": [...], "orextravel": [...] }
+  "regions": { "alexandria": [...] }
 }
 ```
 

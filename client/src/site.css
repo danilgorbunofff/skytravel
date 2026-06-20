@@ -5370,18 +5370,6 @@ html[lang="ru"] .logo {
   background: #fff;
 }
 
-.tour-card__discount {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
 .tour-card__provider {
   position: absolute;
   bottom: 10px;
@@ -5416,12 +5404,6 @@ html[lang="ru"] .logo {
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
-}
-
-/* Ensure discount and offers-badge don't overlap */
-.tour-card__discount + .tour-card__offers-badge,
-.tour-card__offers-badge + .tour-card__discount {
-  top: 44px;
 }
 
 /* Card Body */
@@ -5520,22 +5502,11 @@ html[lang="ru"] .logo {
   font-style: italic;
 }
 
-.tour-card__original-price {
-  font-size: 0.8rem;
-  color: #94a3b8;
-}
-
 .tour-card__offers-count {
   margin-top: 8px;
   font-size: 0.78rem;
   color: #0ea5e9;
   font-weight: 500;
-}
-
-.tour-card__discount-inline {
-  font-size: 0.75rem;
-  color: #ef4444;
-  font-weight: 600;
 }
 
 /* List Card */
@@ -6237,19 +6208,6 @@ html[lang="ru"] .logo {
   margin-bottom: 20px;
 }
 
-.tour-price-card__discount-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
 .tour-price-card__main {
   display: flex;
   align-items: center;
@@ -6274,19 +6232,6 @@ html[lang="ru"] .logo {
 .tour-price-card__per {
   font-size: 0.85rem;
   color: #64748b;
-}
-
-.tour-price-card__savings {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-  font-size: 0.85rem;
-  color: #16a34a;
-}
-
-.tour-price-card__savings s {
-  color: #94a3b8;
 }
 
 .tour-price-card__total {

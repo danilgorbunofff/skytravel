@@ -196,16 +196,6 @@ describe("Provider import", () => {
 
 Create fixture file: `server/src/providers/__fixtures__/alexandria-sample.xml`
 
-#### `server/src/providers/orextravelProvider.test.ts`
-- Parse mock JSON API responses
-- Handle missing optional fields
-- Test price parsing and normalization
-- Test departure/destination mapping
-- Test error responses from API
-- Test rate limiting / retry logic
-
-Create fixture: `server/src/providers/__fixtures__/orextravel-sample.json`
-
 #### `server/src/providers/publicSearchCache.test.ts`
 ```typescript
 describe("PublicSearchCache", () => {
@@ -501,7 +491,7 @@ npm add -D @axe-core/playwright
 | `server/src/__tests__/routes/admin/uploads.test.ts` | Integration | File uploads |
 | `server/src/__tests__/routes/admin/import.test.ts` | Integration | Provider import |
 | `server/src/providers/alexandriaProvider.test.ts` | Unit | XML parsing, edge cases |
-| `server/src/providers/orextravelProvider.test.ts` | Unit | JSON parsing, error handling |
+
 | `server/src/providers/publicSearchCache.test.ts` | Unit | LRU, TTL, single-flight, SWR |
 | `server/src/providers/offerGrouping.test.ts` | Unit | Edge cases (expand existing) |
 | `client/src/pages/__tests__/SearchPage.test.tsx` | Component | Render, states, interactions |
@@ -513,7 +503,7 @@ npm add -D @axe-core/playwright
 | `e2e/admin-import-flow.spec.ts` | E2E | Admin import flow |
 | `e2e/mobile-search.spec.ts` | E2E | Mobile viewport |
 | `server/src/providers/__fixtures__/alexandria-sample.xml` | Fixture | Sample XML for provider test |
-| `server/src/providers/__fixtures__/orextravel-sample.json` | Fixture | Sample JSON for provider test |
+
 
 ### Modified Files
 
@@ -590,5 +580,4 @@ npm run lint
 Create `server/src/providers/__fixtures__/` directory:
 - `alexandria-sample.xml` — realistic Alexandria XML response
 - `alexandria-last-minute.xml` — last-minute subset
-- `orextravel-sample.json` — realistic Orextravel JSON response
-- `orextravel-departures.json` — departures reference data
+

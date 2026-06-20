@@ -11,7 +11,7 @@ module.exports = {
       script: "npm",
       args: "start",
       exec_mode: "fork",
-      node_args: "--max-old-space-size=450",
+      node_args: "--max-old-space-size=900",
       env: {
         NODE_ENV: "production",
         PORT: 4000,
@@ -20,7 +20,7 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
-      max_memory_restart: "450M",
+      max_memory_restart: "900M",
       wait_ready: true,
       listen_timeout: 8000,
       kill_timeout: 10000,
