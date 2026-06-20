@@ -9,7 +9,7 @@ import type { PublicDestinationSummary } from "../types/providers";
 import { safeParseJSON } from "./safeParseJSON";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
-const STORAGE_PREFIX = "skytravel:destinations:v1:";
+const STORAGE_PREFIX = "skytravel:destinations:v2:";
 
 // Module-level cooldown shared across instances of this hook on the page.
 const lastFetchTs = new Map<string, number>();
