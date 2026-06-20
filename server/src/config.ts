@@ -8,6 +8,7 @@ const envSchema = z.object({
   CLIENT_ORIGIN: z.string().optional().default("http://localhost:5173"),
   ADMIN_LOGIN: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+  DISABLE_RATE_LIMIT: z.coerce.boolean().default(false),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -53,6 +54,8 @@ export const config = {
     login: env.ADMIN_LOGIN,
     password: env.ADMIN_PASSWORD,
   },
+
+  disableRateLimit: env.DISABLE_RATE_LIMIT,
 
   smtp: {
     host: process.env.SMTP_HOST,

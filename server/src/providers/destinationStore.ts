@@ -138,13 +138,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
       },
     ],
   },
-  { slug: "egypt", czechName: "Egypt", canonicalName: "Egypt", aliases: ["egypt"] },
-  {
-    slug: "tunisko",
-    czechName: "Tunisko",
-    canonicalName: "Tunisia",
-    aliases: ["tunisko", "tunisia", "tunezja"],
-  },
   {
     slug: "recko",
     czechName: "Řecko",
@@ -174,12 +167,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
     ],
   },
   {
-    slug: "kypr",
-    czechName: "Kypr",
-    canonicalName: "Cyprus",
-    aliases: ["kypr", "cyprus", "larnaka", "jizni kypr", "jižní kypr"],
-  },
-  {
     slug: "spanelsko",
     czechName: "Španělsko",
     canonicalName: "Spain",
@@ -192,54 +179,6 @@ const KNOWN_DESTINATIONS: KnownDestination[] = [
         providerLabel: "Španělsko",
       },
     ],
-  },
-  {
-    slug: "thajsko",
-    czechName: "Thajsko",
-    canonicalName: "Thailand",
-    aliases: ["thajsko", "thailand"],
-  },
-  {
-    slug: "madagaskar",
-    czechName: "Madagaskar",
-    canonicalName: "Madagascar",
-    aliases: ["madagaskar", "madagascar"],
-  },
-  {
-    slug: "dominikanska-republika",
-    czechName: "Dominikánská republika",
-    canonicalName: "Dominican Republic",
-    aliases: [
-      "dominikanska republika",
-      "dominikánská republika",
-      "dominican republic",
-      "dominic republic",
-      "punta cana",
-    ],
-  },
-  {
-    slug: "portugalsko",
-    czechName: "Portugalsko",
-    canonicalName: "Portugal",
-    aliases: ["portugalsko", "portugal", "madeira"],
-  },
-  {
-    slug: "indie",
-    czechName: "Indie",
-    canonicalName: "India",
-    aliases: ["indie", "india"],
-  },
-  {
-    slug: "maledivy",
-    czechName: "Maledivy",
-    canonicalName: "Maldives",
-    aliases: ["maledivy", "maldives"],
-  },
-  {
-    slug: "spojene-arabske-emiraty",
-    czechName: "Spojené arabské emiráty",
-    canonicalName: "United Arab Emirates",
-    aliases: ["spojene arabske emiraty", "spojené arabské emiráty", "united arab emirates", "uae"],
   },
 ];
 
@@ -598,20 +537,22 @@ export async function listPublicDestinations(
   }
 
   const destinations = await prisma.destination.findMany({ orderBy: { czechName: "asc" } });
-  return destinations.map((destination) => {
-    const entry = counts.get(destination.id) ?? blank();
-    return {
-      id: destination.id,
-      slug: destination.slug,
-      czechName: destination.czechName,
-      canonicalName: destination.canonicalName,
-      count: entry.count,
-      rawOfferCount: entry.rawOfferCount,
-      minPrice: entry.minPrice,
-      providerCounts: entry.providerCounts,
-      providerRawOfferCounts: entry.providerRawOfferCounts,
-    };
-  });
+  return destinations
+    .map((destination) => {
+      const entry = counts.get(destination.id) ?? blank();
+      return {
+        id: destination.id,
+        slug: destination.slug,
+        czechName: destination.czechName,
+        canonicalName: destination.canonicalName,
+        count: entry.count,
+        rawOfferCount: entry.rawOfferCount,
+        minPrice: entry.minPrice,
+        providerCounts: entry.providerCounts,
+        providerRawOfferCounts: entry.providerRawOfferCounts,
+      };
+    })
+    .filter((d) => d.count > 0);
 }
 
 export async function getDestinationSearchContext(

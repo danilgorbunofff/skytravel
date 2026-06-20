@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
 import cors from "cors";
 import helmet from "helmet";
@@ -165,16 +165,19 @@ export function createApp() {
     },
   });
 
-  const toursLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: config.isProd ? 30 : 100,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      ok: false,
-      error: { code: "RATE_LIMITED", message: "Too many tour requests. Try again later." },
-    },
-  });
+  const toursLimiter =
+    !config.isProd || config.disableRateLimit
+      ? ((_req: Request, _res: Response, next: NextFunction) => next())
+      : rateLimit({
+          windowMs: 15 * 60 * 1000,
+          max: 30,
+          standardHeaders: true,
+          legacyHeaders: false,
+          message: {
+            ok: false,
+            error: { code: "RATE_LIMITED", message: "Too many tour requests. Try again later." },
+          },
+        });
 
   app.use("/api/admin/login", loginLimiter);
   app.use("/api/inquiries", inquiryLimiter);
