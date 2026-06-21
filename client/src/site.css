@@ -2228,8 +2228,11 @@ html[lang="ru"] .logo {
   max-height: calc(100vh - 185px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.search-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .search-filter-block,
