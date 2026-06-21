@@ -54,8 +54,11 @@ echo "▸ Cleaning node_modules …"
 sudo rm -rf node_modules client/node_modules server/node_modules
 npm cache clean --force 2>/dev/null || true
 
-echo "▸ Injecting DATABASE_URL into PM2 config …"
+echo "▸ Extracting DATABASE_URL from server/.env …"
 DB_URL=$(grep ^DATABASE_URL server/.env | head -1 | sed 's/^DATABASE_URL=//;s/^"//;s/"$//')
+export DATABASE_URL="$DB_URL"
+
+echo "▸ Injecting DATABASE_URL into PM2 config …"
 sed -i "s|PORT: 4000,|PORT: 4000,\n        DATABASE_URL: \"${DB_URL}\",|" ecosystem.config.cjs
 
 echo "▸ Installing dependencies …"
