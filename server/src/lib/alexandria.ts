@@ -247,6 +247,7 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
             .filter(Boolean);
 
           // Each termin is a separate tour offer
+          const terminIds = new Map<string, number>();
           for (const termin of ensureArray((hotel as Record<string, unknown>)?.termin)) {
             const startDate = parseCzDate(attr(termin, "datum_od"));
             const endDate = parseCzDate(attr(termin, "datum_do"));
@@ -259,9 +260,13 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
 
             const akce = attr(objekt, "akce");
             const dateKey = startDate.toISOString().slice(0, 10);
-            const externalId = akce
+            const baseId = akce
               ? `${akce}-${hotelId}-${dateKey}-${transportType}-${board}`
               : `${hotelId}-${dateKey}-${transportType}-${board}`;
+            // Append counter to ensure uniqueness when multiple termini share the same fields
+            const count = terminIds.get(baseId) ?? 0;
+            terminIds.set(baseId, count + 1);
+            const externalId = count > 0 ? `${baseId}-${count}` : baseId;
 
             results.push({
               externalId,
