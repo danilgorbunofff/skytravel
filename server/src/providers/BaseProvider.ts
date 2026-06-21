@@ -276,13 +276,6 @@ export abstract class BaseProvider implements TourProvider {
       }
     }
 
-    if (filters.nights) {
-      const nightsRange = parseNightsRange(filters.nights);
-      if (nightsRange) {
-        where.nights = { gte: nightsRange.min, lte: nightsRange.max };
-      }
-    }
-
     return where;
   }
 
@@ -309,13 +302,7 @@ export abstract class BaseProvider implements TourProvider {
       prisma.providerTour.count({ where }),
     ]);
 
-    const filteredRows = nightsRange
-      ? allFiltered.filter((row) => {
-          if (row.nights != null) return true; // already filtered by DB WHERE
-          const computedNights = nightsFromDates(row.startDate, row.endDate);
-          return computedNights != null && computedNights >= nightsRange.min && computedNights <= nightsRange.max;
-        })
-      : allFiltered;
+    const filteredRows = this.filterRowsByNights(allFiltered, nightsRange);
     const rawFilteredOffers = nightsRange
       ? filteredRows.length
       : rawFilteredDb;

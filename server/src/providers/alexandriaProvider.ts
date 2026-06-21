@@ -29,6 +29,7 @@ import {
   parseNightsRange,
   buildTourSelect,
   type TourQuery,
+  type NightsRange,
 } from "./BaseProvider.js";
 
 // ── Alexandria country IDs (validated 2026-06-16 via API probe) ──────
@@ -162,7 +163,7 @@ export class AlexandriaProvider extends BaseProvider {
 
     // Destination grouping — uses in-memory aggregation of DB results
     if (groupBy === "destination") {
-      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit, omitHeavy);
+      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit, omitHeavy, nightsRange);
     }
 
     const orderBy: Prisma.ProviderTourOrderByWithRelationInput =
@@ -173,15 +174,30 @@ export class AlexandriaProvider extends BaseProvider {
     const hasDateFilter = filters.dateStart !== undefined || filters.dateEnd !== undefined;
     const needsSeparateTotal = hasTextFilter || hasPriceFilter || hasDateFilter;
 
+    // When nights filter is active, we must fetch all rows and filter in memory
+    // (since nights may be NULL in DB and need computation from dates)
+    const allRows = nightsRange
+      ? await prisma.providerTour.findMany({
+          where,
+          orderBy,
+          select: buildTourSelect(omitHeavy),
+          take: 5_000,
+        })
+      : null;
+
     const [items, filtered, rawTotal, uniqueDestinations] = await Promise.all([
-      prisma.providerTour.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit,
-        select: buildTourSelect(omitHeavy),
-      }),
-      prisma.providerTour.count({ where }),
+      nightsRange
+        ? Promise.resolve([]) // handled below
+        : prisma.providerTour.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * limit,
+            take: limit,
+            select: buildTourSelect(omitHeavy),
+          }),
+      nightsRange
+        ? Promise.resolve(0) // handled below
+        : prisma.providerTour.count({ where }),
       needsSeparateTotal
         ? prisma.providerTour.count({
             where: { source: this.id, ...(where.regionKey ? { regionKey: where.regionKey } : {}) },
@@ -196,18 +212,29 @@ export class AlexandriaProvider extends BaseProvider {
         : prisma.providerRegion.count({ where: { providerId: this.id } }),
     ]);
 
-    const total = rawTotal ?? filtered;
+    let finalItems: Array<typeof items[0]>;
+    let finalFiltered: number;
+    if (nightsRange && allRows) {
+      const filteredRows = this.filterRowsByNights(allRows, nightsRange);
+      finalFiltered = filteredRows.length;
+      const start = (page - 1) * limit;
+      finalItems = filteredRows.slice(start, start + limit);
+    } else {
+      finalItems = items;
+      finalFiltered = filtered;
+    }
 
-    const totalPages = Math.ceil(filtered / limit);
+    const total = rawTotal ?? finalFiltered;
+    const totalPages = Math.ceil(finalFiltered / limit);
 
     return {
       total,
-      filtered,
+      filtered: finalFiltered,
       uniqueDestinations,
       page,
       limit,
       totalPages,
-      items: items.map((row) => this.rowToUnified(row)),
+      items: finalItems.map((row) => this.rowToUnified(row)),
     };
   }
 
@@ -218,6 +245,7 @@ export class AlexandriaProvider extends BaseProvider {
     page: number,
     limit: number,
     omitHeavy = false,
+    nightsRange?: NightsRange,
   ): Promise<ToursResult> {
     // Get grouped counts + cheapest per destination
     const allFiltered = await prisma.providerTour.findMany({
@@ -227,9 +255,12 @@ export class AlexandriaProvider extends BaseProvider {
       select: buildTourSelect(omitHeavy),
     });
 
+    // Apply nights filter in memory (nights may be NULL in DB)
+    const nightFiltered = this.filterRowsByNights(allFiltered, nightsRange ?? null);
+
     const counts = new Map<string, number>();
     const cheapest = new Map<string, (typeof allFiltered)[0]>();
-    for (const t of allFiltered) {
+    for (const t of nightFiltered) {
       counts.set(t.destination, (counts.get(t.destination) ?? 0) + 1);
       if (!cheapest.has(t.destination)) cheapest.set(t.destination, t);
     }
@@ -248,7 +279,7 @@ export class AlexandriaProvider extends BaseProvider {
       return sortDir === "asc" ? d : -d;
     });
 
-    const total = allFiltered.length;
+    const total = nightFiltered.length;
     const filteredCount = grouped.length;
     const totalPages = Math.ceil(filteredCount / limit);
     const start = (page - 1) * limit;
