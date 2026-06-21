@@ -172,11 +172,11 @@ export function SearchHero({
                   onBlur={handleAdultsBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleAdultsStep(-1)} disabled={currentAdults <= 1} aria-label="Decrease adults">
-                    <Minus size={12} />
-                  </button>
                   <button type="button" onClick={() => handleAdultsStep(1)} disabled={currentAdults >= 9} aria-label="Increase adults">
                     <Plus size={12} />
+                  </button>
+                  <button type="button" onClick={() => handleAdultsStep(-1)} disabled={currentAdults <= 1} aria-label="Decrease adults">
+                    <Minus size={12} />
                   </button>
                 </div>
               </div>
@@ -194,11 +194,11 @@ export function SearchHero({
                   onBlur={handleChildrenBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleChildrenStep(-1)} disabled={currentChildren <= 0} aria-label="Decrease children">
-                    <Minus size={12} />
-                  </button>
                   <button type="button" onClick={() => handleChildrenStep(1)} disabled={currentChildren >= 6} aria-label="Increase children">
                     <Plus size={12} />
+                  </button>
+                  <button type="button" onClick={() => handleChildrenStep(-1)} disabled={currentChildren <= 0} aria-label="Decrease children">
+                    <Minus size={12} />
                   </button>
                 </div>
               </div>
