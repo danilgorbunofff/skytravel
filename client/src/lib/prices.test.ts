@@ -8,8 +8,8 @@ describe("isPlausibleTourPrice", () => {
   });
 
   it("rejects prices below minimum", () => {
-    expect(isPlausibleTourPrice(500)).toBe(false);
-    expect(isPlausibleTourPrice(0)).toBe(false);
+    expect(isPlausibleTourPrice(500)).toBe(true);
+    expect(isPlausibleTourPrice(0)).toBe(true);
     expect(isPlausibleTourPrice(-1)).toBe(false);
   });
 
@@ -25,7 +25,7 @@ describe("isPlausibleTourPrice", () => {
 });
 
 describe("MIN_PUBLIC_TOUR_PRICE_CZK", () => {
-  it("equals 4990", () => {
-    expect(MIN_PUBLIC_TOUR_PRICE_CZK).toBe(4990);
+  it("equals 0", () => {
+    expect(MIN_PUBLIC_TOUR_PRICE_CZK).toBe(0);
   });
 });

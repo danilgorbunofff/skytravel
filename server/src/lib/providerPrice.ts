@@ -1,4 +1,4 @@
-const DEFAULT_MIN_PROVIDER_TOUR_PRICE_CZK = 4_990;
+const DEFAULT_MIN_PROVIDER_TOUR_PRICE_CZK = 0;
 
 function readMinProviderTourPrice(): number {
   const value = Number(process.env.MIN_PROVIDER_TOUR_PRICE_CZK);

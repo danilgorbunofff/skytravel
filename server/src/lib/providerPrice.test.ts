@@ -9,8 +9,8 @@ describe("isPlausibleProviderPriceCzk", () => {
   });
 
   it("rejects prices below minimum", () => {
-    assert.strictEqual(isPlausibleProviderPriceCzk(500), false);
-    assert.strictEqual(isPlausibleProviderPriceCzk(0), false);
+    assert.strictEqual(isPlausibleProviderPriceCzk(500), true);
+    assert.strictEqual(isPlausibleProviderPriceCzk(0), true);
     assert.strictEqual(isPlausibleProviderPriceCzk(-100), false);
   });
 
@@ -27,7 +27,7 @@ describe("isPlausibleProviderPriceCzk", () => {
 });
 
 describe("MIN_PROVIDER_TOUR_PRICE_CZK", () => {
-  it("defaults to 4990", () => {
-    assert.strictEqual(MIN_PROVIDER_TOUR_PRICE_CZK, 4990);
+  it("defaults to 0", () => {
+    assert.strictEqual(MIN_PROVIDER_TOUR_PRICE_CZK, 0);
   });
 });
