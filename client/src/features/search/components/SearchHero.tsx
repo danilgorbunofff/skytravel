@@ -1,7 +1,8 @@
-import { CalendarDays, Plane, Bus, Car, Train, Ship, Search, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CalendarDays, Plane, Bus, Car, Train, Ship, Search, Users, Plus, Minus } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
-import { getTransportOptions } from "../constants";
+import { getTransportOptions, DEFAULT_ADULTS, DEFAULT_CHILDREN } from "../constants";
 import { SearchAutocomplete } from "./SearchAutocomplete";
 
 interface Props {
@@ -55,6 +56,49 @@ export function SearchHero({
 }: Props) {
   const TRANSPORT_OPTIONS = getTransportOptions(t);
   const TransportIcon = TRANSPORT_ICON_MAP[transport] ?? Plane;
+
+  // Raw string state for editable number inputs (allows empty while typing)
+  const [adultsRaw, setAdultsRaw] = useState(String(adults));
+  const [childrenRaw, setChildrenRaw] = useState(String(children));
+  useEffect(() => { setAdultsRaw(String(adults)); }, [adults]);
+  useEffect(() => { setChildrenRaw(String(children)); }, [children]);
+
+  const clampAdults = (v: number) => Math.min(9, Math.max(1, Math.round(v)));
+  const clampChildren = (v: number) => Math.min(6, Math.max(0, Math.round(v)));
+
+  const handleAdultsBlur = () => {
+    const parsed = Number(adultsRaw);
+    const valid = Number.isFinite(parsed) && parsed >= 1 && parsed <= 9;
+    const clamped = valid ? Math.round(parsed) : DEFAULT_ADULTS;
+    setAdultsRaw(String(clamped));
+    onAdultsChange(clamped);
+  };
+
+  const handleChildrenBlur = () => {
+    const parsed = Number(childrenRaw);
+    const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= 6;
+    const clamped = valid ? Math.round(parsed) : DEFAULT_CHILDREN;
+    setChildrenRaw(String(clamped));
+    onChildrenChange(clamped);
+  };
+
+  const handleAdultsStep = (delta: number) => {
+    const base = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+    const next = clampAdults(base + delta);
+    setAdultsRaw(String(next));
+    onAdultsChange(next);
+  };
+
+  const handleChildrenStep = (delta: number) => {
+    const base = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
+    const next = clampChildren(base + delta);
+    setChildrenRaw(String(next));
+    onChildrenChange(next);
+  };
+
+  // Derived values for stepper disabled state
+  const currentAdults = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+  const currentChildren = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
 
   return (
     <section className="search-hero-section">
@@ -117,28 +161,46 @@ export function SearchHero({
           <div className="search-field-people">
             <label>
               <span>{t("sFormAdults")}</span>
-              <div className="public-search-input">
+              <div className="public-search-input search-input-with-stepper">
                 <Users size={18} aria-hidden="true" />
                 <input
                   type="number"
                   min={1}
                   max={9}
-                  value={adults}
-                  onChange={(e) => onAdultsChange(Math.min(9, Math.max(1, Number(e.target.value) || 1)))}
+                  value={adultsRaw}
+                  onChange={(e) => setAdultsRaw(e.target.value)}
+                  onBlur={handleAdultsBlur}
                 />
+                <div className="people-stepper">
+                  <button type="button" onClick={() => handleAdultsStep(-1)} disabled={currentAdults <= 1} aria-label="Decrease adults">
+                    <Minus size={12} />
+                  </button>
+                  <button type="button" onClick={() => handleAdultsStep(1)} disabled={currentAdults >= 9} aria-label="Increase adults">
+                    <Plus size={12} />
+                  </button>
+                </div>
               </div>
             </label>
             <label>
               <span>{t("sFormChildren")}</span>
-              <div className="public-search-input">
+              <div className="public-search-input search-input-with-stepper">
                 <Users size={18} aria-hidden="true" />
                 <input
                   type="number"
                   min={0}
                   max={6}
-                  value={children}
-                  onChange={(e) => onChildrenChange(Math.min(6, Math.max(0, Number(e.target.value) || 0)))}
+                  value={childrenRaw}
+                  onChange={(e) => setChildrenRaw(e.target.value)}
+                  onBlur={handleChildrenBlur}
                 />
+                <div className="people-stepper">
+                  <button type="button" onClick={() => handleChildrenStep(-1)} disabled={currentChildren <= 0} aria-label="Decrease children">
+                    <Minus size={12} />
+                  </button>
+                  <button type="button" onClick={() => handleChildrenStep(1)} disabled={currentChildren >= 6} aria-label="Increase children">
+                    <Plus size={12} />
+                  </button>
+                </div>
               </div>
             </label>
           </div>
