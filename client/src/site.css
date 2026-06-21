@@ -2856,7 +2856,8 @@ html[lang="ru"] .logo {
   display: flex;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--blue-900);
+  background: #fff;
+  border: 1px solid #d2deef;
 }
 .view-toggle button {
   flex: 1;
@@ -2865,7 +2866,7 @@ html[lang="ru"] .logo {
   justify-content: center;
   padding: 6px 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: #7a8fa8;
   border: none;
   cursor: pointer;
   transition:
@@ -2873,11 +2874,11 @@ html[lang="ru"] .logo {
     color 0.12s;
 }
 .view-toggle button.is-active {
-  background: transparent;
+  background: var(--blue-900);
   color: #fff;
 }
 .view-toggle button:hover:not(.is-active) {
-  background: rgba(255, 255, 255, 0.1);
+  background: #ebf4ff;
 }
 
 /* Card heart / favorites */
