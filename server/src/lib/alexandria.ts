@@ -260,7 +260,7 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
             const akce = attr(objekt, "akce");
             const dateKey = startDate.toISOString().slice(0, 10);
             const externalId = akce
-              ? `${akce}-${dateKey}-${transportType}-${board}`
+              ? `${akce}-${hotelId}-${dateKey}-${transportType}-${board}`
               : `${hotelId}-${dateKey}-${transportType}-${board}`;
 
             results.push({
