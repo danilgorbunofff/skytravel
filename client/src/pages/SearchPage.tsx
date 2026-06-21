@@ -331,18 +331,31 @@ export default function SearchPage() {
   const handleShare = useCallback(async () => {
     const url = window.location.href;
     try {
+      // Try native Web Share API first
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        await navigator.share({ url, title: document.title });
-        return;
+        try {
+          await navigator.share({ url, title: document.title });
+          return; // Native share dialog handled it — no toast needed
+        } catch (shareErr) {
+          // AbortError = user cancelled native dialog, do nothing
+          if ((shareErr as Error)?.name === "AbortError") return;
+          // Otherwise native share failed — fall through to clipboard
+        }
       }
+      // Fallback: copy URL to clipboard
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         setShareConfirmation("copied");
       } else {
-        setShareConfirmation("failed");
+        // Last resort: prompt with the URL
+        try {
+          window.prompt("Zkopírujte adresu:", url);
+          setShareConfirmation("copied");
+        } catch {
+          setShareConfirmation("failed");
+        }
       }
     } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
       setShareConfirmation("failed");
       console.warn("share failed", err);
     } finally {
