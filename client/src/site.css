@@ -2854,29 +2854,30 @@ html[lang="ru"] .logo {
 /* View toggle */
 .view-toggle {
   display: flex;
-  gap: 2px;
-  border: 1px solid #d2deef;
   border-radius: 8px;
   overflow: hidden;
+  background: var(--blue-900);
 }
 .view-toggle button {
-  padding: 5px 8px;
-  background: #fff;
-  color: #7a8fa8;
-  border: none;
-  cursor: pointer;
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
   transition:
     background 0.12s,
     color 0.12s;
 }
 .view-toggle button.is-active {
-  background: var(--blue-900);
+  background: transparent;
   color: #fff;
 }
 .view-toggle button:hover:not(.is-active) {
-  background: #ebf4ff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Card heart / favorites */
