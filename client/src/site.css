@@ -2229,6 +2229,7 @@ html[lang="ru"] .logo {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
 }
 
 .search-filter-block,
@@ -5028,7 +5029,7 @@ html[lang="ru"] .logo {
 .star-rating-picker__btn {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
   padding: 6px 12px;
   border: 1px solid #e2e8f0;
@@ -5039,12 +5040,12 @@ html[lang="ru"] .logo {
 }
 
 .star-rating-picker__btn:hover {
-  border-color: #0ea5e9;
+  border-color: var(--blue-900);
 }
 
 .star-rating-picker__btn.is-active {
-  background: #0ea5e9;
-  border-color: #0ea5e9;
+  background: var(--blue-900);
+  border-color: var(--blue-900);
   color: #fff;
 }
 
@@ -5055,8 +5056,8 @@ html[lang="ru"] .logo {
 }
 
 .star-rating-picker__stars .star-filled {
-  fill: currentColor;
-  color: inherit;
+  fill: #f59e0b;
+  color: #f59e0b;
 }
 
 .star-rating-picker__stars .star-empty {
@@ -5148,12 +5149,12 @@ html[lang="ru"] .logo {
 }
 
 .board-multi-select__btn:hover {
-  border-color: #0ea5e9;
+  border-color: var(--blue-900);
 }
 
 .board-multi-select__btn.is-active {
-  background: #0ea5e9;
-  border-color: #0ea5e9;
+  background: var(--blue-900);
+  border-color: var(--blue-900);
   color: #fff;
 }
 

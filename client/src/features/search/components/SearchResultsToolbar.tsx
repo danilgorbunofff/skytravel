@@ -89,7 +89,7 @@ export function SearchResultsToolbar({
             className={viewMode === "grid" ? "is-active" : ""}
             onClick={() => onSetView("grid")}
           >
-            <LayoutGrid size={16} aria-hidden="true" />
+            <LayoutGrid size={16} aria-hidden="true" fill={viewMode === "grid" ? "currentColor" : "none"} />
           </button>
           <button
             type="button"
@@ -97,7 +97,7 @@ export function SearchResultsToolbar({
             className={viewMode === "list" ? "is-active" : ""}
             onClick={() => onSetView("list")}
           >
-            <LayoutList size={16} aria-hidden="true" />
+            <LayoutList size={16} aria-hidden="true" fill={viewMode === "list" ? "currentColor" : "none"} />
           </button>
         </div>
         <button
