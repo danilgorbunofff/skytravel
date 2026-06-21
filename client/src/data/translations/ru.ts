@@ -167,7 +167,6 @@ const t: Record<string, string> = {
   sFilterSaved: "Сохранённые",
   sFilterAll: "Все",
   sFilterReset: "Сбросить фильтры",
-  sFilterHotelOnly: "Включить проживание без транспорта",
   sFilterRetry: "Попробовать снова",
   sFilterNoDestinations: "Пока нет доступных направлений.",
   sFilterSavedCount: "сохранённых",

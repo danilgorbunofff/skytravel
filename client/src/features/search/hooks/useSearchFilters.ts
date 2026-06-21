@@ -37,7 +37,6 @@ export interface SearchFilterState {
   activeBoard: string;
   activePriceMin: string;
   activePriceMax: string;
-  activeHotelOnly: boolean;
   page: number;
   limit: number;
   sortBy: "price" | "date";
@@ -119,8 +118,6 @@ export function useSearchFilters(
   const activeBoard = searchParams.get("board") ?? "";
   const activePriceMin = searchParams.get("priceMin") ?? "";
   const activePriceMax = searchParams.get("priceMax") ?? "";
-  const activeHotelOnly = searchParams.get("hotelOnly") === "1";
-
   const hasPriceFilter = Boolean(activePriceMin || activePriceMax);
   const hasUserFilters = Boolean(
     activeQuery ||
@@ -265,7 +262,6 @@ export function useSearchFilters(
     activeBoard,
     activePriceMin,
     activePriceMax,
-    activeHotelOnly,
     page,
     limit,
     sortBy,

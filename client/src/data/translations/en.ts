@@ -165,7 +165,6 @@ const t: Record<string, string> = {
   sFilterSaved: "Saved",
   sFilterAll: "All",
   sFilterReset: "Reset filters",
-  sFilterHotelOnly: "Include stays without transport",
   sFilterRetry: "Try again",
   sFilterNoDestinations: "No destinations available yet.",
   sFilterSavedCount: "saved",

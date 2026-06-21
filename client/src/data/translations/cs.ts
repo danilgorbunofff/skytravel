@@ -166,7 +166,6 @@ const t: Record<string, string> = {
   sFilterSaved: "Uložené",
   sFilterAll: "Vše",
   sFilterReset: "Reset filtrů",
-  sFilterHotelOnly: "Včetně pobytů bez dopravy",
   sFilterRetry: "Zkusit znovu",
   sFilterNoDestinations: "Zatím nejsou dostupné žádné destinace.",
   sFilterSavedCount: "uložených",
