@@ -18,7 +18,6 @@ import type {
   TourProvider,
 } from "./types.js";
 import {
-  countOfferGroupsBy,
   groupOfferRows,
   MAX_GROUPED_TOUR_ROWS,
   sortOfferGroups,

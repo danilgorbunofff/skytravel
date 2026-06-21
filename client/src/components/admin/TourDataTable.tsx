@@ -98,7 +98,6 @@ export default function TourDataTable({
   page,
   totalPages,
   limit,
-  filteredCount,
   cacheStatus,
   onToggleSelect,
   onToggleSelectAll,
@@ -119,15 +118,13 @@ export default function TourDataTable({
   }, [visibleColumns]);
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: tours.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 72,
+    overscan: 10,
+  });
   const useVirtual = tours.length > 100;
-  const virtualizer = useVirtual
-    ? useVirtualizer({
-        count: tours.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 72,
-        overscan: 10,
-      })
-    : null;
 
   return (
     <section className="admin-card">

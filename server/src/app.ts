@@ -74,7 +74,7 @@ export function createApp() {
           statusCode: res.statusCode,
         }),
       },
-      customLogLevel: (res, err) => {
+      customLogLevel: (res, _err) => {
         const code = res.statusCode ?? 500;
         if (code >= 500) return "error";
         if (code >= 400) return "warn";

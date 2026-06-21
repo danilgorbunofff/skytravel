@@ -47,7 +47,7 @@ router.get(
     const topDestination = topDestRow[0]?.destination ?? "—";
 
     const destinationBreakdown = destBreakdown.map((d) => ({
-      label: d.destination!,
+      label: d.destination ?? "—",
       value: d._count.id,
     }));
 
@@ -115,7 +115,7 @@ router.get(
       channels,
       destinationBreakdown,
       perDestination: perDestination.map((d) => ({
-        destination: d.destination!,
+        destination: d.destination ?? "—",
         inquiries: d._count.id,
       })),
       period,

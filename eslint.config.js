@@ -10,6 +10,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "server/prisma/migrations/**",
       "ecosystem.config.cjs",
+      "commitlint.config.cjs",
     ],
   },
   js.configs.recommended,

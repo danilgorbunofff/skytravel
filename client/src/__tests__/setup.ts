@@ -18,6 +18,7 @@ const createMockStorage = (): Storage => {
       store[key] = String(value);
     },
     removeItem(key: string) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete store[key];
     },
     key(index: number) {

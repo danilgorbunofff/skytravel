@@ -75,12 +75,6 @@ export interface SearchState {
   resetTours: () => void;
 }
 
-// ── Helpers ──────────────────────────────────────────────────
-
-function hasTwoLevelRegions(provider: ProviderMeta): boolean {
-  return provider.filterFields.some((f) => f.dependsOn != null);
-}
-
 // ── Store ────────────────────────────────────────────────────
 
 /** AbortController for the latest loadTours fetch — lets us cancel stale requests. */
@@ -172,11 +166,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         preloaded ? Promise.resolve(preloaded) : fetchProviderRegions(providerId),
         fetchProviderCacheStatus(providerId),
       ]);
-      const provider = get().providers.find((p) => p.id === providerId);
-      const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
-
       let selectedRegion: ProviderRegion | null = null;
-      let selectedSubRegion: ProviderRegion | null = null;
+      const selectedSubRegion: ProviderRegion | null = null;
 
       if (regionData.length > 0) {
         selectedRegion = regionData[0];
