@@ -27,9 +27,7 @@ import { fmtDate, starsDisplay } from "../lib/formatters";
 
 const fallbackDestinationAliases: Record<string, string> = {
   bulgaria: "bulharsko",
-  egypt: "egypt",
   greece: "recko",
-  tunisia: "tunisko",
   turkey: "turecko",
 };
 

@@ -132,31 +132,19 @@ export const defaultOwnTours: OwnTour[] = [
 export const favorites: Favorite[] = [
   {
     destination: "Bulharsko",
-    price: 4893,
+    price: 4990,
     image:
       "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    destination: "Egypt",
-    price: 8027,
-    image:
-      "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    destination: "Tunisko",
-    price: 9990,
-    image:
-      "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
     destination: "Řecko",
-    price: 6990,
+    price: 8990,
     image:
       "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=80",
   },
   {
     destination: "Turecko",
-    price: 5535,
+    price: 11990,
     image:
       "https://images.unsplash.com/photo-1527838832700-5059252407fa?auto=format&fit=crop&w=1200&q=80",
   },

@@ -21,6 +21,8 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
 import { isPlausibleTourPrice } from "../lib/prices";
+import { fetchPublicDestinations } from "../api/publicProviders";
+import type { PublicDestinationSummary } from "../types/providers";
 import { fmtDate } from "../lib/formatters";
 import {
   useSearchFilters,
@@ -71,6 +73,9 @@ export default function SearchPage() {
   const offerGroups = useOfferGroups(filters.buildFilters);
   const compare = useCompare();
   const [compareExpanded, setCompareExpanded] = useState(false);
+  const [destinationLivePrices, setDestinationLivePrices] = useState<
+    Record<string, PublicDestinationSummary>
+  >({});
 
   // ─── Deep linking: open tour modal from URL param ────────────────────
   const deepLinkHandled = useRef(false);
@@ -326,6 +331,24 @@ export default function SearchPage() {
     });
     document.head.appendChild(script);
   }, [results.result?.items, filters.activeQuery, filters.activeDestinationSlug]);
+
+  // ─── Live prices for popular destinations ───────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDestinations() {
+      try {
+        const items = await fetchPublicDestinations();
+        if (cancelled) return;
+        setDestinationLivePrices(Object.fromEntries(items.map((item) => [item.czechName, item])));
+      } catch {
+        if (!cancelled) setDestinationLivePrices({});
+      }
+    }
+    loadDestinations();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ─── Handlers ────────────────────────────────────────────────────────
   const handleShare = useCallback(async () => {
@@ -591,8 +614,8 @@ export default function SearchPage() {
                     />
                     <div className="dest-thumb__label">
                       <strong>{dest.destination}</strong>
-                      {isPlausibleTourPrice(dest.price) && (
-                        <span>od {formatPrice(dest.price)}</span>
+                      {isPlausibleTourPrice(destinationLivePrices[dest.destination]?.minPrice ?? dest.price) && (
+                        <span>od {formatPrice(destinationLivePrices[dest.destination]?.minPrice ?? dest.price)}</span>
                       )}
                     </div>
                   </button>

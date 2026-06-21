@@ -63,8 +63,6 @@ export function getTransportLabel(t: (key: TranslationKey) => string): Record<st
 
 export const fallbackDestinationAliases: Record<string, string> = {
   bulgaria: "bulharsko",
-  egypt: "egypt",
   greece: "recko",
-  tunisia: "tunisko",
   turkey: "turecko",
 };
