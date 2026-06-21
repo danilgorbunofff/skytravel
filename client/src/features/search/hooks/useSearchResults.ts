@@ -89,7 +89,7 @@ export function useSearchResults(
 
   // Update natural price range when results change
   useEffect(() => {
-    if (!activePriceMin && !activePriceMax && result?.items.length) {
+    if (result?.items.length) {
       const prices = result.items.map((t) => t.price).filter(isPlausibleTourPrice);
       if (prices.length === 0) return;
       const newMin = Math.floor(Math.min(...prices) / 500) * 500;
@@ -98,7 +98,7 @@ export function useSearchResults(
         prev.min === newMin && prev.max === newMax ? prev : { min: newMin, max: newMax },
       );
     }
-  }, [result, activePriceMin, activePriceMax]);
+  }, [result]);
 
   const priceRange = FULL_PRICE_RANGE;
 

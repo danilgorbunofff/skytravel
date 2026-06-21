@@ -117,6 +117,21 @@ export default function SearchPage() {
     }
   });
 
+  // ─── Filtered destination counts (respect current filters) ──────────
+  const destinations = useMemo(() => {
+    if (results.result?.items.length && bootstrap.destinations.length > 0) {
+      const counts = new Map<string, number>();
+      for (const item of results.result.items) {
+        counts.set(item.destination, (counts.get(item.destination) || 0) + 1);
+      }
+      return bootstrap.destinations.map((d) => ({
+        ...d,
+        count: counts.get(d.czechName) ?? 0,
+      }));
+    }
+    return bootstrap.destinations;
+  }, [results.result?.items, bootstrap.destinations]);
+
   // ─── Derived ─────────────────────────────────────────────────────────
   const transportLabel = getTransportLabel(t);
   const NIGHTS_OPTIONS = getNightsOptions(t);
@@ -512,7 +527,7 @@ export default function SearchPage() {
           children={filters.children}
           dateError={filters.dateError}
           validationError={filters.validationError}
-          destinations={bootstrap.destinations}
+          destinations={destinations}
           onQueryChange={(v) => {
             filters.setValidationError(null);
             filters.setQuery(v);
@@ -580,7 +595,7 @@ export default function SearchPage() {
               <SearchFilters
                 t={t}
                 filters={filters}
-                destinations={bootstrap.destinations}
+                destinations={destinations}
                 destinationsStatus={bootstrap.destinationsStatus}
                 destinationsError={bootstrap.destinationsError}
                 onRetryDestinations={bootstrap.retryDestinations}
@@ -651,7 +666,7 @@ export default function SearchPage() {
         open={mobileFiltersOpen}
         onClose={() => setMobileFiltersOpen(false)}
         filters={filters}
-        destinations={bootstrap.destinations}
+        destinations={destinations}
         destinationsStatus={bootstrap.destinationsStatus}
         destinationsError={bootstrap.destinationsError}
         onRetryDestinations={bootstrap.retryDestinations}
