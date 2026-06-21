@@ -47,7 +47,7 @@ function SkeletonRows() {
   );
 }
 
-export default function LeadsTable({ leads, loading, error: _error, searchQuery, onDelete }: Props) {
+export default function LeadsTable({ leads, loading, error, searchQuery, onDelete }: Props) {
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>

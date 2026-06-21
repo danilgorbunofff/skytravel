@@ -4,7 +4,7 @@ import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
 import { fmtDate, starsDisplay } from "../../../lib/formatters";
 import { isPlausibleTourPrice } from "../../../lib/prices";
-import { getTransportLabel } from "../constants";
+import { getBoardLabel, getTransportLabel } from "../constants";
 
 interface Props {
   tours: UnifiedTour[];
@@ -49,6 +49,7 @@ function findBest(tours: UnifiedTour[], field: "price" | "stars" | "board"): Set
 
 export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t }: Props) {
   const transportLabels = getTransportLabel(t);
+  const boardLabels = getBoardLabel(t);
   const bestPrice = findBest(tours, "price");
   const bestStars = findBest(tours, "stars");
   const bestBoard = findBest(tours, "board");
@@ -130,7 +131,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
           const isBest = bestBoard.has(id);
           return (
             <div key={id} className={`compare-view__cell${isBest ? " is-best" : ""}`}>
-              {tour.board ?? "–"}
+              {boardLabels[tour.board] ?? tour.board ?? "–"}
               {isBest && <Trophy size={14} className="compare-view__trophy" />}
             </div>
           );

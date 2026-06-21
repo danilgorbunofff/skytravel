@@ -127,6 +127,19 @@ function mapTransport(raw: string): string {
   return "bus";
 }
 
+/** Map board type from Alexandria termin/@typstravy to short code */
+export function mapBoard(raw: string): string {
+  const lc = raw.toLowerCase().trim();
+  const VALID_CODES = new Set(["ai", "uai", "fb", "hb", "bb", "ro"]);
+  if (VALID_CODES.has(lc)) return raw;
+  if (lc.includes("all inclusive")) return "AI";
+  if (lc.includes("ultra")) return "UAI";
+  if (lc.includes("plna penze") || lc.includes("plna")) return "FB";
+  if (lc.includes("polopenze") || lc.includes("polopen")) return "HB";
+  if (lc.includes("snidane") || lc.includes("snidan")) return "BB";
+  return "RO";
+}
+
 function normalizeCenaLabel(node: unknown): string {
   if (!node || typeof node !== "object") return "";
   const record = node as Record<string, unknown>;
@@ -238,7 +251,7 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
             const startDate = parseCzDate(attr(termin, "datum_od"));
             const endDate = parseCzDate(attr(termin, "datum_do"));
             const transportType = mapTransport(attr(termin, "misto"));
-            const board = attr(termin, "typstravy");
+            const board = mapBoard(attr(termin, "typstravy"));
             const price = extractPrice(termin as Record<string, unknown>);
             const originalPrice = extractOriginalPrice(termin as Record<string, unknown>);
 

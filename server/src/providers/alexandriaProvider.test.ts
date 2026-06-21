@@ -302,9 +302,9 @@ describe("extractToursFromParsed with fixture XML", () => {
   it("parses board type (strava)", () => {
     const parsed = loadFixture();
     const tours = extractToursFromParsed(parsed);
-    assert.equal(tours[0].board, "all inclusive");
-    assert.equal(tours[1].board, "all inclusive");
-    assert.equal(tours[2].board, "polopenze");
+    assert.equal(tours[0].board, "AI");
+    assert.equal(tours[1].board, "AI");
+    assert.equal(tours[2].board, "HB");
   });
 
   it("parses star rating", () => {

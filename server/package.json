@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "npx prisma migrate deploy && node dist/index.js",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

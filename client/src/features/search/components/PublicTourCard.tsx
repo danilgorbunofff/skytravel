@@ -7,7 +7,7 @@ import { buildSrcSet, isValidImageUrl } from "../../../lib/images";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { fmtDate } from "../../../lib/formatters";
 import { favorites as popularDestinations } from "../../../data";
-import { fallbackDestinationAliases, getTransportLabel } from "../constants";
+import { fallbackDestinationAliases, getTransportLabel, getBoardLabel } from "../constants";
 
 const fallbackImageCache = new Map<string, string>();
 
@@ -110,6 +110,7 @@ export const PublicTourCard = memo(function PublicTourCard({
   const srcSet = buildSrcSet(imageSrc);
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
   const transportLabels = getTransportLabel(t);
+  const boardLabels = getBoardLabel(t);
 
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
@@ -237,7 +238,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           {tour.board && (
             <div className="tour-card__board">
               {BoardIcon && <BoardIcon size={12} aria-hidden="true" />}
-              <span>{tour.board}</span>
+              <span>{boardLabels[tour.board] ?? tour.board}</span>
             </div>
           )}
 
@@ -351,7 +352,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           {tour.board && (
             <span className="tour-card__meta-item">
               {BoardIcon && <BoardIcon size={12} aria-hidden="true" />}
-              {tour.board}
+              {boardLabels[tour.board] ?? tour.board}
             </span>
           )}
           {tour.startDate && (

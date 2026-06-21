@@ -7,12 +7,12 @@ import ConfirmDialog from "../ConfirmDialog";
 // ── Labels ────────────────────────────────────────────────────────────────
 const boardLabel: Record<string, string> = {
   AI: "All Inclusive",
-  UAI: "Ultra AI",
+  UAI: "Ultra All Inclusive",
   FB: "Plná penze",
   HB: "Polopenze",
-  BB: "Snídaně",
+  BB: "Pouze snídaně",
   RO: "Bez stravy",
-  SC: "Vlastní doprava",
+  SC: "Bez stravy",
 };
 
 const transportLabel: Record<string, string> = {

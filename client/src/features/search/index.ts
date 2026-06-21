@@ -25,6 +25,7 @@ export {
   getBoardOptions,
   getPresets,
   getTransportLabel,
+  getBoardLabel,
   fallbackDestinationAliases,
   VIEW_MODE_KEY,
   DEFAULT_PAGE_SIZE,

@@ -61,6 +61,18 @@ export function getTransportLabel(t: (key: TranslationKey) => string): Record<st
   };
 }
 
+export function getBoardLabel(t: (key: TranslationKey) => string): Record<string, string> {
+  return {
+    AI: "All Inclusive",
+    UAI: "Ultra All Inclusive",
+    FB: "Plná penze",
+    HB: "Polopenze",
+    BB: "Pouze snídaně",
+    RO: "Bez stravy",
+    SC: "Bez stravy",
+  };
+}
+
 export const fallbackDestinationAliases: Record<string, string> = {
   bulgaria: "bulharsko",
   greece: "recko",

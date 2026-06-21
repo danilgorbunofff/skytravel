@@ -7,12 +7,12 @@ import { fmtDate, starsDisplay } from "../../lib/formatters";
 // ── Labels ────────────────────────────────────────────────────────────────
 const boardLabel: Record<string, string> = {
   AI: "All Inclusive",
-  UAI: "Ultra AI",
+  UAI: "Ultra All Inclusive",
   FB: "Plná penze",
   HB: "Polopenze",
-  BB: "Snídaně",
+  BB: "Pouze snídaně",
   RO: "Bez stravy",
-  SC: "Vlastní doprava",
+  SC: "Bez stravy",
 };
 
 const transportLabel: Record<string, string> = {
@@ -98,6 +98,7 @@ export default function TourDataTable({
   page,
   totalPages,
   limit,
+  filteredCount,
   cacheStatus,
   onToggleSelect,
   onToggleSelectAll,
@@ -118,13 +119,15 @@ export default function TourDataTable({
   }, [visibleColumns]);
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
-    count: tours.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
-    overscan: 10,
-  });
   const useVirtual = tours.length > 100;
+  const virtualizer = useVirtual
+    ? useVirtualizer({
+        count: tours.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 72,
+        overscan: 10,
+      })
+    : null;
 
   return (
     <section className="admin-card">

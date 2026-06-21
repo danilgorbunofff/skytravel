@@ -318,7 +318,7 @@ export class AlexandriaProvider extends BaseProvider {
     );
 
     const limit = pLimit(3);
-    await Promise.allSettled(
+    const syncResults = await Promise.allSettled(
       KNOWN_COUNTRIES.map((country) =>
         limit(async () => {
           const regionKey = String(country.id);

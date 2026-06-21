@@ -5,10 +5,10 @@ import { fmtDate, starsDisplay } from "../lib/formatters";
 
 const boardLabel: Record<string, string> = {
   AI: "All Inclusive",
-  UAI: "Ultra AI",
+  UAI: "Ultra All Inclusive",
   FB: "Plná penze",
   HB: "Polopenze",
-  BB: "Snídaně",
+  BB: "Pouze snídaně",
   RO: "Bez stravy",
   SC: "Bez stravy",
 };

@@ -9,7 +9,6 @@ beforeAll(() => {
     disconnect = vi.fn();
     unobserve = vi.fn();
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vi.stubGlobal("IntersectionObserver", MockIntersectionObserver as any);
 });
 
@@ -32,21 +31,18 @@ describe("TourCard", () => {
 
   it("renders without crashing", () => {
     const onClick = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<TourCard tour={mockTour as any} onClick={onClick} />);
     expect(document.body.textContent).toBeTruthy();
   });
 
   it("displays the destination name", () => {
     const onClick = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<TourCard tour={mockTour as any} onClick={onClick} />);
     expect(screen.getByText("Egypt")).toBeInTheDocument();
   });
 
   it("displays the formatted price", () => {
     const onClick = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<TourCard tour={mockTour as any} onClick={onClick} />);
     // The component renders price via formatPrice — check for presence of "from" key
     expect(screen.getByText(/from/)).toBeInTheDocument();
@@ -54,7 +50,6 @@ describe("TourCard", () => {
 
   it("triggers onClick when clicked", async () => {
     const onClick = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render(<TourCard tour={mockTour as any} onClick={onClick} />);
     const card = screen.getByRole("article");
     card.click();
