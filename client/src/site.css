@@ -827,6 +827,7 @@ html[lang="ru"] .logo {
   position: relative;
   display: flex;
   align-items: center;
+  padding: 0 2.5rem;
 }
 
 .allinc-carousel__track {
@@ -874,7 +875,7 @@ html[lang="ru"] .logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 200ms ease;
 }
 
 .allinc-carousel__arrow:hover {
@@ -882,12 +883,19 @@ html[lang="ru"] .logo {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
+.allinc-carousel__arrow.is-disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.92);
+}
+
 .allinc-carousel__arrow--left {
-  left: -0.5rem;
+  left: 0.25rem;
 }
 
 .allinc-carousel__arrow--right {
-  right: -0.5rem;
+  right: 0.25rem;
 }
 
 .hotel-card {

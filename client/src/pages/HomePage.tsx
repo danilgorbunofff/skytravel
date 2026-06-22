@@ -53,6 +53,8 @@ export default function HomePage() {
   const [allIncTours, setAllIncTours] = useState<UnifiedTour[]>([]);
   const [allIncLoading, setAllIncLoading] = useState(true);
   const [allIncDetail, setAllIncDetail] = useState<UnifiedTour | null>(null);
+  const [carouselLeftDisabled, setCarouselLeftDisabled] = useState(true);
+  const [carouselRightDisabled, setCarouselRightDisabled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
@@ -279,6 +281,22 @@ export default function HomePage() {
     const amount = dir === "left" ? -CARD_SCROLL : CARD_SCROLL;
     carouselRef.current.scrollBy({ left: amount, behavior: "smooth" });
   }
+
+  function updateCarouselArrows() {
+    const el = carouselRef.current;
+    if (!el) return;
+    setCarouselLeftDisabled(el.scrollLeft <= 5);
+    setCarouselRightDisabled(el.scrollLeft + el.clientWidth >= el.scrollWidth - 5);
+  }
+
+  const handleCarouselScroll = useCallback(() => {
+    updateCarouselArrows();
+  }, []);
+
+  // Re-check arrows when tours change
+  useEffect(() => {
+    requestAnimationFrame(() => updateCarouselArrows());
+  }, [allIncTours]);
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
     const href = event.currentTarget.getAttribute("href");
@@ -520,13 +538,18 @@ export default function HomePage() {
               <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
                 <button
                   type="button"
-                  className="allinc-carousel__arrow allinc-carousel__arrow--left"
+                  className={`allinc-carousel__arrow allinc-carousel__arrow--left${carouselLeftDisabled ? " is-disabled" : ""}`}
                   onClick={() => scrollCarousel("left")}
+                  disabled={carouselLeftDisabled}
                   aria-label="Předchozí"
                 >
                   ‹
                 </button>
-                <div ref={carouselRef} className="allinc-carousel__track">
+                <div
+                  ref={carouselRef}
+                  className="allinc-carousel__track"
+                  onScroll={handleCarouselScroll}
+                >
                   {allIncTours.map((tour) => (
                     <PublicTourCard
                       key={`${tour.source}-${tour.externalId}`}
@@ -542,8 +565,9 @@ export default function HomePage() {
                 </div>
                 <button
                   type="button"
-                  className="allinc-carousel__arrow allinc-carousel__arrow--right"
+                  className={`allinc-carousel__arrow allinc-carousel__arrow--right${carouselRightDisabled ? " is-disabled" : ""}`}
                   onClick={() => scrollCarousel("right")}
+                  disabled={carouselRightDisabled}
                   aria-label="Další"
                 >
                   ›
