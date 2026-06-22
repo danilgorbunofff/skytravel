@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { ToursResult, UnifiedTour } from "../../../types/providers";
 import type { SortField, ViewMode, PresetOption } from "../types";
@@ -6,6 +6,43 @@ import { PublicTourCard } from "./PublicTourCard";
 import { TourCardSkeleton } from "./TourCardSkeleton";
 import { SearchResultsToolbar } from "./SearchResultsToolbar";
 import { ActiveFilterChips, type ChipData } from "./ActiveFilterChips";
+
+/** Build pagination items array with ellipsis for smart pagination display.
+ *  Returns (number | "...")[] e.g. [1, 2, "...", 9, 10] or [1, "...", 5, 6, 7, "...", 14] */
+function buildPaginationItems(
+  currentPage: number,
+  totalPages: number,
+): (number | "...")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages: (number | "...")[] = [];
+  // Always include first page
+  pages.push(1);
+
+  if (currentPage > 3) {
+    pages.push("...");
+  }
+
+  // Pages around current
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  for (let p = start; p <= end; p++) {
+    pages.push(p);
+  }
+
+  if (currentPage < totalPages - 2) {
+    pages.push("...");
+  }
+
+  // Always include last page
+  if (totalPages > 1) {
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
 
 interface Props {
   /** Translation function. */
@@ -244,47 +281,49 @@ export function SearchResultsSection({
       )}
 
       {!isMobile && !showFavoritesOnly && result && totalPages > 1 && (
-        <div className="search-pagination" role="navigation" aria-label="Stránkování výsledků">
+        <nav className="search-pagination" aria-label="Stránkování">
           <button
             type="button"
+            className="search-pagination__arrow"
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1 || loading}
             aria-label={`${t("sPagePrev")} — ${t("sPageLabel")} ${page - 1}`}
           >
-            <ArrowLeft size={16} aria-hidden="true" />
-            {t("sPagePrev")}
+            <ChevronLeft size={18} aria-hidden="true" />
           </button>
-          <span aria-current="page">
-            {t("sPageLabel")} {page} {t("sPageOf")} {totalPages}
-          </span>
+
+          <div className="search-pagination__pages">
+            {buildPaginationItems(page, totalPages).map((item, i) =>
+              item === "..." ? (
+                <span key={`ellipsis-${i}`} className="search-pagination__ellipsis">
+                  &hellip;
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  className={`search-pagination__page${item === page ? " is-active" : ""}`}
+                  onClick={() => onPageChange(item as number)}
+                  disabled={loading}
+                  aria-label={`${t("sPageLabel")} ${item}`}
+                  aria-current={item === page ? "page" : undefined}
+                >
+                  {item}
+                </button>
+              ),
+            )}
+          </div>
+
           <button
             type="button"
+            className="search-pagination__arrow"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages || loading}
             aria-label={`${t("sPageNext")} — ${t("sPageLabel")} ${page + 1}`}
           >
-            {t("sPageNext")}
-            <ArrowRight size={16} aria-hidden="true" />
+            <ChevronRight size={18} aria-hidden="true" />
           </button>
-        </div>
-      )}
-
-      {!isMobile && !showFavoritesOnly && result && totalPages > 1 && totalPages <= 10 && (
-        <div className="pagination-pills" role="navigation" aria-label="Stránky">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={p === page ? "is-active" : ""}
-              onClick={() => onPageChange(p)}
-              disabled={loading}
-              aria-label={`${t("sPageLabel")} ${p}`}
-              aria-current={p === page ? "page" : undefined}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        </nav>
       )}
     </section>
   );

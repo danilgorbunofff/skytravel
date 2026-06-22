@@ -4069,46 +4069,7 @@ html[lang="ru"] .logo {
   flex-shrink: 0;
 }
 
-/* Pagination improvements on mobile */
-@media (max-width: 768px) {
-  .search-pagination {
-    flex-direction: column;
-    gap: 10px;
-  }
-  .search-pagination button {
-    width: 100%;
-    padding: 14px;
-    font-size: 1rem;
-    justify-content: center;
-  }
-}
 
-/* Pagination page number pills */
-.pagination-pills {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 8px;
-}
-.pagination-pills button {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  cursor: pointer;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.pagination-pills button.is-active {
-  background: var(--blue);
-  color: #fff;
-  border-color: var(--blue);
-}
 
 /* ── End Phase 5 ─────────────────────────────────────────────── */
 
@@ -4242,29 +4203,60 @@ html[lang="ru"] .logo {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.8rem;
+  gap: 6px;
   flex-wrap: wrap;
+  margin-top: 24px;
 }
 
-.search-pagination button {
-  min-height: 40px;
-  border-radius: 10px;
-  padding: 0.45rem 0.75rem;
+.search-pagination__arrow {
+  min-height: 38px;
+  min-width: 38px;
+  border-radius: 8px;
+  padding: 0;
   background: var(--blue-900);
   color: #fff;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
 }
-
-.search-pagination button:disabled {
+.search-pagination__arrow:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.search-pagination span {
-  color: #40597e;
-  font-weight: 800;
+.search-pagination__pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-pagination__page {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--blue-900);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.search-pagination__page.is-active {
+  background: var(--blue-900);
+  color: #fff;
+}
+.search-pagination__page:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.search-pagination__ellipsis {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  padding: 0 2px;
+  user-select: none;
 }
 
 
