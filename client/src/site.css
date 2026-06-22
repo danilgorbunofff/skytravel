@@ -2,6 +2,7 @@
   --blue-900: #123d8c;
   --blue-800: #1b4da8;
   --blue-700: #2666cb;
+  --blue: #2666cb;
   --yellow: #f3d43b;
   --bg: #eef3fa;
   --text: #223147;
@@ -4259,10 +4260,7 @@ html[lang="ru"] .logo {
   color: #40597e;
   font-weight: 800;
 }
-.search-pagination span .page-current {
-  color: var(--blue);
-  font-size: 1.15em;
-}
+
 
 .cookie-setting strong {
   display: block;
