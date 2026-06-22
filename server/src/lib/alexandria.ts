@@ -50,7 +50,7 @@ export async function fetchAlexandriaRaw(countryId?: number): Promise<string> {
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
-  processEntities: false,
+  processEntities: true,
   stopNodes: ["*.script", "*.style"],
   isArray: (name) =>
     [
