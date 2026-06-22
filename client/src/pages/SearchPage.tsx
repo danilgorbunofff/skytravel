@@ -565,7 +565,7 @@ export default function SearchPage() {
           children={filters.children}
           dateError={filters.dateError}
           validationError={filters.validationError}
-          destinations={destinations}
+          destinations={bootstrap.destinations}
           onQueryChange={(v) => {
             filters.setValidationError(null);
             filters.setQuery(v);

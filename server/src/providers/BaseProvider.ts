@@ -230,7 +230,7 @@ export abstract class BaseProvider implements TourProvider {
     if (filters.q) {
       const q = filters.q;
       where.OR = [
-        { destination: { startsWith: q } },
+        { destination: { contains: q } },
         { title: { contains: q } },
       ];
     }
