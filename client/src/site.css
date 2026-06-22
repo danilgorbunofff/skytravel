@@ -1013,6 +1013,7 @@ html[lang="ru"] .logo {
   background-size: cover;
   background-position: center;
   cursor: pointer;
+  grid-column: span 2;
   transition:
     transform 220ms ease,
     box-shadow 220ms ease;
@@ -1028,26 +1029,6 @@ html[lang="ru"] .logo {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 45%, rgba(14, 39, 85, 0.78));
-}
-
-.favorite-card:nth-child(1) {
-  grid-column: span 2;
-}
-
-.favorite-card:nth-child(2) {
-  grid-column: span 2;
-}
-
-.favorite-card:nth-child(3) {
-  grid-column: span 2;
-}
-
-.favorite-card:nth-child(4) {
-  grid-column: span 2;
-}
-
-.favorite-card:nth-child(5) {
-  grid-column: span 4;
 }
 
 .favorite-card__body {

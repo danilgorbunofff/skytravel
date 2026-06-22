@@ -259,6 +259,12 @@ export default function HomePage() {
   function openFavoriteSearch(item: { destination: string }) {
     const params = new URLSearchParams();
     params.set("q", item.destination);
+    const slug = item.destination
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    params.set("destinationSlug", slug);
     navigate(`/search?${params}`);
   }
 

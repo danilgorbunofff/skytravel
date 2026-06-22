@@ -148,6 +148,24 @@ export const favorites: Favorite[] = [
     image:
       "https://images.unsplash.com/photo-1527838832700-5059252407fa?auto=format&fit=crop&w=1200&q=80",
   },
+  {
+    destination: "Chorvatsko",
+    price: 6990,
+    image:
+      "https://images.unsplash.com/photo-1555997284-7894093a180e?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    destination: "Itálie",
+    price: 9990,
+    image:
+      "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    destination: "Španělsko",
+    price: 11990,
+    image:
+      "https://images.unsplash.com/photo-1539037116275-ce8ca6a13b06?auto=format&fit=crop&w=1200&q=80",
+  },
 ];
 
 
