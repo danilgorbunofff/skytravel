@@ -1,4 +1,4 @@
-import { X, Trophy } from "lucide-react";
+import { X, Trophy, ArrowRight } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
@@ -85,7 +85,10 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
               />
               <h3>{tour.title}</h3>
               <p>{tour.destination}</p>
-              {tour.stars && <span className="compare-view__stars">{starsDisplay(tour.stars)}</span>}
+              {/* Always-rendered container for consistent alignment */}
+              <div className="compare-view__stars">
+                {tour.stars ? starsDisplay(tour.stars) : "\u00A0"}
+              </div>
               <button type="button" className="compare-view__remove" onClick={() => onRemove(id)}>
                 <X size={14} /> Odebrat
               </button>
@@ -102,7 +105,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
           return (
             <div key={id} className={`compare-view__cell${isBest ? " is-best" : ""}`}>
               <strong>{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : "–"}</strong>
-              {isBest && <Trophy size={14} className="compare-view__trophy" />}
+              {isBest && <Trophy size={18} className="compare-view__trophy" />}
               {diff > 0 && <span className="compare-view__diff">+{formatPrice(diff)}</span>}
             </div>
           );
@@ -132,7 +135,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
           return (
             <div key={id} className={`compare-view__cell${isBest ? " is-best" : ""}`}>
               {boardLabels[tour.board] ?? tour.board ?? "–"}
-              {isBest && <Trophy size={14} className="compare-view__trophy" />}
+              {isBest && <Trophy size={18} className="compare-view__trophy" />}
             </div>
           );
         })}
@@ -153,7 +156,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
           return (
             <div key={id} className={`compare-view__cell${isBest ? " is-best" : ""}`}>
               {starsDisplay(tour.stars) || "–"}
-              {isBest && <Trophy size={14} className="compare-view__trophy" />}
+              {isBest && <Trophy size={18} className="compare-view__trophy" />}
             </div>
           );
         })}
@@ -162,7 +165,9 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         <div className="compare-view__row-label">Akce</div>
         {tours.map((tour) => (
           <div key={`${tour.source}-${tour.externalId}`} className="compare-view__cell compare-view__cell--actions">
-            <button type="button" onClick={() => onOpenDetail(tour)}>Detail</button>
+            <button type="button" className="compare-view__detail-btn" onClick={() => onOpenDetail(tour)}>
+              <ArrowRight size={14} /> Detail
+            </button>
           </div>
         ))}
       </div>
