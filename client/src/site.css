@@ -4231,21 +4231,28 @@ html[lang="ru"] .logo {
 }
 
 .search-pagination__page {
-  min-width: 36px;
-  height: 36px;
+  min-width: 40px;
+  height: 40px;
   border-radius: 8px;
-  padding: 0 6px;
-  background: transparent;
+  padding: 0 8px;
+  background: #fff;
   color: var(--blue-900);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid #d7e0ee;
+  transition: background 0.15s, border-color 0.15s;
+}
+.search-pagination__page:hover {
+  border-color: var(--blue-900);
+  background: #f0f4ff;
 }
 .search-pagination__page.is-active {
   background: var(--blue-900);
   color: #fff;
+  border-color: var(--blue-900);
 }
 .search-pagination__page:disabled {
   opacity: 0.45;
@@ -4254,8 +4261,8 @@ html[lang="ru"] .logo {
 
 .search-pagination__ellipsis {
   color: #94a3b8;
-  font-size: 0.85rem;
-  padding: 0 2px;
+  font-size: 0.95rem;
+  padding: 0 4px;
   user-select: none;
 }
 

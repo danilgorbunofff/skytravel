@@ -227,11 +227,11 @@ export default function SearchPage() {
   ]);
 
   // ─── Effects ─────────────────────────────────────────────────────────
-  // Scroll to results after pagination
+  // Scroll to results after pagination (fallback in case onPageChange didn't fire)
   useEffect(() => {
     if (previousPageRef.current === filters.page) return;
     previousPageRef.current = filters.page;
-    if (results.resultsLoading) return;
+    if (results.resultsLoading || !results.result) return;
     requestAnimationFrame(() => {
       resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
@@ -668,7 +668,10 @@ export default function SearchPage() {
               onSetView={setView}
               page={filters.page}
               totalPages={results.result?.totalPages ?? 1}
-              onPageChange={(p) => filters.pageTo(p, results.result?.totalPages ?? 1)}
+              onPageChange={(p) => {
+                resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                filters.pageTo(p, results.result?.totalPages ?? 1);
+              }}
               sortBy={filters.sortBy}
               sortDir={filters.sortDir}
               onToggleSort={filters.toggleSort}
