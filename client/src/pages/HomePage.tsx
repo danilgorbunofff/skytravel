@@ -57,8 +57,10 @@ export default function HomePage() {
   const [carouselRightDisabled, setCarouselRightDisabled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
-  const [searchDateEnd, setSearchDateEnd] = useState("2026-04-21");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const twoWeeksStr = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+  const [searchDateStart, setSearchDateStart] = useState(todayStr);
+  const [searchDateEnd, setSearchDateEnd] = useState(twoWeeksStr);
   const [destinationCounts, setDestinationCounts] = useState<
     Record<string, PublicDestinationSummary>
   >({});
