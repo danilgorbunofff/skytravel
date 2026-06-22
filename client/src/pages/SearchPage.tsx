@@ -60,6 +60,9 @@ export default function SearchPage() {
   const bootstrap = useBootstrap();
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [topQuery, setTopQuery] = useState(filters.query);
+
+  // Keep topQuery independent once initialized
   const results = useSearchResults(
     filters.searchFilterKey,
     filters.searchFilters,
@@ -467,13 +470,20 @@ export default function SearchPage() {
             <span className="logo__travel">Travel</span>
           </Link>
 
-          <form className="top-search" onSubmit={filters.submitSearch}>
+          <form
+            className="top-search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              filters.setValidationError(null);
+              filters.updateParams({ q: topQuery.trim() || null, page: 1 });
+            }}
+          >
             <input
               type="text"
-              value={filters.query}
+              value={topQuery}
               onChange={(event) => {
                 filters.setValidationError(null);
-                filters.setQuery(event.target.value);
+                setTopQuery(event.target.value);
               }}
               placeholder={t("searchPlaceholder")}
               aria-label={t("sFormSearch")}
