@@ -282,6 +282,11 @@ const t: Record<string, string> = {
   sDateNextMonth: "Příští měsíc",
   sRecentSearchesTitle: "Nedávná hledání",
   sRecentSearchesClear: "Vymazat",
+  favoritesPageTitle: "Uložené zájezdy",
+  favoritesPageCount: "uložených zájezdů",
+  favoritesPageEmpty: "Zatím nemáš uložené žádné zájezdy. Klikni na srdíčko u zájezdu, který tě zaujme.",
+  favoritesPageBack: "Prohlédnout zájezdy",
+  sFilterViewAll: "Zobrazit vše",
 };
 
 export default t;

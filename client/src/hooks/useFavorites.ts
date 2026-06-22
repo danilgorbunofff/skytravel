@@ -1,21 +1,28 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import type { UnifiedTour } from "../types/providers";
 
 const KEY = "skytravel:favorites";
 
-function load(): string[] {
+function load(): Record<string, UnifiedTour> {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]");
+    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
   } catch {
-    return [];
+    return {};
   }
 }
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<string[]>(load);
+  const [map, setMap] = useState<Record<string, UnifiedTour>>(load);
 
-  const toggle = useCallback((id: string) => {
-    setFavorites((prev) => {
-      const next = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id];
+  const toggle = useCallback((tour: UnifiedTour) => {
+    const id = `${tour.source}-${tour.externalId}`;
+    setMap((prev) => {
+      const next = { ...prev };
+      if (id in next) {
+        delete next[id];
+      } else {
+        next[id] = tour;
+      }
       try {
         localStorage.setItem(KEY, JSON.stringify(next));
       } catch {
@@ -25,7 +32,13 @@ export function useFavorites() {
     });
   }, []);
 
-  const isFavorite = useCallback((id: string) => favorites.includes(id), [favorites]);
+  const isFavorite = useCallback(
+    (id: string) => id in map,
+    [map],
+  );
 
-  return { favorites, toggle, isFavorite };
+  const favorites = useMemo<string[]>(() => Object.keys(map), [map]);
+  const favoriteTours = useMemo<UnifiedTour[]>(() => Object.values(map), [map]);
+
+  return { favorites, favoriteTours, toggle, isFavorite };
 }

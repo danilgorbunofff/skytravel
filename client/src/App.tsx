@@ -10,6 +10,7 @@ const GdprPage = lazy(() => import("./pages/GdprPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
 const AdminRoutes = lazy(() => import("./features/admin/AdminRoutes"));
+const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/gdpr" element={<GdprPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/admin-login" element={<AdminLoginPage />} />

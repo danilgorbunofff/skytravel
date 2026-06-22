@@ -56,8 +56,8 @@ interface Props {
   providerLabels: Record<string, string>;
   /** Check whether a tour ID is in favorites. */
   isFavorite: (id: string) => boolean;
-  /** Toggle favorite for a tour ID. */
-  onToggleFavorite: (id: string) => void;
+  /** Toggle favorite for a tour. */
+  onToggleFavorite: (tour: UnifiedTour) => void;
   /** Open tour detail modal. */
   onOpenDetail: (tour: UnifiedTour) => void;
   /** Check whether a tour ID is in the compare list. */
@@ -208,7 +208,7 @@ export function SearchResultsSection({
               tour={tour}
               viewMode={viewMode}
               isFavorite={isFavorite(tourId)}
-              onToggleFavorite={() => onToggleFavorite(tourId)}
+              onToggleFavorite={() => onToggleFavorite(tour)}
               onOpenDetail={() => onOpenDetail(tour)}
               providerLabel={providerLabels[tour.source]}
               animationIndex={index}

@@ -7460,3 +7460,75 @@ html[lang="ru"] .logo {
     max-width: 100% !important;
   }
 }
+
+/* ── Favorites Page ── */
+.favorites-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  min-height: 60vh;
+}
+
+.favorites-page__header {
+  margin-bottom: 24px;
+}
+
+.favorites-page__header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.favorites-page__count {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
+.favorites-page__empty {
+  text-align: center;
+  padding: 80px 24px;
+  color: #64748b;
+}
+
+.favorites-page__empty p {
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.favorites-page__back-btn {
+  padding: 10px 24px;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  background: #f0f9ff;
+  color: #0369a1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.favorites-page__back-btn:hover {
+  background: #e0f2fe;
+}
+
+.favorites-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.filter-btn-list__btn--view-all {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #0ea5e9 !important;
+  border: none !important;
+  background: none !important;
+  padding: 4px 0 !important;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.filter-btn-list__btn--view-all:hover {
+  color: #0284c7 !important;
+}

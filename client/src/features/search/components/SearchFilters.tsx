@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   Heart,
   RotateCcw,
@@ -65,6 +66,7 @@ export function SearchFilters({
   onReset,
   showContactCta = true,
 }: Props) {
+  const navigate = useNavigate();
   return (
     <>
       {/* Destinations */}
@@ -175,6 +177,13 @@ export function SearchFilters({
           >
             <Heart size={14} aria-hidden="true" />
             {favoritesCount} {t("sFilterSavedCount")}
+          </button>
+          <button
+            type="button"
+            className="filter-btn-list__btn filter-btn-list__btn--view-all"
+            onClick={() => navigate("/favorites")}
+          >
+            {t("sFilterViewAll")}
           </button>
         </div>
       )}

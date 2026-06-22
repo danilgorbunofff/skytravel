@@ -283,6 +283,11 @@ const t: Record<string, string> = {
   sDateNextMonth: "Наступний місяць",
   sRecentSearchesTitle: "Нещодавні пошуки",
   sRecentSearchesClear: "Очистити",
+  favoritesPageTitle: "Збережені тури",
+  favoritesPageCount: "збережених турів",
+  favoritesPageEmpty: "У вас ще немає збережених турів. Натисніть на сердечко біля туру, щоб зберегти його.",
+  favoritesPageBack: "Переглянути тури",
+  sFilterViewAll: "Переглянути всі",
 };
 
 export default t;

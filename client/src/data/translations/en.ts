@@ -281,6 +281,11 @@ const t: Record<string, string> = {
   sDateNextMonth: "Next month",
   sRecentSearchesTitle: "Recent searches",
   sRecentSearchesClear: "Clear",
+  favoritesPageTitle: "Saved tours",
+  favoritesPageCount: "saved tours",
+  favoritesPageEmpty: "No saved tours yet. Tap the heart icon on any tour to save it.",
+  favoritesPageBack: "Browse tours",
+  sFilterViewAll: "View all",
 };
 
 export default t;
