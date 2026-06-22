@@ -7,7 +7,7 @@ interface Props {
   t: (key: TranslationKey) => string;
 }
 
-type Tab = "description" | "dates" | "location";
+type Tab = "description" | "dates";
 
 export function TourDetailTabs({ description, offers, t }: Props) {
   const [active, setActive] = useState<Tab>(description ? "description" : "dates");
@@ -15,7 +15,6 @@ export function TourDetailTabs({ description, offers, t }: Props) {
   const tabs: { id: Tab; label: string }[] = [
     ...(description ? [{ id: "description" as Tab, label: "Popis" }] : []),
     { id: "dates", label: t("sModalAvailableDates") },
-    { id: "location", label: "Umístění" },
   ];
 
   return (
@@ -42,13 +41,6 @@ export function TourDetailTabs({ description, offers, t }: Props) {
           </div>
         )}
         {active === "dates" && offers}
-        {active === "location" && (
-          <div className="tour-detail-tabs__location">
-            <p className="tour-detail-tabs__placeholder">
-              Informace o umístění hotelu budou brzy k dispozici.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

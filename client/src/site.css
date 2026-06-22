@@ -2554,6 +2554,12 @@ html[lang="ru"] .logo {
   background: #dbe7f7;
   border-radius: 2px;
 }
+.price-slider__track input[type="range"]:first-of-type {
+  z-index: 2;
+}
+.price-slider__track input[type="range"]:last-of-type {
+  z-index: 1;
+}
 .price-slider__track input[type="range"]::-webkit-slider-thumb {
   pointer-events: all;
   -webkit-appearance: none;
@@ -5902,6 +5908,10 @@ html[lang="ru"] .logo {
   gap: 12px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+.tour-detail-modal__price-section > .tour-price-card {
+  flex: 1;
+  min-width: 260px;
 }
 
 .tour-detail-modal__alert {

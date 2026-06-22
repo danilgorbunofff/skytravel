@@ -77,6 +77,9 @@ export function TourDetailModal({
 
   useEffect(() => {
     setSelectedOfferId(`${tour.source}-${tour.externalId}`);
+    // Scroll modal content to top when navigating to a new tour
+    const contentEl = containerRef.current?.querySelector(".tour-detail-modal__content");
+    if (contentEl) contentEl.scrollTop = 0;
   }, [tour]);
 
   useEffect(() => {
