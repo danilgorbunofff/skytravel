@@ -152,7 +152,7 @@ export const favorites: Favorite[] = [
     destination: "Chorvatsko",
     price: 6990,
     image:
-      "https://images.unsplash.com/photo-1555997284-7894093a180e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1582967788606-a171c1080cb0?auto=format&fit=crop&w=1200&q=80",
   },
   {
     destination: "Itálie",
@@ -164,7 +164,7 @@ export const favorites: Favorite[] = [
     destination: "Španělsko",
     price: 11990,
     image:
-      "https://images.unsplash.com/photo-1539037116275-ce8ca6a13b06?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=1200&q=80",
   },
 ];
 
