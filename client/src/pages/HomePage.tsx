@@ -31,10 +31,9 @@ export default function HomePage() {
   const cookies = useCookieConsent();
 
   const budgetOptions = [
-    { value: 10000, label: t("budget1") },
-    { value: 15000, label: t("budget2") },
-    { value: 20000, label: t("budget3") },
-    { value: 999999, label: t("budget4") },
+    { value: 20000, label: "20 000 – 25 000 Kč" },
+    { value: 25000, label: "25 000 – 30 000 Kč" },
+    { value: 35000, label: "35 000+ Kč" },
   ];
 
   function formatDateRange(start?: string, end?: string) {
@@ -47,7 +46,7 @@ export default function HomePage() {
     return `${startDate.toLocaleDateString("cs-CZ")} - ${endDate.toLocaleDateString("cs-CZ")}`;
   }
 
-  const [activeBudget, setActiveBudget] = useState(10000);
+  const [activeBudget, setActiveBudget] = useState(20000);
   const [heroIndex, setHeroIndex] = useState(0);
   const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
   const [lastMinuteDetail, setLastMinuteDetail] = useState<UnifiedTour | null>(null);
@@ -67,6 +66,7 @@ export default function HomePage() {
   const searchTransportRef = useRef<HTMLSelectElement | null>(null);
   const budgetRef = useRef<HTMLDivElement | null>(null);
   const indicatorRef = useRef<HTMLSpanElement | null>(null);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -166,16 +166,14 @@ export default function HomePage() {
       setAllIncLoading(true);
       try {
         const filters: Record<string, string | number> = { board: "AI,UAI" };
-        if (activeBudget === 10000) {
-          filters.priceMax = 10000;
-        } else if (activeBudget === 15000) {
-          filters.priceMin = 10000;
-          filters.priceMax = 15000;
-        } else if (activeBudget === 20000) {
-          filters.priceMin = 15000;
-          filters.priceMax = 20000;
-        } else {
+        if (activeBudget === 20000) {
           filters.priceMin = 20000;
+          filters.priceMax = 25000;
+        } else if (activeBudget === 25000) {
+          filters.priceMin = 25000;
+          filters.priceMax = 30000;
+        } else {
+          filters.priceMin = 35000;
         }
         const result = await fetchPublicAllProviderTours(filters as never);
         if (!cancelled) setAllIncTours(result.items ?? []);
@@ -273,6 +271,13 @@ export default function HomePage() {
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
+  }
+
+  const CARD_SCROLL = 340;
+  function scrollCarousel(dir: "left" | "right") {
+    if (!carouselRef.current) return;
+    const amount = dir === "left" ? -CARD_SCROLL : CARD_SCROLL;
+    carouselRef.current.scrollBy({ left: amount, behavior: "smooth" });
   }
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
@@ -504,25 +509,45 @@ export default function HomePage() {
             </div>
 
             {allIncLoading ? (
-              <div className="hotel-grid" style={{ marginTop: "1rem" }}>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="tour-card-skeleton" />
-                ))}
+              <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
+                <div className="allinc-carousel__track">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="tour-card-skeleton allinc-carousel__skeleton" />
+                  ))}
+                </div>
               </div>
             ) : allIncTours.length > 0 ? (
-              <div className="hotel-grid" style={{ marginTop: "1rem" }}>
-                {allIncTours.map((tour) => (
-                  <PublicTourCard
-                    key={`${tour.source}-${tour.externalId}`}
-                    t={t}
-                    tour={tour}
-                    viewMode="grid"
-                    isFavorite={false}
-                    onToggleFavorite={() => {}}
-                    onOpenDetail={() => setAllIncDetail(tour)}
-                    providerLabel="Alexandria"
-                  />
-                ))}
+              <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
+                <button
+                  type="button"
+                  className="allinc-carousel__arrow allinc-carousel__arrow--left"
+                  onClick={() => scrollCarousel("left")}
+                  aria-label="Předchozí"
+                >
+                  ‹
+                </button>
+                <div ref={carouselRef} className="allinc-carousel__track">
+                  {allIncTours.map((tour) => (
+                    <PublicTourCard
+                      key={`${tour.source}-${tour.externalId}`}
+                      t={t}
+                      tour={tour}
+                      viewMode="grid"
+                      isFavorite={false}
+                      onToggleFavorite={() => {}}
+                      onOpenDetail={() => setAllIncDetail(tour)}
+                      providerLabel="Alexandria"
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="allinc-carousel__arrow allinc-carousel__arrow--right"
+                  onClick={() => scrollCarousel("right")}
+                  aria-label="Další"
+                >
+                  ›
+                </button>
               </div>
             ) : (
               <p style={{ marginTop: "1rem", color: "#4e5f79", fontWeight: 700 }}>
