@@ -3,9 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { favorites, heroImages, type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
-import { fetchPublicDestinations } from "../api/publicProviders";
+import { fetchPublicDestinations, fetchPublicAllProviderTours } from "../api/publicProviders";
 import type { PublicDestinationSummary, UnifiedTour } from "../types/providers";
 import { TourDetailModal } from "../features/search/components/TourDetailModal";
+import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
@@ -50,6 +51,9 @@ export default function HomePage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
   const [lastMinuteDetail, setLastMinuteDetail] = useState<UnifiedTour | null>(null);
+  const [allIncTours, setAllIncTours] = useState<UnifiedTour[]>([]);
+  const [allIncLoading, setAllIncLoading] = useState(true);
+  const [allIncDetail, setAllIncDetail] = useState<UnifiedTour | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
@@ -155,6 +159,36 @@ export default function HomePage() {
     setLastMinuteDetail(tour);
   }
 
+  // ── All-inclusive tours (inline tab content) ──────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setAllIncLoading(true);
+      try {
+        const filters: Record<string, string | number> = { board: "AI,UAI" };
+        if (activeBudget === 10000) {
+          filters.priceMax = 10000;
+        } else if (activeBudget === 15000) {
+          filters.priceMin = 10000;
+          filters.priceMax = 15000;
+        } else if (activeBudget === 20000) {
+          filters.priceMin = 15000;
+          filters.priceMax = 20000;
+        } else {
+          filters.priceMin = 20000;
+        }
+        const result = await fetchPublicAllProviderTours(filters as never);
+        if (!cancelled) setAllIncTours(result.items ?? []);
+      } catch {
+        if (!cancelled) setAllIncTours([]);
+      } finally {
+        if (!cancelled) setAllIncLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [activeBudget]);
+
   const lastMinuteRelated = useMemo(() => {
     if (!lastMinuteDetail) return [];
     return lastMinuteItems
@@ -228,27 +262,17 @@ export default function HomePage() {
     navigate(`/search?${params}`);
   }
 
+  const allIncRelated = useMemo(() => {
+    if (!allIncDetail) return [];
+    return allIncTours.filter(
+      (t) => `${t.source}-${t.externalId}` !== `${allIncDetail.source}-${allIncDetail.externalId}`,
+    );
+  }, [allIncDetail, allIncTours]);
+
   const closeModal = useCallback(() => setModalDetail(null), []);
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
-    const params = new URLSearchParams();
-    // Only apply all-inclusive board filter for budget tiers above the cheapest
-    if (value !== 10000) {
-      params.set("board", "AI,UAI");
-    }
-    if (value === 10000) {
-      params.set("priceMax", "10000");
-    } else if (value === 15000) {
-      params.set("priceMin", "10000");
-      params.set("priceMax", "15000");
-    } else if (value === 20000) {
-      params.set("priceMin", "15000");
-      params.set("priceMax", "20000");
-    } else {
-      params.set("priceMin", "20000");
-    }
-    navigate(`/search?${params}`);
   }
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
@@ -479,6 +503,32 @@ export default function HomePage() {
               ))}
             </div>
 
+            {allIncLoading ? (
+              <div className="hotel-grid" style={{ marginTop: "1rem" }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="tour-card-skeleton" />
+                ))}
+              </div>
+            ) : allIncTours.length > 0 ? (
+              <div className="hotel-grid" style={{ marginTop: "1rem" }}>
+                {allIncTours.map((tour) => (
+                  <PublicTourCard
+                    key={`${tour.source}-${tour.externalId}`}
+                    t={t}
+                    tour={tour}
+                    viewMode="grid"
+                    isFavorite={false}
+                    onToggleFavorite={() => {}}
+                    onOpenDetail={() => setAllIncDetail(tour)}
+                    providerLabel="Alexandria"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p style={{ marginTop: "1rem", color: "#4e5f79", fontWeight: 700 }}>
+                {t("emptyState")}
+              </p>
+            )}
           </div>
         </section>
 
@@ -581,6 +631,18 @@ export default function HomePage() {
           relatedTours={lastMinuteRelated}
           onClose={() => setLastMinuteDetail(null)}
           onNavigateToTour={(tour) => setLastMinuteDetail(tour)}
+        />
+      )}
+
+      {allIncDetail && (
+        <TourDetailModal
+          tour={allIncDetail}
+          providerLabel="Alexandria"
+          offers={[allIncDetail]}
+          loading={false}
+          relatedTours={allIncRelated}
+          onClose={() => setAllIncDetail(null)}
+          onNavigateToTour={(tour) => setAllIncDetail(tour)}
         />
       )}
 

@@ -780,7 +780,7 @@ html[lang="ru"] .logo {
   left: 0;
   height: calc(100% - 1.1rem);
   border-radius: 9px;
-  background: var(--blue-700);
+  background: var(--yellow);
   z-index: 0;
   pointer-events: none;
   transition:
@@ -813,7 +813,7 @@ html[lang="ru"] .logo {
 
 .budget-filters button.is-active {
   background: transparent;
-  color: #fff;
+  color: var(--blue-900);
 }
 
 .hotel-grid {
