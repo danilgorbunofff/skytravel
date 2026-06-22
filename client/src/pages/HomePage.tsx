@@ -132,8 +132,21 @@ export default function HomePage() {
   }, []);
 
   function openLastMinuteModal(item: AlexandriaLastMinuteItem) {
-    // Navigate to the search page which will deep-link to TourDetailModal
-    navigate(`/search?tourId=alexandria-${item.externalId}`);
+    const startDate = new Date(item.startDate);
+    const endDate = new Date(item.endDate);
+    const term = `${startDate.toLocaleDateString("cs-CZ")} - ${endDate.toLocaleDateString("cs-CZ")}`;
+    const starsNum = Number(item.stars) || 0;
+    setModalDetail({
+      type: "Last minute",
+      title: item.title,
+      description: item.description || t("modalDescPartner"),
+      location: item.destination,
+      term,
+      meta: `${t("from")} ${formatPrice(item.price)}`,
+      source: `${item.transport} | ${item.board}${starsNum > 0 ? " \u2022 " + "\u2605".repeat(starsNum) : ""}`,
+      photos: item.photos.length > 0 ? item.photos : item.image ? [item.image] : [],
+      isOwnTour: false,
+    });
   }
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -189,20 +202,6 @@ export default function HomePage() {
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
-    const params = new URLSearchParams();
-    params.set("board", "AI,UAI");
-    if (value === 10000) {
-      params.set("priceMax", "10000");
-    } else if (value === 15000) {
-      params.set("priceMin", "10000");
-      params.set("priceMax", "15000");
-    } else if (value === 20000) {
-      params.set("priceMin", "15000");
-      params.set("priceMax", "20000");
-    } else {
-      params.set("priceMin", "20000");
-    }
-    navigate(`/search?${params}`);
   }
 
   function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {

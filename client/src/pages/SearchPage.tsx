@@ -227,19 +227,13 @@ export default function SearchPage() {
   ]);
 
   // ─── Effects ─────────────────────────────────────────────────────────
-  // Scroll to top of results area after pagination
+  // Scroll to results after pagination (fallback in case onPageChange didn't fire)
   useEffect(() => {
     if (previousPageRef.current === filters.page) return;
     previousPageRef.current = filters.page;
     if (results.resultsLoading || !results.result) return;
     requestAnimationFrame(() => {
-      const el = document.querySelector<HTMLElement>(".search-results-main");
-      if (el) {
-        const header = document.querySelector(".site-header") as HTMLElement | null;
-        const offset = header ? header.offsetHeight + 16 : 20;
-        const top = el.getBoundingClientRect().top + window.scrollY - offset;
-        window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
-      }
+      resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [filters.page, results.result, results.resultsLoading]);
 
@@ -675,13 +669,7 @@ export default function SearchPage() {
               page={filters.page}
               totalPages={results.result?.totalPages ?? 1}
               onPageChange={(p) => {
-                const el = document.querySelector<HTMLElement>(".search-results-main");
-                if (el) {
-                  const header = document.querySelector(".site-header") as HTMLElement | null;
-                  const offset = header ? header.offsetHeight + 16 : 20;
-                  const top = el.getBoundingClientRect().top + window.scrollY - offset;
-                  window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
-                }
+                resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                 filters.pageTo(p, results.result?.totalPages ?? 1);
               }}
               sortBy={filters.sortBy}
