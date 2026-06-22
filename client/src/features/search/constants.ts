@@ -45,8 +45,8 @@ export function getPresets(t: (key: TranslationKey) => string): PresetOption[] {
         dateEnd: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
       },
     },
-    { label: t("sPresetAllInc"), params: { board: "AI" } },
-    { label: t("sPresetFamily"), params: { board: "AI", nights: "7-13" } },
+    { label: t("sPresetAllInc"), params: { board: "AI,UAI" } },
+    { label: t("sPresetFamily"), params: { board: "AI,UAI", nights: "7-13" } },
     { label: t("sPresetShort"), params: { nights: "1-6" } },
   ];
 }

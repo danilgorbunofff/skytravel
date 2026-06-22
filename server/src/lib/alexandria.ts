@@ -132,8 +132,8 @@ export function mapBoard(raw: string): string {
   const lc = raw.toLowerCase().trim();
   const VALID_CODES = new Set(["ai", "uai", "fb", "hb", "bb", "ro"]);
   if (VALID_CODES.has(lc)) return raw;
-  if (lc.includes("all inclusive")) return "AI";
   if (lc.includes("ultra")) return "UAI";
+  if (lc.includes("all inclusive")) return "AI";
   if (lc.includes("plna penze") || lc.includes("plna")) return "FB";
   if (lc.includes("polopenze") || lc.includes("polopen")) return "HB";
   if (lc.includes("snidane") || lc.includes("snidan")) return "BB";
