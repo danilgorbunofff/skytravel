@@ -28,6 +28,7 @@ export function useSearchResults(
   showFavoritesOnly: boolean,
   favorites: string[],
   page: number,
+  favoriteTours: UnifiedTour[] = [],
 ): SearchResultsState {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,19 +115,41 @@ export function useSearchResults(
       ? naturalPriceRange.max
       : Math.min(Math.max(requestedPriceMax, FULL_PRICE_RANGE.min), FULL_PRICE_RANGE.max);
 
-  // Filter displayed tours (favorites-only toggle)
+  // When showFavoritesOnly is active, show ALL saved tours instead of filtered API results
   const displayedTours = useMemo(() => {
-    let items = result?.items ?? [];
-    if (showFavoritesOnly) {
-      items = items.filter((tour) => favorites.includes(`${tour.source}-${tour.externalId}`));
+    if (showFavoritesOnly) return favoriteTours;
+    return result?.items ?? [];
+  }, [result, showFavoritesOnly, favoriteTours]);
+
+  // Fake result for favories-only mode so pagination/toolbar work
+  const activeResult: ToursResult | null = useMemo(() => {
+    if (!showFavoritesOnly) return result;
+    if (favoriteTours.length === 0) {
+      return {
+        items: [],
+        total: 0,
+        filtered: 0,
+        totalPages: 0,
+        page: 1,
+        limit: 0,
+        uniqueDestinations: 0,
+      };
     }
-    return items;
-  }, [result, showFavoritesOnly, favorites]);
+    return {
+      items: favoriteTours,
+      total: favoriteTours.length,
+      filtered: favoriteTours.length,
+      totalPages: 1,
+      page: 1,
+      limit: favoriteTours.length,
+      uniqueDestinations: new Set(favoriteTours.map((t) => t.destination)).size,
+    };
+  }, [showFavoritesOnly, favoriteTours, result]);
 
   return {
-    result,
-    resultsLoading,
-    error,
+    result: activeResult,
+    resultsLoading: showFavoritesOnly ? false : resultsLoading,
+    error: showFavoritesOnly ? null : error,
     displayedTours,
     accumulatedItems,
     naturalPriceRange,

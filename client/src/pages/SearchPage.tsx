@@ -22,7 +22,7 @@ import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
 import { isPlausibleTourPrice } from "../lib/prices";
 import { fetchPublicDestinations } from "../api/publicProviders";
-import type { PublicDestinationSummary, ToursResult, UnifiedTour } from "../types/providers";
+import type { PublicDestinationSummary, UnifiedTour } from "../types/providers";
 import { fmtDate } from "../lib/formatters";
 import {
   useSearchFilters,
@@ -69,32 +69,8 @@ export default function SearchPage() {
     showFavoritesOnly,
     favorites,
     filters.page,
+    favoriteTours,
   );
-
-  // When showFavoritesOnly is active, show ALL saved tours instead of filtered API results
-  const activeResult = useMemo(() => {
-    if (!showFavoritesOnly) return results.result;
-    if (favoriteTours.length === 0) {
-      return {
-        items: [] as UnifiedTour[],
-        total: 0,
-        filtered: 0,
-        totalPages: 0,
-        page: 1,
-        limit: 0,
-        uniqueDestinations: 0,
-      } as ToursResult;
-    }
-    return {
-      items: favoriteTours,
-      total: favoriteTours.length,
-      filtered: favoriteTours.length,
-      totalPages: 1,
-      page: 1,
-      limit: favoriteTours.length,
-      uniqueDestinations: new Set(favoriteTours.map((t) => t.destination)).size,
-    } as ToursResult;
-  }, [showFavoritesOnly, favoriteTours, results.result]);
 
   const offerGroups = useOfferGroups(filters.buildFilters);
   const compare = useCompare();
@@ -468,11 +444,9 @@ export default function SearchPage() {
   ].filter(Boolean).length;
 
   const toursToRender =
-    showFavoritesOnly
-      ? favoriteTours
-      : isMobile
-        ? results.accumulatedItems
-        : results.displayedTours;
+    isMobile && !showFavoritesOnly
+      ? results.accumulatedItems
+      : results.displayedTours;
 
   // ─── Render ──────────────────────────────────────────────────────────
   return (
@@ -667,7 +641,7 @@ export default function SearchPage() {
                 priceRange={results.priceRange}
                 priceMin={results.priceMin}
                 priceMax={results.priceMax}
-                hasResults={activeResult !== null}
+                hasResults={results.result !== null}
                 favoritesCount={favorites.length}
                 showFavoritesOnly={showFavoritesOnly}
                 onToggleFavoritesOnly={handleToggleFavoritesOnly}
@@ -677,22 +651,22 @@ export default function SearchPage() {
 
             <SearchResultsSection
               t={t}
-              result={activeResult}
-              loading={showFavoritesOnly ? false : results.resultsLoading}
-              error={showFavoritesOnly ? null : results.error}
+              result={results.result}
+              loading={results.resultsLoading}
+              error={results.error}
               viewMode={viewMode}
               onSetView={setView}
-              page={showFavoritesOnly ? 1 : filters.page}
-              totalPages={activeResult?.totalPages ?? 1}
-              onPageChange={(p) => filters.pageTo(p, activeResult?.totalPages ?? 1)}
+              page={filters.page}
+              totalPages={results.result?.totalPages ?? 1}
+              onPageChange={(p) => filters.pageTo(p, results.result?.totalPages ?? 1)}
               sortBy={filters.sortBy}
               sortDir={filters.sortDir}
               onToggleSort={filters.toggleSort}
               totalText={totalText}
               toolbarDescription={toolbarDescription}
               displayedCount={toursToRender.length}
-              totalCount={activeResult?.total ?? null}
-              filteredCount={activeResult?.filtered ?? null}
+              totalCount={results.result?.total ?? null}
+              filteredCount={results.result?.filtered ?? null}
               toursToRender={toursToRender}
               chips={activeChips.map((c) => ({ key: c.label, ...c }))}
               onResetFilters={handleResetFilters}
@@ -738,12 +712,12 @@ export default function SearchPage() {
         priceRange={results.priceRange}
         priceMin={results.priceMin}
         priceMax={results.priceMax}
-        hasResults={activeResult !== null}
+        hasResults={results.result !== null}
         favoritesCount={favorites.length}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={handleToggleFavoritesOnly}
         onReset={handleResetFilters}
-        filteredCount={activeResult?.filtered ?? null}
+        filteredCount={results.result?.filtered ?? null}
       />
 
       <LeadPopup
