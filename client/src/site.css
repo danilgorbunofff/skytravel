@@ -4259,6 +4259,10 @@ html[lang="ru"] .logo {
   color: #40597e;
   font-weight: 800;
 }
+.search-pagination span .page-current {
+  color: var(--blue);
+  font-size: 1.15em;
+}
 
 .cookie-setting strong {
   display: block;

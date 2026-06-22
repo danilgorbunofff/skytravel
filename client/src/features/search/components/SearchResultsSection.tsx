@@ -255,7 +255,7 @@ export function SearchResultsSection({
             {t("sPagePrev")}
           </button>
           <span aria-current="page">
-            {t("sPageLabel")} {page} {t("sPageOf")} {totalPages}
+            {t("sPageLabel")} <strong className="page-current">{page}</strong> {t("sPageOf")} {totalPages}
           </span>
           <button
             type="button"
