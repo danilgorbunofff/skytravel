@@ -8,7 +8,7 @@
             nazev="Hotel Slunce"
             ident_hotel="1001"
             url="https://example.com/hotel-slunce"
-            hvezdy="4"
+            hvezdy="****"
             popis="Krásný hotel u pláže s bazénem a výhledem na moře"
             akce="AKCE-BS1"
           />
@@ -42,7 +42,7 @@
             nazev="Hotel Adria"
             ident_hotel="2002"
             url="https://example.com/hotel-adria"
-            hvezdy="3"
+            hvezdy="***"
             popis="Pěkný hotel s výhledem na staré město"
           />
           <obrazek soubor="adria1.jpg" />

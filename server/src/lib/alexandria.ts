@@ -140,6 +140,18 @@ export function mapBoard(raw: string): string {
   return "RO";
 }
 
+/** Map star rating from Alexandria objekt/@hvezdy to numeric string */
+export function mapStars(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  // If it's already a plain number (idempotent), return as-is
+  if (/^\d+$/.test(trimmed)) return trimmed;
+  // Count asterisks — handles "****", "*****", "***+", etc.
+  const match = trimmed.match(/^(\*+)/);
+  if (match) return String(match[1].length);
+  return "";
+}
+
 function normalizeCenaLabel(node: unknown): string {
   if (!node || typeof node !== "object") return "";
   const record = node as Record<string, unknown>;
@@ -231,7 +243,7 @@ export function extractToursFromParsed(parsed: Record<string, unknown>): Alexand
           const hotelName = attr(objekt, "nazev") || mistoName;
           const hotelId = attr(objekt, "ident_hotel");
           const hotelUrl = attr(objekt, "url");
-          const stars = attr(objekt, "hvezdy");
+          const stars = mapStars(attr(objekt, "hvezdy"));
           const hotelDesc =
             attr(objekt, "popis") ||
             String((objekt as Record<string, unknown>)["#text"] ?? "").trim() ||
