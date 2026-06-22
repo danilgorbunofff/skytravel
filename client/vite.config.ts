@@ -21,6 +21,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    allowedHosts: ["skytravel-client-production-dc5f.up.railway.app", "sky-travel.tours", "www.sky-travel.tours"],
   },
   preview: {
     host: true,

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { favorites, heroImages, type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { fetchPublicDestinations } from "../api/publicProviders";
-import type { PublicDestinationSummary } from "../types/providers";
+import type { PublicDestinationSummary, UnifiedTour } from "../types/providers";
+import { TourDetailModal } from "../features/search/components/TourDetailModal";
 import { useLanguage } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
@@ -48,6 +49,7 @@ export default function HomePage() {
   const [activeBudget, setActiveBudget] = useState(10000);
   const [heroIndex, setHeroIndex] = useState(0);
   const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
+  const [lastMinuteDetail, setLastMinuteDetail] = useState<UnifiedTour | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [searchDateStart, setSearchDateStart] = useState("2026-02-21");
@@ -132,9 +134,50 @@ export default function HomePage() {
   }, []);
 
   function openLastMinuteModal(item: AlexandriaLastMinuteItem) {
-    // Navigate to the search page which will deep-link to TourDetailModal
-    navigate(`/search?tourId=alexandria-${item.externalId}`);
+    const tour: UnifiedTour = {
+      externalId: item.externalId,
+      destination: item.destination,
+      title: item.title,
+      price: item.price,
+      originalPrice: item.originalPrice,
+      startDate: item.startDate,
+      endDate: item.endDate,
+      transport: item.transport,
+      image: item.image,
+      description: item.description,
+      photos: item.photos,
+      url: item.url,
+      stars: item.stars,
+      board: item.board,
+      source: "alexandria",
+      offersCount: 1,
+    };
+    setLastMinuteDetail(tour);
   }
+
+  const lastMinuteRelated = useMemo(() => {
+    if (!lastMinuteDetail) return [];
+    return lastMinuteItems
+      .filter((item) => item.externalId !== lastMinuteDetail.externalId)
+      .map((item) => ({
+        externalId: item.externalId,
+        destination: item.destination,
+        title: item.title,
+        price: item.price,
+        originalPrice: item.originalPrice,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        transport: item.transport,
+        image: item.image,
+        description: item.description,
+        photos: item.photos,
+        url: item.url,
+        stars: item.stars,
+        board: item.board,
+        source: "alexandria" as const,
+        offersCount: 1,
+      }));
+  }, [lastMinuteDetail, lastMinuteItems]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -190,7 +233,10 @@ export default function HomePage() {
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
     const params = new URLSearchParams();
-    params.set("board", "AI,UAI");
+    // Only apply all-inclusive board filter for budget tiers above the cheapest
+    if (value !== 10000) {
+      params.set("board", "AI,UAI");
+    }
     if (value === 10000) {
       params.set("priceMax", "10000");
     } else if (value === 15000) {
@@ -525,6 +571,18 @@ export default function HomePage() {
       </footer>
 
       {modalDetail && <TourModal detail={modalDetail} onClose={closeModal} />}
+
+      {lastMinuteDetail && (
+        <TourDetailModal
+          tour={lastMinuteDetail}
+          providerLabel="Alexandria"
+          offers={[lastMinuteDetail]}
+          loading={false}
+          relatedTours={lastMinuteRelated}
+          onClose={() => setLastMinuteDetail(null)}
+          onNavigateToTour={(tour) => setLastMinuteDetail(tour)}
+        />
+      )}
 
       <CookieConsent
         showCookies={cookies.showCookies}

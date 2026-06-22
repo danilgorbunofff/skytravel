@@ -647,6 +647,7 @@ html[lang="ru"] .logo {
 .favorite-card__count {
   display: inline-block;
   margin-top: 0.45rem;
+  margin-left: 0.5rem;
   color: #fff;
   font-size: 0.92rem;
   font-weight: 700;
@@ -770,7 +771,7 @@ html[lang="ru"] .logo {
   padding: 0.55rem;
   border-radius: 12px;
   background: #fff;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .budget-indicator {
@@ -779,7 +780,7 @@ html[lang="ru"] .logo {
   left: 0;
   height: calc(100% - 1.1rem);
   border-radius: 9px;
-  background: #24a8f7;
+  background: var(--blue-700);
   z-index: 0;
   pointer-events: none;
   transition:
@@ -799,6 +800,7 @@ html[lang="ru"] .logo {
   color: var(--blue-900);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition:
     color 220ms ease,
     background-color 220ms ease,

@@ -67,7 +67,17 @@ router.get(
     // Sort by price ascending (cheapest first = best last-minute deals)
     upcoming.sort((a, b) => a.price - b.price);
 
-    const pageItems = upcoming.slice(0, limit);
+    // Deduplicate by title (hotel name) — keep cheapest per hotel
+    const seen = new Set<string>();
+    const deduped: typeof upcoming = [];
+    for (const item of upcoming) {
+      if (!seen.has(item.title)) {
+        seen.add(item.title);
+        deduped.push(item);
+      }
+    }
+
+    const pageItems = deduped.slice(0, limit);
 
     res.json({
       total: upcoming.length,
