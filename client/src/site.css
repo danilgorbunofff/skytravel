@@ -824,20 +824,20 @@ html[lang="ru"] .logo {
 
 /* ── All-inclusive carousel ─────────────────────── */
 .allinc-carousel {
-  position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
 }
 
 .allinc-carousel__track {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 1rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0.25rem 2.5rem;
-  width: 100%;
+  padding: 0.25rem 0;
 }
 
 .allinc-carousel__track::-webkit-scrollbar {
@@ -856,17 +856,16 @@ html[lang="ru"] .logo {
 }
 
 .allinc-carousel__arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 0;
+  margin: 0 0.35rem;
   background: rgba(255, 255, 255, 0.95);
   color: var(--blue-900);
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -877,24 +876,15 @@ html[lang="ru"] .logo {
   transition: transform 150ms ease, box-shadow 150ms ease, opacity 200ms ease;
 }
 
-.allinc-carousel__arrow:hover {
-  transform: translateY(-50%) scale(1.08);
+.allinc-carousel__arrow:hover:not(.is-disabled) {
+  transform: scale(1.08);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .allinc-carousel__arrow.is-disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: default;
   pointer-events: none;
-  transform: translateY(-50%) scale(0.92);
-}
-
-.allinc-carousel__arrow--left {
-  left: -0.25rem;
-}
-
-.allinc-carousel__arrow--right {
-  right: -0.25rem;
 }
 
 .hotel-card {
