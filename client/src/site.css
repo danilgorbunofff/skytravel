@@ -7517,18 +7517,4 @@ html[lang="ru"] .logo {
   gap: 20px;
 }
 
-.filter-btn-list__btn--view-all {
-  margin-top: 4px;
-  font-size: 0.78rem;
-  color: #0ea5e9 !important;
-  border: none !important;
-  background: none !important;
-  padding: 4px 0 !important;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
 
-.filter-btn-list__btn--view-all:hover {
-  color: #0284c7 !important;
-}
