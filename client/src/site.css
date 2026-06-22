@@ -827,7 +827,6 @@ html[lang="ru"] .logo {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 2.5rem;
 }
 
 .allinc-carousel__track {
@@ -837,7 +836,7 @@ html[lang="ru"] .logo {
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0.25rem 0;
+  padding: 0.25rem 2.5rem;
   width: 100%;
 }
 
@@ -891,11 +890,11 @@ html[lang="ru"] .logo {
 }
 
 .allinc-carousel__arrow--left {
-  left: 0.25rem;
+  left: -0.25rem;
 }
 
 .allinc-carousel__arrow--right {
-  right: 0.25rem;
+  right: -0.25rem;
 }
 
 .hotel-card {
