@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon, Share2, Bell, Loader2, CheckCircle } from "lucide-react";
+import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon, Share2, Bell } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { fmtDate, starsDisplay } from "../../../lib/formatters";
-import { createAlert } from "../../../api";
 import { TourGallery } from "./TourGallery";
 import { TourPriceCard } from "./TourPriceCard";
 import { TourDetailTabs } from "./TourDetailTabs";
@@ -48,9 +47,7 @@ export function TourDetailModal({
   const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
   const [animateIn, setAnimateIn] = useState(false);
   const [shareToast, setShareToast] = useState<"copied" | "failed" | null>(null);
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertEmail, setAlertEmail] = useState("");
-  const [alertStatus, setAlertStatus] = useState<"idle" | "sending" | "sent">("idle");
+
   const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -187,20 +184,6 @@ export function TourDetailModal({
     }
   }, [selectedOffer.title]);
 
-  function handleAlertSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!alertEmail) return;
-    setAlertStatus("sending");
-    createAlert({
-      email: alertEmail,
-      providerId: selectedOffer.source,
-      externalId: selectedOffer.externalId,
-      priceMax: selectedOffer.price,
-    })
-      .then(() => setAlertStatus("sent"))
-      .catch(() => setAlertStatus("idle"));
-  }
-
   return (
     <div
       ref={containerRef}
@@ -328,49 +311,17 @@ export function TourDetailModal({
               onInquiry={scrollToInquiry}
             />
 
-            {/* Price Alert Bell */}
+            {/* Price Alert Bell — scrolls to inquiry form */}
             <div className="tour-detail-modal__alert">
-              {!alertOpen && alertStatus !== "sent" && (
-                <button
-                  type="button"
-                  className="tour-detail-modal__alert-btn"
-                  onClick={() => setAlertOpen(true)}
-                  aria-label="Hlídání ceny"
-                >
-                  <Bell size={16} />
-                  Hlídat cenu
-                </button>
-              )}
-              {alertOpen && alertStatus !== "sent" && (
-                <form className="tour-detail-modal__alert-form" onSubmit={handleAlertSubmit}>
-                  <input
-                    type="email"
-                    value={alertEmail}
-                    onChange={(e) => setAlertEmail(e.target.value)}
-                    placeholder="Váš e-mail"
-                    required
-                    className="tour-detail-modal__alert-input"
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    className="tour-detail-modal__alert-submit"
-                    disabled={alertStatus === "sending"}
-                  >
-                    {alertStatus === "sending" ? (
-                      <><Loader2 size={14} className="animate-spin" /> Odesílám...</>
-                    ) : (
-                      "Hlídat"
-                    )}
-                  </button>
-                </form>
-              )}
-              {alertStatus === "sent" && (
-                <div className="tour-detail-modal__alert-sent">
-                  <CheckCircle size={16} />
-                  Budeme Vás informovat
-                </div>
-              )}
+              <button
+                type="button"
+                className="tour-detail-modal__alert-btn"
+                onClick={scrollToInquiry}
+                aria-label="Hlídání ceny"
+              >
+                <Bell size={16} />
+                Hlídat cenu
+              </button>
             </div>
           </div>
 
