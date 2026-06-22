@@ -24,7 +24,7 @@ export default defineConfig({
   },
   preview: {
     host: true,
-    allowedHosts: ["skytravel-client-production-dc5f.up.railway.app"],
+    allowedHosts: ["skytravel-client-production-dc5f.up.railway.app", "sky-travel.tours", "www.sky-travel.tours"],
   },
   build: {
     chunkSizeWarningLimit: 200,
