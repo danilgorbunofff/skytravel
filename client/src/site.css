@@ -5903,33 +5903,37 @@ html[lang="ru"] .logo {
 
 .tour-detail-modal__price-section {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 .tour-detail-modal__price-section > .tour-price-card {
-  flex: 1;
-  min-width: 260px;
+  width: 100%;
+  max-width: 380px;
 }
 
 .tour-detail-modal__alert {
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  justify-content: center;
 }
 .tour-detail-modal__alert-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 10px 14px;
+  padding: 12px 24px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #fff;
   color: #475569;
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  white-space: nowrap;
+  width: 100%;
 }
 .tour-detail-modal__alert-btn:hover {
   border-color: #0ea5e9;
@@ -5940,6 +5944,7 @@ html[lang="ru"] .logo {
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
 }
 .tour-detail-modal__alert-input {
   padding: 8px 12px;
@@ -6035,9 +6040,6 @@ html[lang="ru"] .logo {
     overflow-y: auto;
     padding: 16px;
     -webkit-overflow-scrolling: touch;
-  }
-  .tour-detail-modal--mobile .tour-detail-modal__price-section {
-    flex-direction: column;
   }
   .tour-detail-modal--mobile .tour-detail-modal__alert-input {
     width: 140px;
@@ -6262,6 +6264,7 @@ html[lang="ru"] .logo {
 .tour-price-card__main {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -6288,6 +6291,7 @@ html[lang="ru"] .logo {
 .tour-price-card__total {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-top: 6px;
   font-size: 0.85rem;
