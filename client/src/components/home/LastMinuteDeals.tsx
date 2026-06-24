@@ -74,7 +74,12 @@ function LoadingState() {
   );
 }
 
-function renderCard(item: AlexandriaLastMinuteItem, t: (key: TranslationKey) => string, onClick: (item: AlexandriaLastMinuteItem) => void) {
+function renderCard(
+  item: AlexandriaLastMinuteItem,
+  t: (key: TranslationKey) => string,
+  onClick: (item: AlexandriaLastMinuteItem) => void,
+  isClone?: boolean,
+) {
   const starsNum = Number(item.stars) || 0;
   const hasOriginalPrice = item.originalPrice > 0 && item.originalPrice > item.price;
 
@@ -82,7 +87,8 @@ function renderCard(item: AlexandriaLastMinuteItem, t: (key: TranslationKey) => 
     <article
       className="lm-card"
       role="button"
-      tabIndex={0}
+      tabIndex={isClone ? -1 : 0}
+      aria-hidden={isClone || undefined}
       onClick={() => onClick(item)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -162,7 +168,7 @@ export default function LastMinuteDeals({
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
-  const prefersReducedMotion = useRef(false);
+  const rAFRef = useRef<number | null>(null);
 
   // Split into pairs
   const pairs = useMemo(() => chunkPairs(lastMinuteItems), [lastMinuteItems]);
@@ -174,42 +180,40 @@ export default function LastMinuteDeals({
     return [pairs[pairs.length - 1], ...pairs, pairs[0]];
   }, [pairs]);
 
-  // Get slide width from track
-  const getSlideWidth = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return 0;
-    return track.clientWidth;
-  }, []);
-
   // Hover pause handlers
   const pauseAuto = useCallback(() => { pausedRef.current = true; }, []);
   const resumeAuto = useCallback(() => { pausedRef.current = false; }, []);
 
+  // Safe rAF helper that gets cleaned up on unmount
+  const scheduleRAF = useCallback((fn: () => void) => {
+    rAFRef.current = requestAnimationFrame(() => {
+      rAFRef.current = null;
+      fn();
+    });
+  }, []);
+
   // Manual navigation
   const goNext = useCallback(() => {
-    trackRef.current?.scrollBy({ left: getSlideWidth(), behavior: "smooth" });
-  }, [getSlideWidth]);
+    trackRef.current?.scrollBy({ left: trackRef.current.clientWidth, behavior: "smooth" });
+  }, []);
 
   const goPrev = useCallback(() => {
-    trackRef.current?.scrollBy({ left: -getSlideWidth(), behavior: "smooth" });
-  }, [getSlideWidth]);
+    trackRef.current?.scrollBy({ left: -trackRef.current!.clientWidth, behavior: "smooth" });
+  }, []);
 
   // Initialize scroll position to first real slide (past clone)
   useEffect(() => {
     const track = trackRef.current;
     if (!track || slides.length < 3) return;
     track.classList.add("no-smooth");
-    track.scrollLeft = getSlideWidth();
-    requestAnimationFrame(() => track.classList.remove("no-smooth"));
-  }, [slides, getSlideWidth]);
+    track.scrollLeft = track.clientWidth;
+    scheduleRAF(() => track.classList.remove("no-smooth"));
+  }, [slides, scheduleRAF]);
 
   // Auto-scroll interval
   useEffect(() => {
-    if (prefersReducedMotion.current) return;
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    prefersReducedMotion.current = mql.matches;
-    if (prefersReducedMotion.current) return;
-
+    if (mql.matches) return;
     if (slides.length < 3) return;
 
     const id = setInterval(() => {
@@ -225,25 +229,25 @@ export default function LastMinuteDeals({
     const track = trackRef.current;
     if (!track || slides.length < 3) return;
 
-    const sw = getSlideWidth();
+    const sw = track.clientWidth;
     const left = track.scrollLeft;
 
     // Clones are at index 0 (last pair clone) and slides.length-1 (first pair clone)
-    const realFirstAt = sw;                // scrollLeft for real pair 0
-    const realLastAt = sw * (slides.length - 2);  // scrollLeft for real last pair
+    const realFirstAt = sw;                        // scrollLeft for real pair 0
+    const realLastAt = sw * (slides.length - 2);    // scrollLeft for real last pair
 
     if (left < sw / 2) {
       // Scrolled into clone at start → jump to real last pair
       track.classList.add("no-smooth");
       track.scrollLeft = realLastAt;
-      requestAnimationFrame(() => track.classList.remove("no-smooth"));
-    } else if (left > realLastAt + sw / 2 && !pausedRef.current) {
-      // Scrolled into clone at end → jump to real first pair
+      scheduleRAF(() => track.classList.remove("no-smooth"));
+    } else if (left > realLastAt + sw / 2) {
+      // Scrolled into clone at end → jump to real first pair (always, not gated)
       track.classList.add("no-smooth");
       track.scrollLeft = realFirstAt;
-      requestAnimationFrame(() => track.classList.remove("no-smooth"));
+      scheduleRAF(() => track.classList.remove("no-smooth"));
     }
-  }, [slides.length, getSlideWidth]);
+  }, [slides.length, scheduleRAF]);
 
   // Disable snap during jumps to prevent browser fighting
   useEffect(() => {
@@ -258,6 +262,16 @@ export default function LastMinuteDeals({
     });
     observer.observe(track, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
+  }, []);
+
+  // Cleanup rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rAFRef.current !== null) {
+        cancelAnimationFrame(rAFRef.current);
+        rAFRef.current = null;
+      }
+    };
   }, []);
 
   // ── Render ──────────────────────────────────────────────────
@@ -305,7 +319,7 @@ export default function LastMinuteDeals({
                 type="button"
                 className="lm-nav lm-nav--prev"
                 onClick={goPrev}
-                aria-label={t("navPrev" as TranslationKey) || "Previous"}
+                aria-label="Previous"
               >
                 ‹
               </button>
@@ -316,24 +330,34 @@ export default function LastMinuteDeals({
               ref={trackRef}
               onScroll={handleScroll}
             >
-              {slides.map((pair, slideIdx) => (
-                <div className="lm-slide" key={slideIdx}>
-                  {pair.map((item, cardIdx) =>
-                    cardIdx < pair.length ? (
-                      <div key={item.externalId} style={{ flex: "1 1 0", minWidth: 0 }}>
-                        {renderCard(item, t, onItemClick)}
-                      </div>
-                    ) : (
-                      <div
-                        key={`empty-${cardIdx}`}
-                        className="lm-card lm-card--empty"
-                        aria-hidden="true"
-                        style={{ flex: "1 1 0", minWidth: 0 }}
-                      />
-                    ),
-                  )}
-                </div>
-              ))}
+              {slides.map((pair, slideIdx) => {
+                const isClone = slides.length > 2 && (slideIdx === 0 || slideIdx === slides.length - 1);
+                return (
+                  <div
+                    className="lm-slide"
+                    key={isClone ? `clone-${slideIdx}` : `real-${slideIdx}`}
+                    aria-hidden={isClone || undefined}
+                  >
+                    {pair.map((item, cardIdx) =>
+                      cardIdx < pair.length ? (
+                        <div
+                          key={`${isClone ? "clone-" : "real-"}${item.externalId}`}
+                          style={{ flex: "1 1 0", minWidth: 0 }}
+                        >
+                          {renderCard(item, t, onItemClick, isClone)}
+                        </div>
+                      ) : (
+                        <div
+                          key={`empty-${cardIdx}`}
+                          className="lm-card lm-card--empty"
+                          aria-hidden="true"
+                          style={{ flex: "1 1 0", minWidth: 0 }}
+                        />
+                      ),
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {showArrows && (
@@ -341,7 +365,7 @@ export default function LastMinuteDeals({
                 type="button"
                 className="lm-nav lm-nav--next"
                 onClick={goNext}
-                aria-label={t("navNext" as TranslationKey) || "Next"}
+                aria-label="Next"
               >
                 ›
               </button>
