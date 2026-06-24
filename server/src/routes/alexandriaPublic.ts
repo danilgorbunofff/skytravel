@@ -58,6 +58,12 @@ router.get(
     const countryId = req.query.zeme !== undefined ? Number(req.query.zeme) : undefined;
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 8));
 
+    // Optional board filter (comma-separated, case-insensitive)
+    const boardParam = (req.query.board as string | undefined)?.trim();
+    const boardFilter = boardParam
+      ? new Set(boardParam.split(",").map((b) => b.trim().toUpperCase()).filter(Boolean))
+      : null;
+
     const items = await getCachedFeed(countryId);
 
     const now = new Date();
@@ -77,10 +83,18 @@ router.get(
       }
     }
 
-    const pageItems = deduped.slice(0, limit);
+    // Apply board filter if requested
+    const filtered = boardFilter
+      ? deduped.filter((it) => {
+          const code = (it.board ?? "").toUpperCase();
+          return boardFilter.has(code);
+        })
+      : deduped;
+
+    const pageItems = filtered.slice(0, limit);
 
     res.json({
-      total: upcoming.length,
+      total: filtered.length,
       items: pageItems.map(serializeItem),
     });
   }),

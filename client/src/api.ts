@@ -205,8 +205,11 @@ export type AlexandriaLastMinuteItem = {
 
 export async function fetchAlexandriaLastMinute(
   limit = 8,
+  board?: string,
 ): Promise<{ total: number; items: AlexandriaLastMinuteItem[] }> {
-  const res = await fetch(`${API_URL}/api/alexandria/last-minute?limit=${limit}`);
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (board) params.set("board", board);
+  const res = await fetch(`${API_URL}/api/alexandria/last-minute?${params}`);
   if (!res.ok) throw new Error("Failed to fetch last-minute offers");
   return res.json();
 }
