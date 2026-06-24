@@ -118,7 +118,7 @@ export default function HomePage() {
     let cancelled = false;
     async function load() {
       try {
-        const data = await fetchAlexandriaLastMinute(10, "AI,UAI");
+        const data = await fetchAlexandriaLastMinute(10);
         if (!cancelled) setLastMinuteItems(data.items);
       } catch {
         // fall back to empty; static partner tours still visible below
