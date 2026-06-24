@@ -53,14 +53,6 @@ export default function SearchHero({
         <a className="hero__btn" href="#vlastni" onClick={onNavClick}>
           {t("heroBtn")}
         </a>
-        <div className="hero-dots" aria-hidden="true">
-          {heroImages.map((_, index) => (
-            <span
-              key={index}
-              className={`hero-dot${index === heroIndex ? " is-active" : ""}`}
-            />
-          ))}
-        </div>
       </div>
 
       <div className="container hero-search-wrap">

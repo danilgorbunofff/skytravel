@@ -300,27 +300,6 @@ html[lang="ru"] .logo {
   filter: brightness(1.04);
 }
 
-/* Hero carousel dots */
-.hero-dots {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.hero-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  transition: background 200ms ease, transform 200ms ease;
-}
-
-.hero-dot.is-active {
-  background: #fff;
-  transform: scale(1.3);
-}
-
 .hero-search-wrap {
   position: relative;
   z-index: 4;
