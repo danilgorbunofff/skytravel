@@ -829,20 +829,20 @@ html[lang="ru"] .logo {
 }
 
 .lm-nav--prev {
-  left: -48px;
+  left: -78px;
 }
 
 .lm-nav--next {
-  right: -48px;
+  right: -78px;
 }
 
 @media (max-width: 900px) {
   .lm-nav--prev {
-    left: -12px;
+    left: -32px;
   }
 
   .lm-nav--next {
-    right: -12px;
+    right: -32px;
   }
 }
 
