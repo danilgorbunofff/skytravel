@@ -664,7 +664,7 @@ html[lang="ru"] .logo {
 
 .last-minute-card {
   background: linear-gradient(180deg, #174ea9, #11428f);
-  padding: 1.2rem;
+  padding: 1.2rem 2.5rem;
   border-radius: 16px;
 }
 
@@ -698,7 +698,7 @@ html[lang="ru"] .logo {
 }
 
 .lm-slide {
-  flex: 0 0 calc(50% - 0.5rem);
+  flex: 0 0 100%;
   scroll-snap-align: start;
   display: flex;
   gap: 1rem;
@@ -801,11 +801,11 @@ html[lang="ru"] .logo {
 }
 
 .lm-nav--prev {
-  left: 0.5rem;
+  left: -22px;
 }
 
 .lm-nav--next {
-  right: 0.5rem;
+  right: -22px;
 }
 
 .lm-nav:disabled {
