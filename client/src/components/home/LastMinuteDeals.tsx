@@ -169,6 +169,7 @@ export default function LastMinuteDeals({
   const trackRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const rAFRef = useRef<number | null>(null);
+  const cooldownRef = useRef(0);
 
   // Split into pairs
   const pairs = useMemo(() => chunkPairs(lastMinuteItems), [lastMinuteItems]);
@@ -192,12 +193,14 @@ export default function LastMinuteDeals({
     });
   }, []);
 
-  // Manual navigation
+  // Manual navigation (with cooldown to prevent auto-scroll race)
   const goNext = useCallback(() => {
+    cooldownRef.current = Date.now();
     trackRef.current?.scrollBy({ left: trackRef.current.clientWidth, behavior: "smooth" });
   }, []);
 
   const goPrev = useCallback(() => {
+    cooldownRef.current = Date.now();
     trackRef.current?.scrollBy({ left: -trackRef.current!.clientWidth, behavior: "smooth" });
   }, []);
 
@@ -218,6 +221,7 @@ export default function LastMinuteDeals({
 
     const id = setInterval(() => {
       if (pausedRef.current) return;
+      if (Date.now() - cooldownRef.current < 2000) return;
       goNext();
     }, AUTO_SCROLL_MS);
 
