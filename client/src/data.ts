@@ -54,9 +54,9 @@ export const defaultOwnTours: OwnTour[] = [
     description:
       "Kombinace pláží, výletů a pohodlného ubytování s dopravou i servisem od SkyTravel.",
     image:
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     photos: [
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
     ],
@@ -104,9 +104,9 @@ export const defaultOwnTours: OwnTour[] = [
     description:
       "Dobrodružná exotika s jedinečnou přírodou, delším pobytem a kompletní asistencí agentury.",
     image:
-      "https://images.unsplash.com/photo-1518806118471-f28b20a1d79d?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1506710503106-38f3c2070cea?auto=format&fit=crop&w=1200&q=80",
     photos: [
-      "https://images.unsplash.com/photo-1518806118471-f28b20a1d79d?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1506710503106-38f3c2070cea?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1600&q=80",
     ],

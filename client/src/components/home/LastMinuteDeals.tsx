@@ -4,6 +4,7 @@ import type { TranslationKey } from "../../hooks/useLanguage";
 import { formatPrice } from "../../utils";
 import { EmptyState } from "../EmptyState";
 import { Skeleton } from "../Skeleton";
+import StarRating from "../StarRating";
 
 interface Props {
   lastMinuteItems: AlexandriaLastMinuteItem[];
@@ -117,14 +118,7 @@ function renderCard(
 
       <div className="lm-card__body">
         <div className="hotel-topline">
-          <span
-            className="stars"
-            aria-label={starsNum > 0 ? `${starsNum} out of 5 stars` : undefined}
-          >
-            {starsNum > 0
-              ? "\u2605".repeat(starsNum) + "\u2606".repeat(5 - starsNum)
-              : ""}
-          </span>
+          {starsNum > 0 && <StarRating rating={starsNum} />}
           {item.board ? (
             <span className="hotel-board-badge">{item.board}</span>
           ) : null}

@@ -3,6 +3,7 @@ import { Heart, Search, Plane, Bus, Car, Train, Ship, Layers, Moon, Utensils, Co
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
+import StarRating from "../../../components/StarRating";
 import { buildSrcSet, isValidImageUrl } from "../../../lib/images";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { fmtDate } from "../../../lib/formatters";
@@ -229,7 +230,7 @@ export const PublicTourCard = memo(function PublicTourCard({
             </span>
             {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
               <span className="tour-card__meta-item tour-card__stars">
-                {"★".repeat(Math.min(5, Math.max(1, Math.round(Number(tour.stars)))))}
+                <StarRating rating={Number(tour.stars)} />
               </span>
             )}
           </div>
@@ -337,7 +338,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           <div className="tour-card__destination">{tour.destination}</div>
           <h3 className="tour-card__title">{tour.title}</h3>
           {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
-            <span className="tour-card__stars">{"★".repeat(Math.min(5, Math.max(1, Math.round(Number(tour.stars)))))}</span>
+            <span className="tour-card__stars"><StarRating rating={Number(tour.stars)} /></span>
           )}
           {providerLabel && (
             <span className="tour-card__provider-inline">{providerLabel}</span>
