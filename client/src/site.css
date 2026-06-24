@@ -2733,6 +2733,12 @@ html[lang="ru"] .logo {
   background: #dbe7f7;
   border-radius: 2px;
 }
+.price-slider__track input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #dbe7f7;
+  border-radius: 2px;
+  border: none;
+}
 .price-slider__track input[type="range"]:first-of-type {
   z-index: 2;
 }
@@ -2751,6 +2757,23 @@ html[lang="ru"] .logo {
   margin-top: -7px;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.price-slider__track input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+/* Hide the second input's track so it doesn't draw through first thumb */
+.price-slider__track input[type="range"]:last-of-type::-webkit-slider-runnable-track {
+  background: transparent;
+}
+.price-slider__track input[type="range"]:last-of-type::-moz-range-track {
+  background: transparent;
 }
 
 /* Sidebar filter select */
