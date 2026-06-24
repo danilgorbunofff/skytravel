@@ -104,17 +104,32 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!budgetRef.current || !indicatorRef.current) return;
-    const activeButton = budgetRef.current.querySelector<HTMLButtonElement>("button.is-active");
-    if (!activeButton) return;
+    let resizeObserver: ResizeObserver | null = null;
+    function positionIndicator() {
+      if (!budgetRef.current || !indicatorRef.current) return;
+      const activeButton = budgetRef.current.querySelector<HTMLButtonElement>("button.is-active");
+      if (!activeButton) return;
 
-    const containerRect = budgetRef.current.getBoundingClientRect();
-    const activeRect = activeButton.getBoundingClientRect();
-    const inset = 4;
-    const left = activeRect.left - containerRect.left + inset;
+      const containerRect = budgetRef.current.getBoundingClientRect();
+      const activeRect = activeButton.getBoundingClientRect();
+      const inset = 4;
+      const left = activeRect.left - containerRect.left + inset;
 
-    indicatorRef.current.style.width = `${Math.max(activeRect.width - inset * 2, 12)}px`;
-    indicatorRef.current.style.transform = `translateX(${left}px)`;
+      indicatorRef.current.style.width = `${Math.max(activeRect.width - inset * 2, 12)}px`;
+      indicatorRef.current.style.transform = `translateX(${left}px)`;
+    }
+
+    positionIndicator();
+    // Re-measure after fonts load (fixes initial render with fallback font → custom font swap)
+    document.fonts.ready.then(positionIndicator);
+    // Watch for button size changes (zoom, dynamic content, etc.)
+    const activeButton = budgetRef.current?.querySelector<HTMLButtonElement>("button.is-active");
+    if (activeButton) {
+      resizeObserver = new ResizeObserver(positionIndicator);
+      resizeObserver.observe(activeButton);
+    }
+
+    return () => resizeObserver?.disconnect();
   }, [activeBudget]);
 
   // ── Live Alexandria last-minute offers ──────────────────────
