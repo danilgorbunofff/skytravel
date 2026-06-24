@@ -67,13 +67,31 @@ router.get(
     const items = await getCachedFeed(countryId);
 
     const now = new Date();
-    // Only future departures with plausible prices
-    const upcoming = items.filter((t) => t.startDate > now && isPlausibleProviderPriceCzk(t.price));
+    // Only departures starting within the next 7 days with plausible prices
+    const cutoff = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const upcoming = items.filter(
+      (t) => t.startDate > now && t.startDate < cutoff && isPlausibleProviderPriceCzk(t.price),
+    );
 
-    // Sort by price ascending (cheapest first = best last-minute deals)
-    upcoming.sort((a, b) => a.price - b.price);
+    // Board priority: UAI = 0, AI = 1, rest = 2
+    function boardPriority(board: string | undefined): number {
+      const b = (board ?? "").toUpperCase();
+      if (b === "UAI") return 0;
+      if (b === "AI") return 1;
+      return 2;
+    }
 
-    // Deduplicate by title (hotel name) — keep cheapest per hotel
+    // Sort: highest stars → best board → cheapest price
+    upcoming.sort((a, b) => {
+      const starsA = Number(a.stars) || 0;
+      const starsB = Number(b.stars) || 0;
+      if (starsB !== starsA) return starsB - starsA;
+      const boardDiff = boardPriority(a.board) - boardPriority(b.board);
+      if (boardDiff !== 0) return boardDiff;
+      return a.price - b.price;
+    });
+
+    // Deduplicate by title (hotel name) — keep first (best by sort order)
     const seen = new Set<string>();
     const deduped: typeof upcoming = [];
     for (const item of upcoming) {
