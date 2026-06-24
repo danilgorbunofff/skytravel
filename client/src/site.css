@@ -829,20 +829,20 @@ html[lang="ru"] .logo {
 }
 
 .lm-nav--prev {
-  left: -78px;
+  left: -48px;
 }
 
 .lm-nav--next {
-  right: -78px;
+  right: -48px;
 }
 
 @media (max-width: 900px) {
   .lm-nav--prev {
-    left: -32px;
+    left: -12px;
   }
 
   .lm-nav--next {
-    right: -32px;
+    right: -12px;
   }
 }
 
@@ -1025,6 +1025,14 @@ html[lang="ru"] .logo {
     transform 150ms ease,
     box-shadow 150ms ease,
     opacity 200ms ease;
+}
+
+.allinc-carousel__arrow--left {
+  margin-left: 1.5rem;
+}
+
+.allinc-carousel__arrow--right {
+  margin-right: 1.5rem;
 }
 
 .allinc-carousel__arrow:hover:not(.is-disabled) {
