@@ -36,14 +36,17 @@ jobs:
       - name: Secret sanity check
         run: |
           K="${{ secrets.SSH_PRIVATE_KEY }}"
+          LEN=${#K}
+          BEGIN=$(printf '%s' "$K" | grep -c 'BEGIN OPENSSH PRIVATE KEY' || true)
+          END=$(printf '%s' "$K" | grep -c 'END OPENSSH PRIVATE KEY' || true)
+          CR=$(printf '%s' "$K" | grep -c $'\r' || true)
+          LIT=$(printf '%s' "$K" | grep -c '\\\\n' || true)
           {
-            echo "len=${#K}"
-            printf 'begin_ok=%s\n' "$(printf '%s' "$K" | grep -c 'BEGIN OPENSSH PRIVATE KEY')"
-            printf 'end_ok=%s\n'   "$(printf '%s' "$K" | grep -c 'END OPENSSH PRIVATE KEY')"
-            printf 'has_cr=%s\n'   "$(printf '%s' "$K" | grep -c $'\r')"
-            printf 'literal_slash_n=%s\n' "$(printf '%s' "$K" | grep -c '\\\\n')"
-            LINES=$(printf '%s\n' "$K" | wc -l)
-            echo "lines=$LINES"
+            echo "len=$LEN"
+            echo "begin_ok=$BEGIN"
+            echo "end_ok=$END"
+            echo "has_cr=$CR"
+            echo "literal_slash_n=$LIT"
           } > /tmp/keymeta.txt
           cat /tmp/keymeta.txt
 
