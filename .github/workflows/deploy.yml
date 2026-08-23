@@ -33,6 +33,20 @@ jobs:
       - name: Build check
         run: npm run build
 
+      - name: Secret sanity check
+        run: |
+          K="${{ secrets.SSH_PRIVATE_KEY }}"
+          {
+            echo "len=${#K}"
+            printf 'begin_ok=%s\n' "$(printf '%s' "$K" | grep -c 'BEGIN OPENSSH PRIVATE KEY')"
+            printf 'end_ok=%s\n'   "$(printf '%s' "$K" | grep -c 'END OPENSSH PRIVATE KEY')"
+            printf 'has_cr=%s\n'   "$(printf '%s' "$K" | grep -c $'\r')"
+            printf 'literal_slash_n=%s\n' "$(printf '%s' "$K" | grep -c '\\\\n')"
+            LINES=$(printf '%s\n' "$K" | wc -l)
+            echo "lines=$LINES"
+          } > /tmp/keymeta.txt
+          cat /tmp/keymeta.txt
+
       - name: Deploy via SSH
         if: success()
         uses: appleboy/ssh-action@v1
@@ -98,7 +112,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          { echo "Deploy via SSH failed on runner."
+            echo ""
+            echo "```"
+            cat /tmp/keymeta.txt 2>/dev/null || echo "(no keymeta)"
+            echo "```"
+          } > /tmp/body.txt
           gh issue create \
             --title "deploy: failed @ ${GITHUB_SHA::7}" \
-            --body "Deploy via SSH step failed on runner. Check step logs in Actions UI; if no remote log lines appear above this issue, the SSH key/host rejected the connection (likely secrets.SSH_PRIVATE_KEY mismatch)." \
+            --body-file /tmp/body.txt \
             --repo "$GITHUB_REPOSITORY" || true
