@@ -123,9 +123,12 @@ jobs:
               pm2 save
 
               echo "▸ Refreshing Alexandria feed …"
+              mkdir -p /home/ubuntu/logs
               cd server
-              npx tsx scripts/refresh-alexandria.ts || echo "  ⚠ Alexandria refresh failed (non-critical)"
-
+              # Fire-and-forget: app also self-refreshes every 25 min
+              nohup npx tsx scripts/refresh-alexandria.ts \
+                > /home/ubuntu/logs/alexandria-refresh.log 2>&1 &
+              cd ..
               echo "✅ Deploy complete!"
             } >> "$LOG" 2>&1 || RC=$?
 
