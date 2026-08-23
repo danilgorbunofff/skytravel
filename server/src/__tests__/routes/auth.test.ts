@@ -5,12 +5,15 @@ import express from "express";
 import { createMockAdminApp, skipWithoutDb } from "../test-utils.js";
 import authRoutes from "../../routes/admin/auth.js";
 import type { Express, Request, Response, NextFunction } from "express";
+import { registerTeardown } from "../helpers/teardown.js";
+import { ensureAdminUser } from "../../lib/ensureAdminUser.js";
 
 let app: Express;
 let unauthApp: Express;
 
-before(() => {
+before(async () => {
   // Mock app with admin session — bypasses CSRF for login/logout tests
+  await ensureAdminUser();
   // Mounts auth routes at /api/admin so paths match /api/admin/login etc.
   app = createMockAdminApp(["/api/admin", authRoutes]);
 
@@ -46,12 +49,11 @@ before(() => {
         .json({ ok: false, error: { code: "VALIDATION_ERROR", message: err.message } });
       return;
     }
-    res
-      .status(500)
-      .json({ ok: false, error: { code: "INTERNAL_ERROR", message: err.message } });
+    res.status(500).json({ ok: false, error: { code: "INTERNAL_ERROR", message: err.message } });
   });
 });
 
+registerTeardown();
 describe("POST /api/admin/login", () => {
   it(
     "returns 200 with a session when valid credentials are provided",
@@ -59,7 +61,10 @@ describe("POST /api/admin/login", () => {
     async () => {
       const res = await request(app)
         .post("/api/admin/login")
-        .send({ login: "admin", password: "admin123" })
+        .send({
+          login: process.env.ADMIN_LOGIN ?? "admin",
+          password: process.env.ADMIN_PASSWORD ?? "admin123",
+        })
         .set("Content-Type", "application/json");
 
       assert.equal(res.status, 200);
@@ -72,7 +77,7 @@ describe("POST /api/admin/login", () => {
   it("returns 401 for invalid credentials", { skip: skipWithoutDb }, async () => {
     const res = await request(app)
       .post("/api/admin/login")
-      .send({ login: "admin", password: "wrong-password" })
+      .send({ login: process.env.ADMIN_LOGIN ?? "admin", password: "wrong-password" })
       .set("Content-Type", "application/json");
 
     assert.equal(res.status, 401);
@@ -92,7 +97,7 @@ describe("POST /api/admin/login", () => {
   it("returns 400 when password field is missing", async () => {
     const res = await request(app)
       .post("/api/admin/login")
-      .send({ login: "admin" })
+      .send({ login: process.env.ADMIN_LOGIN ?? "admin" })
       .set("Content-Type", "application/json");
 
     assert.equal(res.status, 400);
@@ -130,7 +135,10 @@ describe("GET /api/admin/me", () => {
     async () => {
       const loginRes = await request(app)
         .post("/api/admin/login")
-        .send({ login: "admin", password: "admin123" })
+        .send({
+          login: process.env.ADMIN_LOGIN ?? "admin",
+          password: process.env.ADMIN_PASSWORD ?? "admin123",
+        })
         .set("Content-Type", "application/json");
 
       assert.equal(loginRes.status, 200);
@@ -139,7 +147,7 @@ describe("GET /api/admin/me", () => {
       const meRes = await request(app).get("/api/admin/me");
       assert.equal(meRes.status, 200);
       assert.equal(meRes.body.ok, true);
-      assert.equal(meRes.body.data.login, "admin");
+      assert.equal(meRes.body.data.login, "admin"); // mock session user
     },
   );
 });

@@ -13,11 +13,13 @@ import supertest from "supertest";
 import { createApp } from "../../../app.js";
 import campaignRoutes from "../../../routes/admin/campaigns.js";
 import { createMockAdminApp, skipWithoutDb, createAuthenticatedAgent } from "../../test-utils.js";
+import { registerTeardown } from "../../helpers/teardown.js";
 
 // ---------------------------------------------------------------------------
 // 1. Authentication guard (real app)
 // ---------------------------------------------------------------------------
 
+registerTeardown();
 describe("Admin campaigns — auth guard", () => {
   it("GET /api/admin/campaigns without session returns 401", async () => {
     const app = createApp();
@@ -25,18 +27,14 @@ describe("Admin campaigns — auth guard", () => {
     assert.equal(res.status, 401);
   });
 
-  it("POST /api/admin/campaigns/send without session returns 401",
+  it(
+    "POST /api/admin/campaigns/send without session returns 401",
     { skip: skipWithoutDb },
     async () => {
       const app = createApp();
-      const res = await supertest(app)
-        .post("/api/admin/campaigns/send")
-        .send({ subject: "test" });
+      const res = await supertest(app).post("/api/admin/campaigns/send").send({ subject: "test" });
       // 401 from requireAuth or 403 from CSRF — either is an auth error
-      assert.ok(
-        res.status === 401 || res.status === 403,
-        `Expected 401 or 403, got ${res.status}`,
-      );
+      assert.ok(res.status === 401 || res.status === 403, `Expected 401 or 403, got ${res.status}`);
     },
   );
 });
@@ -64,9 +62,7 @@ describe("Admin campaigns — validation", () => {
   });
 
   it("POST /api/admin/campaigns/send without html returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/campaigns/send")
-      .send({ subject: "Test" });
+    const res = await supertest(app).post("/api/admin/campaigns/send").send({ subject: "Test" });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
@@ -86,25 +82,21 @@ describe("Admin campaigns — validation", () => {
   });
 
   it("POST /api/admin/campaigns/test with invalid email returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/campaigns/test")
-      .send({
-        subject: "Test",
-        html: "<p>Body</p>",
-        testEmail: "not-an-email",
-      });
+    const res = await supertest(app).post("/api/admin/campaigns/test").send({
+      subject: "Test",
+      html: "<p>Body</p>",
+      testEmail: "not-an-email",
+    });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
 
   it("POST /api/admin/campaigns/send with invalid segment returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/campaigns/send")
-      .send({
-        subject: "Test",
-        html: "<p>Body</p>",
-        segment: "invalid-segment",
-      });
+    const res = await supertest(app).post("/api/admin/campaigns/send").send({
+      subject: "Test",
+      html: "<p>Body</p>",
+      segment: "invalid-segment",
+    });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
@@ -129,13 +121,10 @@ describe("Admin campaigns — send flow", { skip: skipWithoutDb }, () => {
   it("POST /api/admin/campaigns/send without SMTP returns 400", async () => {
     // When SMTP is not configured and there are no leads, the route
     // should fail with NO_RECIPIENTS (leads query comes first).
-    const res = await agent
-      .post("/api/admin/campaigns/send")
-      .set("x-xsrf-token", csrfToken)
-      .send({
-        subject: "Test Campaign",
-        html: "<h1>Hello</h1>",
-      });
+    const res = await agent.post("/api/admin/campaigns/send").set("x-xsrf-token", csrfToken).send({
+      subject: "Test Campaign",
+      html: "<h1>Hello</h1>",
+    });
 
     // Without leads in the DB, we expect NO_RECIPIENTS
     assert.equal(res.status, 400);

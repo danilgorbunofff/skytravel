@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import request from "supertest";
 import { createApp } from "../../app.js";
 import type { Express } from "express";
+import { registerTeardown } from "../helpers/teardown.js";
 
+registerTeardown();
 let app: Express;
 
 before(() => {
@@ -59,9 +61,7 @@ describe("GET /api/search/all/tours", () => {
   });
 
   it("returns 400 when priceMin exceeds priceMax", async () => {
-    const res = await request(app).get(
-      "/api/search/all/tours?priceMin=50000&priceMax=10000",
-    );
+    const res = await request(app).get("/api/search/all/tours?priceMin=50000&priceMax=10000");
     assert.equal(res.status, 400);
   });
 
@@ -77,10 +77,7 @@ describe("GET /api/search/destinations", () => {
     const res = await request(app).get("/api/search/destinations");
     // Without provider data in the DB this may return 500 (via error middleware)
     // or 200 (if destinations are available). Verify the endpoint exists.
-    assert.ok(
-      res.status === 200 || res.status === 500,
-      `Expected 200 or 500, got ${res.status}`,
-    );
+    assert.ok(res.status === 200 || res.status === 500, `Expected 200 or 500, got ${res.status}`);
   });
 });
 

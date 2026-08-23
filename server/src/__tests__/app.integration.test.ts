@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../app.js";
+import { registerTeardown } from "./helpers/teardown.js";
 
 // Lightweight integration tests that exercise Express middleware and error handling
 // without requiring a database connection. Uses Node's native fetch against
@@ -25,6 +26,7 @@ async function startTestServer() {
   });
 }
 
+registerTeardown();
 describe("App integration: 404 handling", () => {
   it("returns 404 JSON for unknown routes", async () => {
     const { baseUrl, close } = await startTestServer();

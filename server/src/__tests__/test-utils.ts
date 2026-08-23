@@ -26,9 +26,7 @@ type SuperTestAgent = any;
  * @param mountPoints Pairs of `[mountPath, router]` — the router is mounted
  *                    at the given path (e.g. `["/api/admin/tours", toursRouter]`).
  */
-export function createMockAdminApp(
-  ...mountPoints: Array<[string, express.Router]>
-): Express {
+export function createMockAdminApp(...mountPoints: Array<[string, express.Router]>): Express {
   const app = express();
   app.use(express.json());
 
@@ -65,9 +63,7 @@ export function createMockAdminApp(
     if (err instanceof ApiError) {
       const status = (err as Error & { status: number }).status ?? 400;
       const code = (err as Error & { code: string }).code ?? "ERROR";
-      res
-        .status(status)
-        .json({ ok: false, error: { code, message: err.message } });
+      res.status(status).json({ ok: false, error: { code, message: err.message } });
       return;
     }
 
@@ -79,9 +75,7 @@ export function createMockAdminApp(
       return;
     }
 
-    res
-      .status(500)
-      .json({ ok: false, error: { code: "INTERNAL_ERROR", message: err.message } });
+    res.status(500).json({ ok: false, error: { code: "INTERNAL_ERROR", message: err.message } });
   });
 
   return app;
@@ -96,9 +90,7 @@ export function parseXsrfToken(resp: any): string | null {
   const setCookie = resp.headers["set-cookie"];
   if (!setCookie) return null;
 
-  const cookieArray: string[] = Array.isArray(setCookie)
-    ? setCookie
-    : [String(setCookie)];
+  const cookieArray: string[] = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
 
   for (const cookie of cookieArray) {
     const match = cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -129,6 +121,10 @@ export function parseXsrfToken(resp: any): string | null {
 export async function createAuthenticatedAgent(
   app: Express,
 ): Promise<{ agent: SuperTestAgent; csrfToken: string }> {
+  // Ensure the ADMIN_LOGIN user exists before attempting login.
+  const { ensureAdminUser } = await import("../lib/ensureAdminUser.js");
+  await ensureAdminUser();
+
   const agent = supertest.agent(app);
 
   // Step 1: Obtain initial CSRF token (first request always lacks the header)
@@ -148,9 +144,7 @@ export async function createAuthenticatedAgent(
     .send({ login, password });
 
   if (loginResp.status !== 200) {
-    throw new Error(
-      `Login failed (status ${loginResp.status}): ${JSON.stringify(loginResp.body)}`,
-    );
+    throw new Error(`Login failed (status ${loginResp.status}): ${JSON.stringify(loginResp.body)}`);
   }
 
   // Step 3: Session was regenerated — old CSRF token is invalid.

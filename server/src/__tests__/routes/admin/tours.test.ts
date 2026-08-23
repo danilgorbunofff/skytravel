@@ -14,11 +14,13 @@ import nock from "nock";
 import { createApp } from "../../../app.js";
 import tourRoutes from "../../../routes/admin/tours.js";
 import { createMockAdminApp, skipWithoutDb, createAuthenticatedAgent } from "../../test-utils.js";
+import { registerTeardown } from "../../helpers/teardown.js";
 
 // ---------------------------------------------------------------------------
 // 1. Authentication guard (real app)
 // ---------------------------------------------------------------------------
 
+registerTeardown();
 describe("Admin tours — auth guard", () => {
   it("GET /api/admin/tours without session returns 401", async () => {
     const app = createApp();
@@ -28,9 +30,7 @@ describe("Admin tours — auth guard", () => {
 
   it("POST /api/admin/tours without session returns 401", { skip: skipWithoutDb }, async () => {
     const app = createApp();
-    const res = await supertest(app)
-      .post("/api/admin/tours")
-      .send({ title: "test" });
+    const res = await supertest(app).post("/api/admin/tours").send({ title: "test" });
     // Without session we get 401 from requireAuth (after CSRF is handled;
     // without CSRF header a POST triggers 403 first, but the initial POST
     // should have failed on auth — verify it's an error status)
@@ -53,46 +53,44 @@ describe("Admin tours — validation", () => {
   });
 
   it("POST /api/admin/tours with missing destination returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/tours")
-      .send({
-        title: "Test Tour",
-        price: 100,
-        image: "http://example.com/img.jpg",
-        startDate: "2026-07-01",
-        endDate: "2026-07-10",
-        transport: "bus",
-      });
+    const res = await supertest(app).post("/api/admin/tours").send({
+      title: "Test Tour",
+      price: 100,
+      image: "http://example.com/img.jpg",
+      startDate: "2026-07-01",
+      endDate: "2026-07-10",
+      transport: "bus",
+    });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
 
   it("POST /api/admin/tours with missing title returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/tours")
-      .send({
-        destination: "Greece",
-        price: 100,
-        image: "http://example.com/img.jpg",
-        startDate: "2026-07-01",
-        endDate: "2026-07-10",
-        transport: "bus",
-      });
+    const res = await supertest(app).post("/api/admin/tours").send({
+      destination: "Greece",
+      price: 100,
+      image: "http://example.com/img.jpg",
+      startDate: "2026-07-01",
+      endDate: "2026-07-10",
+      transport: "bus",
+    });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
 
   it("PUT /api/admin/tours/:id with invalid id returns 400", async () => {
-    const res = await supertest(app)
-      .put("/api/admin/tours/abc")
-      .send({ title: "Updated" });
+    const res = await supertest(app).put("/api/admin/tours/abc").send({ title: "Updated" });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "INVALID_ID");
   });
 
-  it("PUT /api/admin/tours/:id with valid id and body succeeds", { skip: skipWithoutDb }, async () => {
-    // This test reaches Prisma — skip without a database
-  });
+  it(
+    "PUT /api/admin/tours/:id with valid id and body succeeds",
+    { skip: skipWithoutDb },
+    async () => {
+      // This test reaches Prisma — skip without a database
+    },
+  );
 
   it("DELETE /api/admin/tours/:id with invalid id returns 400", async () => {
     const res = await supertest(app).delete("/api/admin/tours/abc");
@@ -101,17 +99,15 @@ describe("Admin tours — validation", () => {
   });
 
   it("POST /api/admin/tours with non-numeric price returns 400", async () => {
-    const res = await supertest(app)
-      .post("/api/admin/tours")
-      .send({
-        destination: "Greece",
-        title: "Test",
-        price: "free",
-        image: "http://example.com/img.jpg",
-        startDate: "2026-07-01",
-        endDate: "2026-07-10",
-        transport: "bus",
-      });
+    const res = await supertest(app).post("/api/admin/tours").send({
+      destination: "Greece",
+      title: "Test",
+      price: "free",
+      image: "http://example.com/img.jpg",
+      startDate: "2026-07-01",
+      endDate: "2026-07-10",
+      transport: "bus",
+    });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, "VALIDATION_ERROR");
   });
@@ -138,19 +134,16 @@ describe("Admin tours — full CRUD", { skip: skipWithoutDb }, () => {
   });
 
   it("POST /api/admin/tours creates a tour", async () => {
-    const res = await agent
-      .post("/api/admin/tours")
-      .set("x-xsrf-token", csrfToken)
-      .send({
-        destination: "Greece",
-        title: "Integration Test Tour",
-        price: 499,
-        image: "http://example.com/greece.jpg",
-        description: "A beautiful tour",
-        startDate: "2026-08-01",
-        endDate: "2026-08-10",
-        transport: "air",
-      });
+    const res = await agent.post("/api/admin/tours").set("x-xsrf-token", csrfToken).send({
+      destination: "Greece",
+      title: "Integration Test Tour",
+      price: 499,
+      image: "http://example.com/greece.jpg",
+      description: "A beautiful tour",
+      startDate: "2026-08-01",
+      endDate: "2026-08-10",
+      transport: "air",
+    });
 
     assert.equal(res.status, 201);
     assert.equal(res.body.ok, true);
@@ -160,9 +153,7 @@ describe("Admin tours — full CRUD", { skip: skipWithoutDb }, () => {
 
     // Clean up
     const createdId = res.body.data.item.id;
-    await agent
-      .delete(`/api/admin/tours/${createdId}`)
-      .set("x-xsrf-token", csrfToken);
+    await agent.delete(`/api/admin/tours/${createdId}`).set("x-xsrf-token", csrfToken);
   });
 
   it("GET /api/admin/tours lists tours", async () => {
@@ -174,18 +165,15 @@ describe("Admin tours — full CRUD", { skip: skipWithoutDb }, () => {
 
   it("PUT /api/admin/tours/:id updates a tour", async () => {
     // First create a tour
-    const createRes = await agent
-      .post("/api/admin/tours")
-      .set("x-xsrf-token", csrfToken)
-      .send({
-        destination: "Italy",
-        title: "Original Title",
-        price: 599,
-        image: "http://example.com/italy.jpg",
-        startDate: "2026-09-01",
-        endDate: "2026-09-10",
-        transport: "air",
-      });
+    const createRes = await agent.post("/api/admin/tours").set("x-xsrf-token", csrfToken).send({
+      destination: "Italy",
+      title: "Original Title",
+      price: 599,
+      image: "http://example.com/italy.jpg",
+      startDate: "2026-09-01",
+      endDate: "2026-09-10",
+      transport: "air",
+    });
 
     assert.equal(createRes.status, 201);
     const tourId = createRes.body.data.item.id;
@@ -201,25 +189,20 @@ describe("Admin tours — full CRUD", { skip: skipWithoutDb }, () => {
     assert.equal(updateRes.body.data.item.price, 699);
 
     // Clean up
-    await agent
-      .delete(`/api/admin/tours/${tourId}`)
-      .set("x-xsrf-token", csrfToken);
+    await agent.delete(`/api/admin/tours/${tourId}`).set("x-xsrf-token", csrfToken);
   });
 
   it("DELETE /api/admin/tours/:id deletes a tour", async () => {
     // First create a tour
-    const createRes = await agent
-      .post("/api/admin/tours")
-      .set("x-xsrf-token", csrfToken)
-      .send({
-        destination: "Spain",
-        title: "To Delete",
-        price: 399,
-        image: "http://example.com/spain.jpg",
-        startDate: "2026-10-01",
-        endDate: "2026-10-07",
-        transport: "bus",
-      });
+    const createRes = await agent.post("/api/admin/tours").set("x-xsrf-token", csrfToken).send({
+      destination: "Spain",
+      title: "To Delete",
+      price: 399,
+      image: "http://example.com/spain.jpg",
+      startDate: "2026-10-01",
+      endDate: "2026-10-07",
+      transport: "bus",
+    });
 
     assert.equal(createRes.status, 201);
     const tourId = createRes.body.data.item.id;

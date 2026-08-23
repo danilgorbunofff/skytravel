@@ -4,7 +4,9 @@ import request from "supertest";
 import { createApp } from "../../app.js";
 import { skipWithoutDb } from "../test-utils.js";
 import type { Express } from "express";
+import { registerTeardown } from "../helpers/teardown.js";
 
+registerTeardown();
 let app: Express;
 
 before(() => {
@@ -50,53 +52,45 @@ describe("POST /api/erasure — validation", () => {
 });
 
 describe("POST /api/erasure — execution (requires DB)", () => {
-  it(
-    "returns 404 when no data exists for the given email",
-    { skip: skipWithoutDb },
-    async () => {
-      const res = await request(app)
-        .post("/api/erasure")
-        .send({ email: "erasure-nonexistent@example.com" })
-        .set("Content-Type", "application/json");
+  it("returns 404 when no data exists for the given email", { skip: skipWithoutDb }, async () => {
+    const res = await request(app)
+      .post("/api/erasure")
+      .send({ email: "erasure-nonexistent@example.com" })
+      .set("Content-Type", "application/json");
 
-      assert.equal(res.status, 404);
-      assert.equal(res.body.ok, false);
-      assert.equal(res.body.error.code, "NOT_FOUND");
-    },
-  );
+    assert.equal(res.status, 404);
+    assert.equal(res.body.ok, false);
+    assert.equal(res.body.error.code, "NOT_FOUND");
+  });
 
-  it(
-    "returns 200 and deletes data for an existing email",
-    { skip: skipWithoutDb },
-    async () => {
-      // First create a lead to have data to erase
-      const createRes = await request(app)
-        .post("/api/inquiries")
-        .send({
-          email: "erasure-test@example.com",
-          destination: "Egypt",
-          marketingConsent: true,
-          gdprConsent: true,
-        })
-        .set("Content-Type", "application/json");
+  it("returns 200 and deletes data for an existing email", { skip: skipWithoutDb }, async () => {
+    // First create a lead to have data to erase
+    const createRes = await request(app)
+      .post("/api/inquiries")
+      .send({
+        email: "erasure-test@example.com",
+        destination: "Egypt",
+        marketingConsent: true,
+        gdprConsent: true,
+      })
+      .set("Content-Type", "application/json");
 
-      assert.equal(createRes.status, 201);
+    assert.equal(createRes.status, 201);
 
-      // Now erase it
-      const res = await request(app)
-        .post("/api/erasure")
-        .send({ email: "erasure-test@example.com" })
-        .set("Content-Type", "application/json");
+    // Now erase it
+    const res = await request(app)
+      .post("/api/erasure")
+      .send({ email: "erasure-test@example.com" })
+      .set("Content-Type", "application/json");
 
-      assert.equal(res.status, 200);
-      assert.equal(res.body.ok, true);
-      assert.ok(res.body.data);
-      assert.ok("deleted" in res.body.data);
-      // At least the lead we created should be deleted
-      assert.ok(
-        res.body.data.deleted.leads >= 1,
-        `Expected at least 1 lead deleted, got ${res.body.data.deleted.leads}`,
-      );
-    },
-  );
+    assert.equal(res.status, 200);
+    assert.equal(res.body.ok, true);
+    assert.ok(res.body.data);
+    assert.ok("deleted" in res.body.data);
+    // At least the lead we created should be deleted
+    assert.ok(
+      res.body.data.deleted.leads >= 1,
+      `Expected at least 1 lead deleted, got ${res.body.data.deleted.leads}`,
+    );
+  });
 });

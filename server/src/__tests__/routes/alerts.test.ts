@@ -4,7 +4,9 @@ import request from "supertest";
 import { createApp } from "../../app.js";
 import { skipWithoutDb } from "../test-utils.js";
 import type { Express } from "express";
+import { registerTeardown } from "../helpers/teardown.js";
 
+registerTeardown();
 let app: Express;
 
 before(() => {
@@ -115,7 +117,7 @@ describe("POST /api/alerts — creation (requires DB)", () => {
       const res = await request(app)
         .post("/api/alerts")
         .send({
-          email: "alert-test@example.com",
+          email: `alert-test-${process.pid}@example.com`,
           providerId: "alexandria",
           externalId: "integration-test-tour",
           priceMax: 15000,
@@ -128,37 +130,33 @@ describe("POST /api/alerts — creation (requires DB)", () => {
     },
   );
 
-  it(
-    "handles duplicate alert registration gracefully",
-    { skip: skipWithoutDb },
-    async () => {
-      const body = {
-        email: "alert-duplicate@example.com",
-        providerId: "alexandria",
-        externalId: "dup-tour-123",
-        priceMax: 20000,
-      };
+  it("handles duplicate alert registration gracefully", { skip: skipWithoutDb }, async () => {
+    const body = {
+      email: `alert-duplicate-${process.pid}@example.com`,
+      providerId: "alexandria",
+      externalId: "dup-tour-123",
+      priceMax: 20000,
+    };
 
-      // First registration should succeed
-      const first = await request(app)
-        .post("/api/alerts")
-        .send(body)
-        .set("Content-Type", "application/json");
+    // First registration should succeed
+    const first = await request(app)
+      .post("/api/alerts")
+      .send(body)
+      .set("Content-Type", "application/json");
 
-      assert.equal(first.status, 201);
+    assert.equal(first.status, 201);
 
-      // Second registration for the same email + tour should return success
-      // (with a "already registered" message) rather than an error
-      const second = await request(app)
-        .post("/api/alerts")
-        .send(body)
-        .set("Content-Type", "application/json");
+    // Second registration for the same email + tour should return success
+    // (with a "already registered" message) rather than an error
+    const second = await request(app)
+      .post("/api/alerts")
+      .send(body)
+      .set("Content-Type", "application/json");
 
-      // The route returns 200 (not 201) for duplicates
-      assert.ok(
-        second.status === 200 || second.status === 201,
-        `Expected 200 or 201, got ${second.status}`,
-      );
-    },
-  );
+    // The route returns 200 (not 201) for duplicates
+    assert.ok(
+      second.status === 200 || second.status === 201,
+      `Expected 200 or 201, got ${second.status}`,
+    );
+  });
 });
