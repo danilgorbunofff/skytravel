@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   deploy:
     name: Deploy to remote server
@@ -32,47 +36,69 @@ jobs:
       - name: Deploy via SSH
         if: success()
         uses: appleboy/ssh-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SHA_SHORT: ${{ github.sha }}
         with:
           host: 167.233.47.103
           username: ${{ secrets.SSH_USER || 'root' }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           command_timeout: 10m
+          envs: GH_TOKEN,GITHUB_REPOSITORY,SHA_SHORT
           script: |
-            set -euo pipefail
+            LOG=/tmp/deploy-$$.log
+            RC=0
+            {
+              set -euo pipefail
 
-            REMOTE_PATH="${{ secrets.REMOTE_PROJECT_PATH || '/home/ubuntu/skytravel' }}"
-            cd "$REMOTE_PATH"
+              REMOTE_PATH="/home/ubuntu/skytravel"
+              cd "$REMOTE_PATH"
 
-            echo "▸ Pulling latest code …"
-            git fetch origin main
-            git reset --hard origin/main
+              echo "▸ Pulling latest code …"
+              git fetch origin main
+              git reset --hard origin/main
 
-            echo "▸ Stopping running services …"
-            pm2 stop ecosystem.config.cjs 2>/dev/null || true
+              echo "▸ Stopping running services …"
+              pm2 stop ecosystem.config.cjs 2>/dev/null || true
 
-            echo "▸ Installing dependencies …"
-            npm ci --legacy-peer-deps
+              echo "▸ Installing dependencies …"
+              npm ci --legacy-peer-deps
 
-            echo "▸ Building server …"
-            cd server
-            npx prisma generate
-            NODE_OPTIONS="--max-old-space-size=512" npx tsc -p tsconfig.json
-            npx tsc-alias -p tsconfig.json --resolve-full-paths -fe .js
-            cd ..
+              echo "▸ Building server …"
+              cd server
+              npx prisma generate
+              NODE_OPTIONS="--max-old-space-size=512" npx tsc -p tsconfig.json
+              npx tsc-alias -p tsconfig.json --resolve-full-paths -fe .js
+              cd ..
 
-            echo "▸ Running database migrations …"
-            (cd server && npx prisma migrate deploy)
+              echo "▸ Running database migrations …"
+              (cd server && npx prisma migrate deploy)
 
-            echo "▸ Building client …"
-            npm --workspace client run build
+              echo "▸ Building client …"
+              npm --workspace client run build
 
-            echo "▸ Starting PM2 apps …"
-            pm2 start ecosystem.config.cjs --env production
-            pm2 save
+              echo "▸ Starting PM2 apps …"
+              pm2 start ecosystem.config.cjs --env production
+              pm2 save
 
-            echo "▸ Refreshing Alexandria feed …"
-            cd server
-            npx tsx scripts/refresh-alexandria.ts || echo "  ⚠ Alexandria refresh failed (non-critical)"
+              echo "▸ Refreshing Alexandria feed …"
+              cd server
+              npx tsx scripts/refresh-alexandria.ts || echo "  ⚠ Alexandria refresh failed (non-critical)"
 
-            echo "✅ Deploy complete!"
+              echo "✅ Deploy complete!"
+            } >> "$LOG" 2>&1 || RC=$?
+
+            cat "$LOG"
+            exit $RC
+
+      - name: Report deploy failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "deploy: failed @ ${GITHUB_SHA::7}" \
+            --body "Deploy via SSH step failed on runner. Check step logs in Actions UI; if no remote log lines appear above this issue, the SSH key/host rejected the connection (likely secrets.SSH_PRIVATE_KEY mismatch)." \
+            --repo "$GITHUB_REPOSITORY" || true
