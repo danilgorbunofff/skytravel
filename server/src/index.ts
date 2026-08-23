@@ -1,25 +1,13 @@
 import "dotenv/config";
-import bcrypt from "bcryptjs";
 import { config } from "./config.js";
+
 import { createApp } from "./app.js";
 import { logger } from "./lib/logger.js";
-import prisma, { getPoolInfo } from "./prisma.js";
+import { getPoolInfo } from "./prisma.js";
 import { ensureKnownDestinations } from "./providers/destinationStore.js";
+import { ensureAdminUser } from "./lib/ensureAdminUser.js";
 
 const app = createApp();
-
-async function ensureAdminUser() {
-  const { login, password } = config.admin;
-  if (!login || !password) {
-    logger.warn("ADMIN_LOGIN or ADMIN_PASSWORD is missing. Admin login disabled.");
-    return;
-  }
-  const existing = await prisma.adminUser.findUnique({ where: { login } });
-  if (existing) return;
-  const passwordHash = await bcrypt.hash(password, 12);
-  await prisma.adminUser.create({ data: { login, passwordHash } });
-  logger.info(`Admin user '${login}' created.`);
-}
 
 ensureAdminUser()
   .catch((error) => {
@@ -59,7 +47,7 @@ ensureAdminUser()
                 )();
               }
             } catch (err) {
-              logger.warn({ err, provider: meta.id }, '[Cache] loadCacheStatus failed');
+              logger.warn({ err, provider: meta.id }, "[Cache] loadCacheStatus failed");
             }
           }),
         );
@@ -111,8 +99,11 @@ ensureAdminUser()
       })();
 
       // ── DB pool stats logging (every 5 min) ──────────────────────
-      setInterval(() => {
-        logger.info({ pool: getPoolInfo(), memory: process.memoryUsage().rss }, "DB pool stats");
-      }, 5 * 60 * 1000);
+      setInterval(
+        () => {
+          logger.info({ pool: getPoolInfo(), memory: process.memoryUsage().rss }, "DB pool stats");
+        },
+        5 * 60 * 1000,
+      );
     });
   });

@@ -25,7 +25,9 @@ import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf
 
 // Sentry — disabled unless SENTRY_DSN is configured
 if (process.env.SENTRY_DSN) {
-  console.warn("[sentry] SENTRY_DSN is set but Sentry SDK is not installed. Install @sentry/node to enable error tracking.");
+  console.warn(
+    "[sentry] SENTRY_DSN is set but Sentry SDK is not installed. Install @sentry/node to enable error tracking.",
+  );
 }
 
 export function createApp() {
@@ -121,16 +123,23 @@ export function createApp() {
   app.use(csrfTokenMiddleware);
 
   // ── Rate limiters ─────────────────────────────────────────────────────
-  const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      ok: false,
-      error: { code: "RATE_LIMITED", message: "Too many login attempts. Try again later." },
-    },
-  });
+  const skipLimit = config.disableRateLimit;
+  const passthrough = ((_req: Request, _res: Response, next: NextFunction) => next()) as ReturnType<
+    typeof rateLimit
+  >;
+
+  const loginLimiter = skipLimit
+    ? passthrough
+    : rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 10,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+          ok: false,
+          error: { code: "RATE_LIMITED", message: "Too many login attempts. Try again later." },
+        },
+      });
 
   const inquiryLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -167,7 +176,7 @@ export function createApp() {
 
   const toursLimiter =
     !config.isProd || config.disableRateLimit
-      ? ((_req: Request, _res: Response, next: NextFunction) => next())
+      ? (_req: Request, _res: Response, next: NextFunction) => next()
       : rateLimit({
           windowMs: 15 * 60 * 1000,
           max: 30,
@@ -209,24 +218,30 @@ export function createApp() {
 
   app.use("/api", publicRoutes);
   app.use("/api/alexandria", alexandriaPublicRoutes);
-  app.use("/api/search", (req, res, next) => {
-    if (req.path === "/bootstrap") return next();
-    toursLimiter(req, res, next);
-  }, providerSearchPublicRoutes);
+  app.use(
+    "/api/search",
+    (req, res, next) => {
+      if (req.path === "/bootstrap") return next();
+      toursLimiter(req, res, next);
+    },
+    providerSearchPublicRoutes,
+  );
   app.use("/api/admin", csrfProtectionMiddleware);
   app.use("/api/admin", adminRoutes);
   app.use("/api/alerts", alertsRouter);
 
-  const erasureLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 3,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      ok: false,
-      error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." },
-    },
-  });
+  const erasureLimiter = skipLimit
+    ? passthrough
+    : rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 3,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+          ok: false,
+          error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." },
+        },
+      });
   app.use("/api/erasure", erasureLimiter, erasureRouter);
 
   // ── Sitemap ───────────────────────────────────────────────────────────
