@@ -96,6 +96,10 @@ jobs:
 
               echo "▸ Stopping running services …"
               pm2 stop ecosystem.config.cjs 2>/dev/null || true
+              # Kill any orphaned app processes so they cannot hold DB locks
+              pkill -9 -f "node dist/index.js" 2>/dev/null || true
+              pkill -9 -f "vite preview" 2>/dev/null || true
+              sleep 2
 
               echo "▸ Installing dependencies …"
               npm ci --legacy-peer-deps
