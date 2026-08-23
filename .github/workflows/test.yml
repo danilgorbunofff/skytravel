@@ -37,6 +37,11 @@ jobs:
       - name: Generate Prisma client
         run: npm --workspace server run prisma:generate
 
+      - name: Run database migrations
+        run: npm --workspace server exec -- prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://root:test@localhost:3306/skytravel_test
+
       - name: Run server tests
         run: npm --workspace server run test
         env:
