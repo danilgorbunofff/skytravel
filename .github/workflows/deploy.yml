@@ -117,9 +117,9 @@ jobs:
         run: |
           { echo "Deploy via SSH failed on runner."
             echo ""
-            echo "```"
+            echo '```'
             cat /tmp/keymeta.txt 2>/dev/null || echo "(no keymeta)"
-            echo "```"
+            echo '```'
           } > /tmp/body.txt
           gh issue create \
             --title "deploy: failed @ ${GITHUB_SHA::7}" \
