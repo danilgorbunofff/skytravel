@@ -194,8 +194,10 @@ export default function LastMinuteDeals({
   }, []);
 
   const goPrev = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
     cooldownRef.current = Date.now();
-    trackRef.current?.scrollBy({ left: -trackRef.current!.clientWidth, behavior: "smooth" });
+    track.scrollBy({ left: -track.clientWidth, behavior: "smooth" });
   }, []);
 
   // Initialize scroll position to first real slide (past clone)

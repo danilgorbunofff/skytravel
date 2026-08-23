@@ -173,10 +173,10 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         fetchProviderCacheStatus(providerId),
       ]);
       const provider = get().providers.find((p) => p.id === providerId);
-      const twoLevel = provider ? hasTwoLevelRegions(provider) : false;
+      const _twoLevel = provider ? hasTwoLevelRegions(provider) : false;
 
       let selectedRegion: ProviderRegion | null = null;
-      let selectedSubRegion: ProviderRegion | null = null;
+      const selectedSubRegion: ProviderRegion | null = null;
 
       if (regionData.length > 0) {
         selectedRegion = regionData[0];

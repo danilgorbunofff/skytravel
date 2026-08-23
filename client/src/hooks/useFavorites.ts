@@ -17,12 +17,9 @@ export function useFavorites() {
   const toggle = useCallback((tour: UnifiedTour) => {
     const id = `${tour.source}-${tour.externalId}`;
     setMap((prev) => {
-      const next = { ...prev };
-      if (id in next) {
-        delete next[id];
-      } else {
-        next[id] = tour;
-      }
+      const isFav = id in prev;
+      const { [id]: _removed, ...rest } = prev;
+      const next = isFav ? rest : { ...prev, [id]: tour };
       try {
         localStorage.setItem(KEY, JSON.stringify(next));
       } catch {

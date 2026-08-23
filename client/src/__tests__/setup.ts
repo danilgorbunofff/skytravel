@@ -18,7 +18,8 @@ const createMockStorage = (): Storage => {
       store[key] = String(value);
     },
     removeItem(key: string) {
-      delete store[key];
+      const { [key]: _removed, ...rest } = store;
+      store = rest;
     },
     key(index: number) {
       return Object.keys(store)[index] ?? null;

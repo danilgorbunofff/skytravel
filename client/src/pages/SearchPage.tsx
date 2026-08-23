@@ -22,7 +22,7 @@ import { formatPrice } from "../utils";
 import { favorites as popularDestinations } from "../data";
 import { isPlausibleTourPrice } from "../lib/prices";
 import { fetchPublicDestinations } from "../api/publicProviders";
-import type { PublicDestinationSummary, UnifiedTour } from "../types/providers";
+import type { PublicDestinationSummary } from "../types/providers";
 import { fmtDate } from "../lib/formatters";
 import {
   useSearchFilters,

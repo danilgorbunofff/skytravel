@@ -4,7 +4,7 @@ import { favorites, heroImages, type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import { fetchPublicDestinations, fetchPublicAllProviderTours } from "../api/publicProviders";
-import type { PublicDestinationSummary, UnifiedTour } from "../types/providers";
+import type { PublicDestinationSummary, UnifiedTour, UnifiedFilters } from "../types/providers";
 import { TourDetailModal } from "../features/search/components/TourDetailModal";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
@@ -206,7 +206,7 @@ export default function HomePage() {
         } else {
           filters.priceMin = 35000;
         }
-        const result = await fetchPublicAllProviderTours(filters as unknown as import("../types/providers").UnifiedFilters);
+        const result = await fetchPublicAllProviderTours(filters as unknown as UnifiedFilters);
         if (!cancelled) setAllIncTours(result.items ?? []);
       } catch {
         if (!cancelled) setAllIncTours([]);

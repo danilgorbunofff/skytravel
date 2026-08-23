@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
+import type { OwnTour } from "../../data";
 import TourCard from "../TourCard";
 
 // Mock IntersectionObserver for jsdom — must be a constructable function
@@ -9,7 +10,7 @@ beforeAll(() => {
     disconnect = vi.fn();
     unobserve = vi.fn();
   }
-  vi.stubGlobal("IntersectionObserver", MockIntersectionObserver as any);
+  vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 });
 
 // Mock useLanguage hook
@@ -31,26 +32,26 @@ describe("TourCard", () => {
 
   it("renders without crashing", () => {
     const onClick = vi.fn();
-    render(<TourCard tour={mockTour as any} onClick={onClick} />);
+    render(<TourCard tour={mockTour as OwnTour} onClick={onClick} />);
     expect(document.body.textContent).toBeTruthy();
   });
 
   it("displays the destination name", () => {
     const onClick = vi.fn();
-    render(<TourCard tour={mockTour as any} onClick={onClick} />);
+    render(<TourCard tour={mockTour as OwnTour} onClick={onClick} />);
     expect(screen.getByText("Egypt")).toBeInTheDocument();
   });
 
   it("displays the formatted price", () => {
     const onClick = vi.fn();
-    render(<TourCard tour={mockTour as any} onClick={onClick} />);
+    render(<TourCard tour={mockTour as OwnTour} onClick={onClick} />);
     // The component renders price via formatPrice — check for presence of "from" key
     expect(screen.getByText(/from/)).toBeInTheDocument();
   });
 
   it("triggers onClick when clicked", async () => {
     const onClick = vi.fn();
-    render(<TourCard tour={mockTour as any} onClick={onClick} />);
+    render(<TourCard tour={mockTour as OwnTour} onClick={onClick} />);
     const card = screen.getByRole("article");
     card.click();
     expect(onClick).toHaveBeenCalledTimes(1);
