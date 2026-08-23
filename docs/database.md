@@ -1,6 +1,6 @@
 # Database Schema
 
-MySQL 8.0, managed via Prisma 5.
+MySQL 8.4, managed via Prisma 7.
 
 ## Entity Relationship Diagram
 

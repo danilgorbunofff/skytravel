@@ -2,15 +2,15 @@
 
 ## Server Details
 
-- **Host:** `<PRODUCTION_SERVER_IP>`
+- **Host:** Hetzner VPS `167.233.47.103`
 - **User:** `root` (default in deploy script; overridable via SSH_USER env var)
 - **SSH key:** `<SSH_KEY_FILE>` (in repo root)
 - **Remote path:** `/home/ubuntu/skytravel`
 - **Process Manager:** PM2 (`ecosystem.config.cjs`)
 - **Apps:** `skytravel-api` (port 4000), `skytravel-ui` (port 4173)
 - **Database:** MySQL 8.4, local
-- **Git remote:** `https://github.com/<REPO_OWNER>/<REPO_NAME>.git` (main branch)
-- **No nginx** — services serve directly on ports 4000 and 4173
+- **Git remote:** `https://github.com/danilgorbunofff/skytravel.git` (main branch)
+- **Reverse proxy:** nginx — SSL termination in front of services (API :4000, UI :4173)
 
 ---
 
@@ -105,15 +105,15 @@ pm2 monit
 
 ## Troubleshooting
 
-| Scenario | Diagnosis | Action |
-|---|---|---|
-| App not responding | `pm2 status` → check if running | `pm2 restart skytravel-api` |
-| UI loads, API errors | `curl http://localhost:4000/api/health` | Check `pm2 logs skytravel-api` |
-| MySQL connection error | Database down | `systemctl status mysql` |
-| Memory spike | `pm2 monit` → RSS growing | Identify leak in logs → restart |
-| Deploy failed | Check GitHub Actions log | Fix issue → re-run workflow |
-| Database full | `df -h` + check table sizes | Archive old ProviderSync records |
-| Provider sync stuck | Admin UI → ProviderSync table | Reset status via admin panel |
+| Scenario               | Diagnosis                               | Action                           |
+| ---------------------- | --------------------------------------- | -------------------------------- |
+| App not responding     | `pm2 status` → check if running         | `pm2 restart skytravel-api`      |
+| UI loads, API errors   | `curl http://localhost:4000/api/health` | Check `pm2 logs skytravel-api`   |
+| MySQL connection error | Database down                           | `systemctl status mysql`         |
+| Memory spike           | `pm2 monit` → RSS growing               | Identify leak in logs → restart  |
+| Deploy failed          | Check GitHub Actions log                | Fix issue → re-run workflow      |
+| Database full          | `df -h` + check table sizes             | Archive old ProviderSync records |
+| Provider sync stuck    | Admin UI → ProviderSync table           | Reset status via admin panel     |
 
 ---
 
@@ -153,11 +153,11 @@ gunzip < /home/ubuntu/backups/mysql/skytravel_YYYYMMDD_HHMMSS.sql.gz | mysql sky
 See `server/.env.example` for full list. Production `.env` is on server at `/home/ubuntu/skytravel/server/.env`.
 
 Required in production:
+
 - `DATABASE_URL` — MySQL connection string
 - `SESSION_SECRET` — min 32 chars, random
 - `CLIENT_ORIGIN` — e.g. `http://<PRODUCTION_SERVER_IP>:4173`
 - `ALEXANDRIA_API_KEY` — provider API key
-
 
 ---
 

@@ -4,7 +4,7 @@
 
 ```
 ┌──────────────┐       ┌──────────────────────────────────────┐
-│   Browser    │──────>│         Oracle Cloud VPS             │
+│   Browser    │──────>│           Hetzner VPS                │
 │ (React SPA)  │       │  167.233.47.103                      │
 └──────────────┘       │                                      │
                        │  ┌─────────────┐  ┌──────────────┐   │
@@ -12,7 +12,7 @@
                        │  │ skytravel-ui│  │skytravel-api │   │
                        │  │ :4173       │  │ :4000        │   │
                        │  │ (Vite       │  │ (Express 4 + │   │
-                       │  │  preview)   │  │  Prisma 5)   │   │
+                        │  │  preview)   │  │  Prisma 7)   │   │
                        │  └──────┬──────┘  └──────┬───────┘   │
                        │         │                │           │
                        │         │                ▼           │
@@ -44,7 +44,7 @@
                  (Alexandria export)
 ```
 
-**Production architecture**: Oracle Cloud VPS → no nginx — services serve directly on ports 4000 (API) and 4173 (UI) via PM2. Both apps are managed by PM2 with `wait_ready` protocol.
+**Production architecture**: Hetzner VPS → nginx reverse proxy (SSL termination) → services on ports 4000 (API) and 4173 (UI) via PM2. Both apps are managed by PM2 with `wait_ready` protocol.
 
 ---
 
@@ -226,23 +226,23 @@ Response { ok: true } (201)
 
 ## Key Design Decisions
 
-| Decision | Rationale |
-|---|---|
-| **MySQL** (not PostgreSQL) | Existing infrastructure, good enough for the workload (~5000 tours) |
-| **Prisma ORM** (not raw SQL / Drizzle) | Type-safe queries, auto-generated types, migrations-as-docs |
-| **Express 4** (not Fastify / Hono) | Mature ecosystem, simple middleware model, adequate perf |
-| **React 18** (not Next.js / Remix) | SPA is sufficient; no SSR need; simpler deployment (static build) |
-| **Zustand** (not Redux) | Minimal boilerplate, works well for a single store (search) |
-| **Tailwind v4** (no CSS-in-JS) | Utility-first, fast iteration, no runtime overhead |
-| **Session auth** (not JWT) | Revocable, no token refresh complexity, simpler for admin-only auth |
-| **LRU cache** (not Redis) | Single-process deployment fits in 450MB; avoids extra service dependency |
-| **Pino** (not Winston) | Faster, JSON-native, lower overhead for structured logging |
-| **Zod** (not Joi / Yup) | TypeScript-first, tree-shakeable, smaller bundle |
-| **ESM throughout** | Modern standard, better tree-shaking, native Node.js support |
-| **No nginx** | Services serve directly on ports; simpler deployment for single-server setup |
-| **bcryptjs** (not native bcrypt) | Pure JS avoids native compile issues on production |
-| **Provider pattern** (not inline API calls) | Testable, swappable, single responsibility per provider |
-| **Czech-first i18n** (not i18next) | Single market; custom `useLanguage` hook is lighter |
+| Decision                                    | Rationale                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------- |
+| **MySQL** (not PostgreSQL)                  | Existing infrastructure, good enough for the workload (~5000 tours)       |
+| **Prisma ORM** (not raw SQL / Drizzle)      | Type-safe queries, auto-generated types, migrations-as-docs               |
+| **Express 4** (not Fastify / Hono)          | Mature ecosystem, simple middleware model, adequate perf                  |
+| **React 18** (not Next.js / Remix)          | SPA is sufficient; no SSR need; simpler deployment (static build)         |
+| **Zustand** (not Redux)                     | Minimal boilerplate, works well for a single store (search)               |
+| **Tailwind v4** (no CSS-in-JS)              | Utility-first, fast iteration, no runtime overhead                        |
+| **Session auth** (not JWT)                  | Revocable, no token refresh complexity, simpler for admin-only auth       |
+| **LRU cache** (not Redis)                   | Single-process deployment fits in 450MB; avoids extra service dependency  |
+| **Pino** (not Winston)                      | Faster, JSON-native, lower overhead for structured logging                |
+| **Zod** (not Joi / Yup)                     | TypeScript-first, tree-shakeable, smaller bundle                          |
+| **ESM throughout**                          | Modern standard, better tree-shaking, native Node.js support              |
+| **Nginx reverse proxy**                     | SSL termination + static caching in front of PM2 services on a single VPS |
+| **bcryptjs** (not native bcrypt)            | Pure JS avoids native compile issues on production                        |
+| **Provider pattern** (not inline API calls) | Testable, swappable, single responsibility per provider                   |
+| **Czech-first i18n** (not i18next)          | Single market; custom `useLanguage` hook is lighter                       |
 
 ---
 
@@ -287,6 +287,7 @@ Centralized error middleware (app.ts, mounted last):
 ```
 
 **Response envelope**:
+
 - Success: `{ "ok": true, "data": { ... } }`
 - Paginated: `{ "ok": true, "data": [...], "meta": { total, page, pageSize, totalPages } }`
 - Error: `{ "ok": false, "error": { "code": "ERROR_CODE", "message": "..." } }`
@@ -323,27 +324,27 @@ Centralized error middleware (app.ts, mounted last):
 
 ## Tech Stack Summary
 
-| Layer | Technology | Version |
-|---|---|---|
-| **Runtime** | Node.js | ≥ 20 |
-| **Language** | TypeScript | strict mode |
-| **Module system** | ESM | `"type": "module"` |
-| **API framework** | Express | 4.x |
-| **ORM** | Prisma | 5.x |
-| **Database** | MySQL | 8.4 |
-| **Frontend** | React | 18.x |
-| **Build (client)** | Vite | 8.x (Rolldown) |
-| **Styling** | Tailwind CSS | 4.x (`@tailwindcss/vite`) |
-| **State** | Zustand | 5.x |
-| **UI primitives** | Radix UI | — |
-| **Icons** | Lucide React | — |
-| **Rich text** | TipTap | admin campaigns |
-| **Logging** | Pino | structured JSON |
-| **Email** | Nodemailer | batched BCC |
-| **Validation** | Zod | input schemas |
-| **Testing (server)** | Node test runner + tsx | — |
-| **Testing (client)** | Vitest + Testing Library + jsdom | — |
-| **E2E** | Playwright | latest |
-| **Linting** | ESLint 9 (flat config) + Prettier | — |
-| **Process manager** | PM2 | ecosystem.config.cjs |
-| **CI/CD** | GitHub Actions | lint → test → deploy |
+| Layer                | Technology                        | Version                   |
+| -------------------- | --------------------------------- | ------------------------- |
+| **Runtime**          | Node.js                           | ≥ 20                      |
+| **Language**         | TypeScript                        | strict mode               |
+| **Module system**    | ESM                               | `"type": "module"`        |
+| **API framework**    | Express                           | 4.x                       |
+| **ORM**              | Prisma                            | 5.x                       |
+| **Database**         | MySQL                             | 8.4                       |
+| **Frontend**         | React                             | 18.x                      |
+| **Build (client)**   | Vite                              | 8.x (Rolldown)            |
+| **Styling**          | Tailwind CSS                      | 4.x (`@tailwindcss/vite`) |
+| **State**            | Zustand                           | 5.x                       |
+| **UI primitives**    | Radix UI                          | —                         |
+| **Icons**            | Lucide React                      | —                         |
+| **Rich text**        | TipTap                            | admin campaigns           |
+| **Logging**          | Pino                              | structured JSON           |
+| **Email**            | Nodemailer                        | batched BCC               |
+| **Validation**       | Zod                               | input schemas             |
+| **Testing (server)** | Node test runner + tsx            | —                         |
+| **Testing (client)** | Vitest + Testing Library + jsdom  | —                         |
+| **E2E**              | Playwright                        | latest                    |
+| **Linting**          | ESLint 9 (flat config) + Prettier | —                         |
+| **Process manager**  | PM2                               | ecosystem.config.cjs      |
+| **CI/CD**            | GitHub Actions                    | lint → test → deploy      |

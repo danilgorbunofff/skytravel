@@ -43,7 +43,7 @@ Open http://localhost:5173 (client) / http://localhost:4000 (API).
 ```
 skytravel/
 ├── client/          React 18 SPA (Vite, Tailwind v4, TypeScript)
-├── server/          Express 4 REST API (TypeScript, Prisma 5, MySQL)
+├── server/          Express 4 REST API (TypeScript, Prisma 7, MySQL)
 ├── scripts/         Deploy & backup scripts
 ├── docs/            Architecture, API, and operations docs
 ├── e2e/             Playwright E2E tests
@@ -72,15 +72,15 @@ See [docs/architecture.md](docs/architecture.md) for detailed diagrams.
 
 ## Deployment
 
-Production deploys via `bash scripts/deploy-remote.sh` (SSH to Oracle VM, PM2-managed).
+Production deploys via `bash scripts/deploy-remote.sh` (SSH to Hetzner VPS, PM2-managed).
 
 See [docs/operations.md](docs/operations.md) for full runbook.
 
 ## Tech Stack
 
 - **Client:** React 18, React Router 6, Zustand 5, Tailwind v4, Radix UI, TipTap
-- **Server:** Express 4, Prisma 5, pino, express-session (MySQL-backed), Zod
+- **Server:** Express 4, Prisma 7, pino, express-session (MySQL-backed), Zod
 - **Build:** Vite 8 (client), tsc + prisma generate (server), ESM throughout
 - **Test:** Node test runner (server), Vitest + Testing Library (client), Playwright (E2E)
 - **CI/CD:** GitHub Actions (lint → test → build → deploy)
-- **Infra:** Oracle Cloud VM, PM2, MySQL 8.0, Nginx reverse proxy
+- **Infra:** Hetzner VPS (167.233.47.103), Nginx reverse proxy, PM2, MySQL 8.4

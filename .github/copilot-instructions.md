@@ -9,14 +9,14 @@ SkyTravel is a Czech travel-aggregation site (`sky-travel.tours`). It exposes to
 Monorepo layout (npm workspaces, Node ≥ 20):
 
 - `client/` — React 18 SPA (Vite, Tailwind v4, TypeScript strict).
-- `server/` — Express 4 REST API (TypeScript strict, ESM, Prisma 5 + MySQL).
-- `scripts/deploy-remote.sh` — production deploy via SSH to the Oracle VM (PM2-managed).
+- `server/` — Express 4 REST API (TypeScript strict, ESM, Prisma 7 + MySQL).
+- `scripts/deploy-remote.sh` — production deploy via SSH to the Hetzner VPS (PM2-managed).
 - `.github/workflows/deploy.yml` — CI/CD; do not modify without explicit instruction.
 
 ## Tech stack (do not introduce alternatives without asking)
 
 - **Client:** React 18, React Router 6, Zustand 5, Radix UI primitives, `class-variance-authority` + `clsx` + `tailwind-merge`, Tailwind v4 (`@tailwindcss/vite`), TipTap (admin rich-text), Lucide icons.
-- **Server:** Express 4, Prisma 5, `express-session` (cookie sessions, NOT JWT), `bcryptjs` (NOT native `bcrypt` — broke deploys), `helmet`, `cors`, `express-rate-limit`, `multer` (uploads), `nodemailer`, `fast-xml-parser`, `pino` (structured logging), `zod` (input validation).
+- **Server:** Express 4, Prisma 7, `express-session` (cookie sessions, NOT JWT), `bcryptjs` (NOT native `bcrypt` — broke deploys), `helmet`, `cors`, `express-rate-limit`, `multer` (uploads), `nodemailer`, `fast-xml-parser`, `pino` (structured logging), `zod` (input validation).
 - **Build:** Vite 8 (client, uses Rolldown), `tsc` + `prisma generate` (server). Both sides ESM (`"type": "module"`).
 - **Testing:** Node test runner + tsx (server), Vitest + Testing Library + jsdom (client), Playwright (E2E).
 - **Linting:** ESLint 9 flat config + Prettier. Auto-formatted on commit via Husky + lint-staged.

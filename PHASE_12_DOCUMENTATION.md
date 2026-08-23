@@ -16,51 +16,54 @@ Enhance existing `docs/architecture.md` with comprehensive content.
 # Architecture
 
 ## High-Level System Diagram
-
 ```
-┌──────────────┐       ┌───────────────────┐       ┌───────────────┐
-│   Browser     │  HTTP  │   Express 4 API    │  HTTP  │  Alexandria   │
-│  (React 18)   │◄──────►│   (TypeScript)     │◄──────►│  API Export   │
-│  Vite SPA     │  REST  │   Prisma 5 + MySQL │       └───────────────┘
-└──────────────┘       │                    │
-                        │  Provider Registry │
-                        │  (TourProvider)    │
-                        └────────┬──────────┘
-                                │
-                       ┌────────▼──────────┐
-                       │   MySQL 8.0       │
-                       │   (via Prisma)    │
-                       └───────────────────┘
+
+┌──────────────┐ ┌───────────────────┐ ┌───────────────┐
+│ Browser │ HTTP │ Express 4 API │ HTTP │ Alexandria │
+│ (React 18) │◄──────►│ (TypeScript) │◄──────►│ API Export │
+│ Vite SPA │ REST │ Prisma 5 + MySQL │ └───────────────┘
+└──────────────┘ │ │
+│ Provider Registry │
+│ (TourProvider) │
+└────────┬──────────┘
+│
+┌────────▼──────────┐
+│ MySQL 8.0 │
+│ (via Prisma) │
+└───────────────────┘
+
 ```
 
 ## Monorepo Structure
 
 ```
+
 skytravel/
-├── client/           React 18 SPA (Vite, Tailwind v4)
-│   ├── src/
-│   │   ├── components/   Shared UI components
-│   │   ├── features/     Feature modules (search, admin)
-│   │   ├── pages/        Page components
-│   │   ├── hooks/        Custom React hooks
-│   │   ├── stores/       Zustand stores
-│   │   ├── api/          API client functions
-│   │   ├── types/        TypeScript types
-│   │   └── lib/          Utilities
-│   └── vite.config.ts
-├── server/           Express 4 REST API (TypeScript, Prisma)
-│   ├── src/
-│   │   ├── routes/       Route handlers
-│   │   ├── providers/    TourProvider implementations
-│   │   ├── middleware/   Express middleware
-│   │   ├── lib/          Shared utilities
-│   │   └── config.ts     Environment config
-│   └── prisma/
-│       └── schema.prisma  Database schema
-├── e2e/              Playwright end-to-end tests
-├── scripts/          Deploy and utility scripts
-└── docs/             Documentation
-```
+├── client/ React 18 SPA (Vite, Tailwind v4)
+│ ├── src/
+│ │ ├── components/ Shared UI components
+│ │ ├── features/ Feature modules (search, admin)
+│ │ ├── pages/ Page components
+│ │ ├── hooks/ Custom React hooks
+│ │ ├── stores/ Zustand stores
+│ │ ├── api/ API client functions
+│ │ ├── types/ TypeScript types
+│ │ └── lib/ Utilities
+│ └── vite.config.ts
+├── server/ Express 4 REST API (TypeScript, Prisma)
+│ ├── src/
+│ │ ├── routes/ Route handlers
+│ │ ├── providers/ TourProvider implementations
+│ │ ├── middleware/ Express middleware
+│ │ ├── lib/ Shared utilities
+│ │ └── config.ts Environment config
+│ └── prisma/
+│ └── schema.prisma Database schema
+├── e2e/ Playwright end-to-end tests
+├── scripts/ Deploy and utility scripts
+└── docs/ Documentation
+
+````
 
 ## Data Flow
 
@@ -89,12 +92,12 @@ skytravel/
 { ok: true, data: { ... } }
 // Error
 { ok: false, error: { code: "NOT_FOUND", message: "..." } }
-```
+````
 
 ## Deployment Architecture
 
 ```
-Oracle Cloud VM (single VPS)
+Hetzner VPS (single VPS)
 ├── Nginx (reverse proxy, SSL termination)
 ├── PM2 (process manager)
 │   ├── skytravel-api (Express, port 4000)
@@ -104,16 +107,17 @@ Oracle Cloud VM (single VPS)
 
 ## Design Decisions
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Database | MySQL 8.0 | Already in use by partner data source; good enough for scale |
-| ORM | Prisma 5 | Type-safe queries, migrations, great DX |
-| Server framework | Express 4 | Simple, well-known, sufficient for API-only server |
-| Client framework | React 18 | Broad ecosystem, SPA for admin panel |
-| State management | Zustand 5 | Simpler than Redux, great TypeScript support |
-| Styling | Tailwind v4 | Utility-first, fast iteration, no config file needed |
-| Rich text editor | TipTap | Headless, extensible, good email HTML output |
-```
+| Decision         | Choice      | Rationale                                                    |
+| ---------------- | ----------- | ------------------------------------------------------------ |
+| Database         | MySQL 8.0   | Already in use by partner data source; good enough for scale |
+| ORM              | Prisma 5    | Type-safe queries, migrations, great DX                      |
+| Server framework | Express 4   | Simple, well-known, sufficient for API-only server           |
+| Client framework | React 18    | Broad ecosystem, SPA for admin panel                         |
+| State management | Zustand 5   | Simpler than Redux, great TypeScript support                 |
+| Styling          | Tailwind v4 | Utility-first, fast iteration, no config file needed         |
+| Rich text editor | TipTap      | Headless, extensible, good email HTML output                 |
+
+````
 
 ### Acceptance criteria
 - New developer can understand the system in 15 minutes
@@ -141,7 +145,7 @@ pm2 start ecosystem.config.cjs --env production
 pm2 restart skytravel-api
 pm2 stop skytravel-api
 pm2 status
-```
+````
 
 ## Database
 
@@ -178,13 +182,13 @@ curl http://localhost:4000/api/health/ready | jq .
 
 ## Common Issues
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| "DB connection refused" | MySQL not running | `systemctl start mysql` |
-| Memory exceeded, PM2 restart | Heap OOM | Check `pm2 logs`; increase `--max-old-space-size` |
-| Provider sync failed | API key expired or network issue | Check env vars; `curl` test API endpoint |
-| Deploy fails at npm ci | Network timeout | Re-run deploy; check npm registry status |
-| Client build OOM | Vite memory spike | Increase NODE_OPTIONS `--max-old-space-size` |
+| Symptom                      | Cause                            | Fix                                               |
+| ---------------------------- | -------------------------------- | ------------------------------------------------- |
+| "DB connection refused"      | MySQL not running                | `systemctl start mysql`                           |
+| Memory exceeded, PM2 restart | Heap OOM                         | Check `pm2 logs`; increase `--max-old-space-size` |
+| Provider sync failed         | API key expired or network issue | Check env vars; `curl` test API endpoint          |
+| Deploy fails at npm ci       | Network timeout                  | Re-run deploy; check npm registry status          |
+| Client build OOM             | Vite memory spike                | Increase NODE_OPTIONS `--max-old-space-size`      |
 
 ## Logs
 
@@ -209,6 +213,7 @@ tail -f server/logs/api-error.log
 ## Emergency Procedures
 
 ### 1. Server unresponsive
+
 ```bash
 ssh root@167.233.47.103
 pm2 status
@@ -216,6 +221,7 @@ pm2 restart skytravel-api
 ```
 
 ### 2. Rollback deploy
+
 ```bash
 cd /home/ubuntu/skytravel
 git log --oneline -5
@@ -225,6 +231,7 @@ git push origin main
 ```
 
 ### 3. Database restore
+
 ```bash
 # Find latest backup
 ls -lt /backups/mysql/
@@ -233,6 +240,7 @@ gunzip < /backups/mysql/skytravel-2025XXXX-XXXX.sql.gz | mysql -u root skytravel
 ```
 
 ### 4. Scale (if needed)
+
 ```markdown
 - Increase PM2 instances in ecosystem.config.cjs
 - Add read replica for MySQL
@@ -242,7 +250,8 @@ gunzip < /backups/mysql/skytravel-2025XXXX-XXXX.sql.gz | mysql -u root skytravel
 ## On-Call Rotation
 
 See `docs/oncall.md` for schedule and escalation.
-```
+
+````
 
 ### Acceptance criteria
 - On-call developer can follow RUNBOOK for common incidents
@@ -303,7 +312,7 @@ export interface TourProvider {
   fetchTours(filters: UnifiedFilters): Promise<UnifiedTour[]>;
   // ... other methods
 }
-```
+````
 
 #### `server/src/lib/response.ts`
 
@@ -348,12 +357,12 @@ export function asyncHandler(fn: Function): express.RequestHandler;
 
 #### Other files to document
 
-| File | Key exports | JSDoc priority |
-|---|---|---|
-| `server/src/lib/mail.ts` | `sendEmail()`, `sendBatchedEmail()` | High |
-| `server/src/lib/hash.ts` | `hashEmail()`, `verifyHash()` | High |
-| `server/src/providers/publicSearchCache.ts` | `getCached()`, `setCached()`, `invalidate()` | Medium |
-| `server/src/providers/offerGrouping.ts` | `groupOffers()`, `pickBestOffer()` | Medium |
+| File                                        | Key exports                                  | JSDoc priority |
+| ------------------------------------------- | -------------------------------------------- | -------------- |
+| `server/src/lib/mail.ts`                    | `sendEmail()`, `sendBatchedEmail()`          | High           |
+| `server/src/lib/hash.ts`                    | `hashEmail()`, `verifyHash()`                | High           |
+| `server/src/providers/publicSearchCache.ts` | `getCached()`, `setCached()`, `invalidate()` | Medium         |
+| `server/src/providers/offerGrouping.ts`     | `groupOffers()`, `pickBestOffer()`           | Medium         |
 
 ### Generate docs
 
@@ -372,6 +381,7 @@ npm --workspace server install --save-dev typedoc
 ```
 
 ### Acceptance criteria
+
 - All public exports in provider and lib files have JSDoc
 - `@param`, `@returns`, `@throws` present on all functions
 - `@example` on key functions
@@ -387,7 +397,7 @@ Enhance existing `docs/providers.md`.
 
 ### Contents
 
-```markdown
+````markdown
 # Provider Development Guide
 
 ## TourProvider Interface
@@ -396,17 +406,21 @@ Every provider must implement the `TourProvider` interface:
 
 ```typescript
 interface TourProvider {
-  readonly id: string;          // unique identifier (e.g., "alexandria")
-  readonly label: string;       // human-readable name (e.g., "Alexandria")
+  readonly id: string; // unique identifier (e.g., "alexandria")
+  readonly label: string; // human-readable name (e.g., "Alexandria")
   readonly filterFields: FilterField[];
-  
+
   fetchTours(filters: UnifiedFilters): Promise<UnifiedTour[]>;
   fetchRegions(parentId?: number): Promise<ProviderRegion[]>;
   fetchCacheStatus(): Promise<CacheStatus>;
   refreshCache(): Promise<void>;
-  fetchTourDetail(externalId: string, context?: Record<string, unknown>): Promise<UnifiedTour | null>;
+  fetchTourDetail(
+    externalId: string,
+    context?: Record<string, unknown>,
+  ): Promise<UnifiedTour | null>;
 }
 ```
+````
 
 ## Step-by-Step: Adding a New Provider
 
@@ -421,14 +435,14 @@ export class MyProvider implements TourProvider {
   readonly id = "myprovider";
   readonly label = "My Provider";
   readonly filterFields = [...];
-  
+
   async fetchTours(filters: UnifiedFilters): Promise<UnifiedTour[]> {
     // 1. Build provider-specific API request from filters
     // 2. Fetch from external API
     // 3. Parse response into UnifiedTour[]
     // 4. Return normalized tours
   }
-  
+
   // ... implement other methods
 }
 ```
@@ -489,7 +503,8 @@ const provider = new MockProvider({ tours: [...] });
 const results = await provider.fetchTours({ destination: "Chorvatsko" });
 expect(results).toHaveLength(3);
 ```
-```
+
+````
 
 ### Acceptance criteria
 - Developer can add a new provider following the guide
@@ -538,14 +553,15 @@ Search for tours across all providers.
     "totalPages": 2
   }
 }
-```
+````
 
 **Error Codes:**
 | Code | Status | Description |
 |---|---|---|
 | RATE_LIMITED | 429 | Too many requests |
 | PROVIDER_ERROR | 502 | External provider unavailable |
-```
+
+````
 
 ### Routes to document
 
@@ -571,9 +587,10 @@ curl -X POST http://localhost:4000/api/admin/login \
 
 # Health check
 curl http://localhost:4000/api/health/ready | jq .
-```
+````
 
 ### Acceptance criteria
+
 - All routes documented with method, path, auth, params, response shape, error codes
 - Example curl commands for each endpoint
 - Frontend developer can integrate without reading server code
@@ -584,6 +601,7 @@ curl http://localhost:4000/api/health/ready | jq .
 ## Step 6: Add TypeScript path aliases
 
 ### Files to modify
+
 - `server/tsconfig.json` — add paths
 - `client/tsconfig.json` — add paths
 - `client/vite.config.ts` — add resolve.alias
@@ -698,6 +716,7 @@ Add `eslint-plugin-import` or `@ianvs/prettier-plugin-sort-imports` for import o
 ```
 
 ### Acceptance criteria
+
 - `npx tsc --noEmit` resolves all path aliases without errors
 - Vite client build works with alias imports
 - Server starts and resolves alias imports at runtime
@@ -800,6 +819,7 @@ Add `eslint-plugin-import` or `@ianvs/prettier-plugin-sort-imports` for import o
 ```
 
 ### Acceptance criteria
+
 - Opening project in VS Code shows recommended extensions popup
 - Format on save works for TypeScript/TSX files
 - ESLint auto-fix on save
@@ -870,6 +890,7 @@ jobs:
 ```
 
 ### Acceptance criteria
+
 - `git commit -m "bad message"` rejected by local husky hook (if husky configured)
 - `git commit -m "feat: add tour search"` accepted
 - CI workflow validates all commits in a PR
@@ -887,59 +908,58 @@ jobs:
 
 ## Required
 
-| Variable | Description | Default | Example |
-|---|---|---|---|
-| `DATABASE_URL` | MySQL connection string | — | `mysql://root:password@localhost:3306/skytravel` |
-| `SESSION_SECRET` | Session encryption secret (min 16 chars, required in prod) | `dev-secret` | `a8f2c9...` |
+| Variable         | Description                                                | Default      | Example                                          |
+| ---------------- | ---------------------------------------------------------- | ------------ | ------------------------------------------------ |
+| `DATABASE_URL`   | MySQL connection string                                    | —            | `mysql://root:password@localhost:3306/skytravel` |
+| `SESSION_SECRET` | Session encryption secret (min 16 chars, required in prod) | `dev-secret` | `a8f2c9...`                                      |
 
 ## Server
 
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `PORT` | Server port | `4000` | No |
-| `NODE_ENV` | Environment (`development`, `production`, `test`) | `development` | No |
-| `CLIENT_ORIGIN` | Allowed CORS origin (comma-separated for multiple) | `http://localhost:5173` | No |
+| Variable        | Description                                        | Default                 | Required |
+| --------------- | -------------------------------------------------- | ----------------------- | -------- |
+| `PORT`          | Server port                                        | `4000`                  | No       |
+| `NODE_ENV`      | Environment (`development`, `production`, `test`)  | `development`           | No       |
+| `CLIENT_ORIGIN` | Allowed CORS origin (comma-separated for multiple) | `http://localhost:5173` | No       |
 
 ## Providers
 
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `ALEXANDRIA_API_URL` | Alexandria export API base URL | `http://export.alexandria.cz/export` | No |
-| `ALEXANDRIA_API_KEY` | Alexandria API key | — | Yes (for Alexandria provider) |
-| `ALEXANDRIA_COUNTRY` | Default country ID for Alexandria | `107` | No |
-
+| Variable             | Description                       | Default                              | Required                      |
+| -------------------- | --------------------------------- | ------------------------------------ | ----------------------------- |
+| `ALEXANDRIA_API_URL` | Alexandria export API base URL    | `http://export.alexandria.cz/export` | No                            |
+| `ALEXANDRIA_API_KEY` | Alexandria API key                | —                                    | Yes (for Alexandria provider) |
+| `ALEXANDRIA_COUNTRY` | Default country ID for Alexandria | `107`                                | No                            |
 
 ## Email (SMTP)
 
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `SMTP_HOST` | SMTP server hostname | — | Yes (for email features) |
-| `SMTP_PORT` | SMTP server port | `587` | No |
-| `SMTP_USER` | SMTP username | — | Yes (for email features) |
-| `SMTP_PASS` | SMTP password | — | Yes (for email features) |
-| `SMTP_FROM` | Default sender email address | — | No |
+| Variable    | Description                  | Default | Required                 |
+| ----------- | ---------------------------- | ------- | ------------------------ |
+| `SMTP_HOST` | SMTP server hostname         | —       | Yes (for email features) |
+| `SMTP_PORT` | SMTP server port             | `587`   | No                       |
+| `SMTP_USER` | SMTP username                | —       | Yes (for email features) |
+| `SMTP_PASS` | SMTP password                | —       | Yes (for email features) |
+| `SMTP_FROM` | Default sender email address | —       | No                       |
 
 ## Admin
 
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `ADMIN_LOGIN` | Admin panel login | — | No (uses default if not set) |
-| `ADMIN_PASSWORD` | Admin panel password | — | No (uses default if not set) |
+| Variable         | Description          | Default | Required                     |
+| ---------------- | -------------------- | ------- | ---------------------------- |
+| `ADMIN_LOGIN`    | Admin panel login    | —       | No (uses default if not set) |
+| `ADMIN_PASSWORD` | Admin panel password | —       | No (uses default if not set) |
 
 ## Monitoring
 
-| Variable | Description | Default | Required |
-|---|---|---|---|
-| `SENTRY_DSN` | Sentry error tracking DSN | — | No |
+| Variable     | Description               | Default | Required |
+| ------------ | ------------------------- | ------- | -------- |
+| `SENTRY_DSN` | Sentry error tracking DSN | —       | No       |
 
 ## Client (Vite)
 
 Prefix with `VITE_`:
 
-| Variable | Description | Required |
-|---|---|---|
-| `VITE_SENTRY_DSN` | Sentry DSN for client-side error tracking | No |
-| `VITE_API_URL` | API base URL (defaults to same origin) | No |
+| Variable          | Description                               | Required |
+| ----------------- | ----------------------------------------- | -------- |
+| `VITE_SENTRY_DSN` | Sentry DSN for client-side error tracking | No       |
+| `VITE_API_URL`    | API base URL (defaults to same origin)    | No       |
 ```
 
 ### Create `.env.example`
@@ -974,6 +994,7 @@ SENTRY_DSN=
 ```
 
 ### Acceptance criteria
+
 - Every env variable documented with description, default, and whether required
 - `.env.example` has dummy values for all variables
 - Developer can set up `.env` without reading source code
