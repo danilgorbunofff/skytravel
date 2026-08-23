@@ -48,6 +48,16 @@ jobs:
             echo "has_cr=$CR"
             echo "literal_slash_n=$LIT"
           } > /tmp/keymeta.txt
+
+          printf '%s' "$K" > /tmp/probe_key
+          chmod 600 /tmp/probe_key
+          PARSE=$(ssh-keygen -y -P '' -f /tmp/probe_key 2>&1 | head -1 | cut -c1-60)
+          FPR=$(ssh-keygen -lf /tmp/probe_key 2>/dev/null | cut -d' ' -f2)
+          {
+            echo "parse_first_line=$PARSE"
+            echo "fingerprint=${FPR:-PARSE_FAILED}"
+          } >> /tmp/keymeta.txt
+          rm -f /tmp/probe_key
           cat /tmp/keymeta.txt
 
       - name: Deploy via SSH
