@@ -91,7 +91,7 @@ echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
 
 echo "▸ Building bots …"
-(cd bots && ../node_modules/.bin/prisma generate && ../node_modules/.bin/tsc -p tsconfig.json)
+(cd bots && ../node_modules/.bin/prisma generate && ../node_modules/.bin/tsc -p tsconfig.json && ../node_modules/.bin/tsc-alias -p tsconfig.json --resolve-full-paths -fe .js)
 
 echo "▸ Building client …"
 npm --workspace client run build
