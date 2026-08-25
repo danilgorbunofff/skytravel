@@ -9,6 +9,8 @@ export default tseslint.config(
       "**/dist/**",
       "**/node_modules/**",
       "server/prisma/migrations/**",
+      "server/src/generated/**",
+      "bots/src/generated/**",
       "ecosystem.config.cjs",
     ],
   },

@@ -4,11 +4,13 @@
   "type": "module",
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "bots"
   ],
   "scripts": {
     "dev": "npm --workspace server run dev & npm --workspace client run dev",
-    "build": "npm --workspace server run build && npm --workspace client run build",
+    "dev:bots": "npm --workspace bots run dev",
+    "build": "npm --workspace server run build && npm --workspace client run build && npm --workspace bots run build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

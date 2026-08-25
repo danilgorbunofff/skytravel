@@ -58,6 +58,20 @@ echo "▸ Extracting DATABASE_URL from server/.env …"
 DB_URL=$(grep ^DATABASE_URL server/.env | head -1 | sed 's/^DATABASE_URL=//;s/^"//;s/"$//')
 export DATABASE_URL="$DB_URL"
 
+if [ ! -f bots/.env ]; then
+  echo "▸ Creating bots/.env from template …"
+  cp bots/.env.example bots/.env
+  sed -i "s|DATABASE_URL=.*|DATABASE_URL=\"${DB_URL}\"|" bots/.env
+  echo "  ⚠ Please fill TELEGRAM_BOT_TOKEN and other secrets in bots/.env manually"
+else
+  # Ensure DATABASE_URL is correct even if file exists
+  if grep -q "^DATABASE_URL=" bots/.env; then
+    sed -i "s|DATABASE_URL=.*|DATABASE_URL=\"${DB_URL}\"|" bots/.env
+  else
+    echo "DATABASE_URL=\"${DB_URL}\"" >> bots/.env
+  fi
+fi
+
 echo "▸ Injecting DATABASE_URL into PM2 config …"
 sed -i "s|PORT: 4000,|PORT: 4000,\n        DATABASE_URL: \"${DB_URL}\",|" ecosystem.config.cjs
 
@@ -75,6 +89,9 @@ cd ..
 
 echo "▸ Running database migrations …"
 (cd server && ../node_modules/.bin/prisma migrate deploy)
+
+echo "▸ Building bots …"
+(cd bots && ../node_modules/.bin/prisma generate && ../node_modules/.bin/tsc -p tsconfig.json)
 
 echo "▸ Building client …"
 npm --workspace client run build

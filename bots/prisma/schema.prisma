@@ -1,0 +1,103 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma/client"
+}
+
+model BotLead {
+  id            Int       @id @default(autoincrement())
+  telegramId    String    @unique @db.VarChar(64) @map("telegram_id")
+  username      String?   @db.VarChar(255)
+  displayName   String?   @db.VarChar(255) @map("display_name")
+  lang          String    @default("ru") @db.VarChar(8)
+  source        String    @default("direct") @db.VarChar(32)
+  branch        String    @default("guide") @db.VarChar(32)
+  direction     String?   @db.VarChar(128)
+  travelMonth   String?   @db.VarChar(64) @map("travel_month")
+  duration      String?   @db.VarChar(64) @map("duration")
+  party         String?   @db.VarChar(128)
+  adults        Int?
+  children      Int?
+  childAges     String?   @db.VarChar(64) @map("child_ages")
+  budget        String?   @db.VarChar(64)
+  wishes        String?   @db.VarChar(1000)
+  status        String    @default("new") @db.VarChar(32)
+  subscribed    Boolean   @default(false)
+  unsubscribed  Boolean   @default(false)
+  lastFollowUp  Int       @default(0) @map("last_follow_up")
+  departureDate DateTime? @map("departure_date")
+  tourTitle     String?   @db.VarChar(255) @map("tour_title")
+  tourPrice     Int?      @map("tour_price")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([branch])
+  @@index([createdAt])
+  @@map("bot_leads")
+}
+
+model QuizSession {
+  id          Int      @id @default(autoincrement())
+  chatId      String   @unique @db.VarChar(64) @map("chat_id")
+  step        Int      @default(0)
+  direction   String?  @db.VarChar(128)
+  travelMonth String?  @db.VarChar(64) @map("travel_month")
+  duration    String?  @db.VarChar(64) @map("duration")
+  adults      Int?
+  hasChildren Int?     @map("has_children")
+  childCount  Int?     @map("child_count")
+  childAges   String?  @db.VarChar(64) @map("child_ages")
+  budget      String?  @db.VarChar(64)
+  wishes      String?  @db.VarChar(1000)
+  lang        String   @default("ru") @db.VarChar(8)
+  source      String   @default("direct") @db.VarChar(32)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("bot_quiz_sessions")
+}
+
+model KeywordHit {
+  id        Int      @id @default(autoincrement())
+  keyword   String   @db.VarChar(32)
+  branch    String   @db.VarChar(32)
+  commentId String   @db.VarChar(64) @map("comment_id")
+  mediaId   String?  @db.VarChar(64) @map("media_id")
+  commenter String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([commentId])
+  @@index([keyword, createdAt])
+  @@map("bot_keyword_hits")
+}
+
+model BotUiState {
+  chatId    String   @id @db.VarChar(64) @map("chat_id")
+  messageId Int      @map("message_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("bot_chat_ui")
+}
+
+model BotRequest {
+  id          Int      @id @default(autoincrement())
+  telegramId  String   @db.VarChar(64) @map("telegram_id")
+  direction   String?  @db.VarChar(128)
+  travelMonth String?  @db.VarChar(64) @map("travel_month")
+  duration    String?  @db.VarChar(64)
+  adults      Int?
+  children    Int?
+  childAges   String?  @db.VarChar(255) @map("child_ages")
+  budget      String?  @db.VarChar(64)
+  wishes      String?  @db.VarChar(1000)
+  source      String   @default("direct") @db.VarChar(32)
+  status      String   @default("new") @db.VarChar(32)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([telegramId, createdAt])
+  @@map("bot_requests")
+}

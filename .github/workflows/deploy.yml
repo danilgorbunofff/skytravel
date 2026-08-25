@@ -105,6 +105,21 @@ jobs:
               echo "▸ Installing dependencies …"
               npm ci --legacy-peer-deps
 
+              echo "▸ Preparing bots env …"
+              DB_URL=$(grep ^DATABASE_URL server/.env | head -1 | sed 's/^DATABASE_URL=//;s/^"//;s/"$//')
+              if [ ! -f bots/.env ]; then
+                cp bots/.env.example bots/.env
+                sed -i "s|DATABASE_URL=.*|DATABASE_URL=\"${DB_URL}\"|" bots/.env
+                echo "  ⚠ bots/.env created from template — fill TELEGRAM_BOT_TOKEN manually"
+              else
+                # Ensure DATABASE_URL is correct even if file exists
+                if grep -q "^DATABASE_URL=" bots/.env; then
+                  sed -i "s|DATABASE_URL=.*|DATABASE_URL=\"${DB_URL}\"|" bots/.env
+                else
+                  echo "DATABASE_URL=\"${DB_URL}\"" >> bots/.env
+                fi
+              fi
+
               echo "▸ Building server …"
               cd server
               npx prisma generate
@@ -114,6 +129,9 @@ jobs:
 
               echo "▸ Running database migrations …"
               (cd server && npx prisma migrate deploy)
+
+              echo "▸ Building bots …"
+              (cd bots && npx prisma generate && npx tsc -p tsconfig.json)
 
               echo "▸ Building client …"
               npm --workspace client run build
