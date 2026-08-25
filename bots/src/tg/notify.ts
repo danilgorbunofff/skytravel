@@ -2,9 +2,19 @@ import { config } from "../config.js";
 import { logger } from "../logger.js";
 import type { BotLead } from "../generated/prisma/client/client.js";
 import { ownerIntentText, ownerNewLeadText, ownerReviewText } from "./texts.js";
+import { getInfoBot } from "./infoBot.js";
 
 async function sendToOwnerRaw(text: string): Promise<void> {
   if (!config.telegram.ownerChatId) return;
+  const infoBot = getInfoBot();
+  if (infoBot) {
+    try {
+      await infoBot.api.sendMessage(config.telegram.ownerChatId, text);
+      return;
+    } catch (e) {
+      logger.warn(e, "info bot send failed, falling back to main bot");
+    }
+  }
   const { bot } = await import("./bot.js");
   await bot.api.sendMessage(config.telegram.ownerChatId, text);
 }
@@ -45,8 +55,9 @@ export async function forwardPhotoToOwner(
   if (!config.telegram.ownerChatId) return;
   try {
     await sendToOwnerRaw(ownerReviewText(lead, "photo", caption ?? ""));
-    const { bot } = await import("./bot.js");
-    await bot.api.sendPhoto(config.telegram.ownerChatId, fileId);
+    const infoBot = getInfoBot();
+    const targetBot = infoBot ?? (await import("./bot.js")).bot;
+    await targetBot.api.sendPhoto(config.telegram.ownerChatId, fileId);
   } catch (e) {
     logger.error(e, "failed to forward photo");
   }

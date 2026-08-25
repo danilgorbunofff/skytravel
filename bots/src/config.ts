@@ -18,6 +18,7 @@ export const config = {
   telegram: {
     token: optional("TELEGRAM_BOT_TOKEN"),
     botUsername: optional("TELEGRAM_BOT_USERNAME"),
+    infoToken: optional("TELEGRAM_INFO_BOT_TOKEN"),
     ownerChatId: optional("OWNER_CHAT_ID"),
     channelId: optional("CHANNEL_ID", "@your_channel"),
     channelUsername: optional("CHANNEL_USERNAME"),
