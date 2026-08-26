@@ -208,7 +208,7 @@ describe("renderListPage", () => {
       hubs: [{ slug: "recko", czechName: "Řecko", count: 3 }],
     });
     assert.ok(home.includes("blog-featured"));
-    assert.ok(home.includes("blog-stats"));
+    assert.ok(!home.includes("blog-stats"));
     assert.ok(home.includes("/blog/prvni/"));
     assert.ok(home.includes("Hlavní článek") || home.includes("Řecko"));
   });

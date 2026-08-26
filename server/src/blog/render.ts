@@ -153,6 +153,7 @@ function head(seo: SeoPage): string {
    ${canonicalLink}
    <link rel="alternate" type="application/rss+xml" title="SkyTravel Blog — RSS" href="${SITE_BASE_URL}/blog/rss.xml" />
    <link rel="stylesheet" href="/assets/blog.css" />
+   <script src="/assets/blog.js" defer></script>
    <link rel="icon" href="/favicon.ico" />
    <meta property="og:site_name" content="SkyTravel" />
    <meta property="og:locale" content="cs_CZ" />
@@ -300,7 +301,7 @@ function articleAuthorSignOff(): string {
          <div class="prose-end__role">Cestovní experti · Praha</div>
        </div>
      </div>
-     <p class="prose-end__note">Líbil se vám článek? Sdílejte ho s přáteli, kteří se chystají na dovolenou.</p>
+     <span class="prose-end__share">Líbí se vám? Sdílejte článek.</span>
    </div>`;
 }
 
@@ -358,12 +359,15 @@ function ctaBox(
 ): string {
   const label = destinationCzechName ? UI.searchInto(destinationCzechName) : UI.searchCta;
   const query = searchUrl(destinationCzechName);
-  const cls = variant === "hero" ? "cta-box cta-box--hero" : "cta-box";
-  return `<section class="${cls}">
+  const cls = variant === "hero" ? "cta-box cta-box--compact" : "cta-box";
+  const prompt = destinationCzechName
+    ? "Aktuální nabídky a termíny na jednom místě."
+    : "Aktuální nabídky, termíny a ceny na jednom místě.";
+  return `<aside class="${cls}">
      <h2>${escapeHtml(label)}</h2>
-     <p>Porovnejte aktuální nabídky, termíny a ceny od ověřených pořadatelů přímo v naší vyhledávači.</p>
-     <a class="cta-btn" href="${query}">${escapeHtml(label)}</a>
-   </section>`;
+     <p>${escapeHtml(prompt)}</p>
+     <a class="cta-btn" href="${query}">Hledat zájezdy <span aria-hidden="true" class="cta-btn__arrow">→</span></a>
+   </aside>`;
 }
 
 function hubDestinationCards(
@@ -374,42 +378,37 @@ function hubDestinationCards(
      <div class="hub-destinations__inner">
        <h2>${UI.byDestination}</h2>
        <p class="hub-destinations__lead">Prohlédněte si všechny destinace, pro které máme smlouvy — najdete zde podrobné průvodce, itineráře a tipy.</p>
-       <div class="destination-grid">
-         ${hubs
-           .map(
-             (hub) => `<a class="destination-card" href="/blog/destinace/${hub.slug}/">
-               <img class="destination-card__bg" src="${escapeHtml(HUB_IMAGES[hub.czechName] ?? "/assets/blog/hero-fallback.jpg")}" alt="" loading="lazy" width="1200" height="800"/>
-               <span class="destination-card__body"><h3>${escapeHtml(hub.czechName)}</h3><span class="destination-card__meta"><span class="hub-count-pill">${hub.count} ${hub.count === 1 ? "článek" : hub.count < 5 ? "články" : "článků"}<span class="hub-count-pill__num" aria-hidden="true" style="display:none">(${hub.count})</span></span></span></span>
-             </a>`,
-           )
-           .join("")}
+       <div class="destination-carousel" data-carousel="page">
+         <button class="destination-carousel__arrow destination-carousel__arrow--prev" type="button" data-carousel-prev aria-label="Předchozí destinace" disabled>
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+         </button>
+         <div class="destination-carousel__track" data-carousel-track>
+           <div class="destination-grid destination-grid--carousel">
+             ${hubs
+               .map(
+                 (hub) => `<a class="destination-card" href="/blog/destinace/${hub.slug}/">
+                   <img class="destination-card__bg" src="${escapeHtml(HUB_IMAGES[hub.czechName] ?? "/assets/blog/hero-fallback.jpg")}" alt="" loading="lazy" width="1200" height="800"/>
+                   <span class="destination-card__body"><h3>${escapeHtml(hub.czechName)}</h3><span class="destination-card__meta"><span class="hub-count-pill">${hub.count} ${hub.count === 1 ? "článek" : hub.count < 5 ? "články" : "článků"}<span class="hub-count-pill__num" aria-hidden="true" style="display:none">(${hub.count})</span></span></span></span>
+                 </a>`,
+               )
+               .join("")}
+           </div>
+         </div>
+         <button class="destination-carousel__arrow destination-carousel__arrow--next" type="button" data-carousel-next aria-label="Další destinace">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+         </button>
        </div>
      </div>
    </section>`;
-}
-
-function blogStats(posts: BlogPostMeta[], hubs: Array<{ count: number }>): string {
-  if (posts.length === 0) return "";
-  const total = posts.length;
-  const destinations = hubs.length;
-  const totalRead = posts.reduce((sum, p) => sum + (p.readingMinutes ?? 3), 0);
-  const latestYear = posts
-    .reduce((max, p) => (p.publishedAt > max ? p.publishedAt : max), posts[0].publishedAt)
-    .slice(0, 4);
-  return `<div class="blog-stats" aria-label="Přehled blogu">
-     <div class="blog-stats__item"><span class="blog-stats__num">${total}</span><span class="blog-stats__label">článků k přečtení</span></div>
-     <div class="blog-stats__item"><span class="blog-stats__num">${destinations}</span><span class="blog-stats__label">destinací v nabídce</span></div>
-     <div class="blog-stats__item"><span class="blog-stats__num">${totalRead} min</span><span class="blog-stats__label">celkem čtení</span></div>
-     <div class="blog-stats__item"><span class="blog-stats__num">${escapeHtml(latestYear)}</span><span class="blog-stats__label">nejnovější články</span></div>
-   </div>`;
 }
 
 function featuredStrip(posts: BlogPostMeta[]): string {
   if (posts.length < 3) return "";
   const [main, side1, side2] = posts;
   const renderSide = (p: BlogPostMeta) => `<a class="blog-featured__side" href="/blog/${p.slug}/">
-     <div class="blog-featured__side-img"><img src="${escapeHtml(coverFor(p))}" alt="" loading="eager" width="360" height="202"/></div>
+     <div class="blog-featured__side-img"><img src="${escapeHtml(coverFor(p))}" alt="" loading="eager" width="800" height="500"/></div>
      <div class="blog-featured__side-body">
+        <span class="blog-featured__side-eyebrow">${p.destinationCzechName ? escapeHtml(p.destinationCzechName) : "Další článek"}</span>
         <h3>${escapeHtml(p.title)}</h3>
         <span class="blog-featured__side-meta">${formatDateCs(p.publishedAt)} · ${p.readingMinutes ?? 3} ${UI.minReadSuffix}</span>
      </div>
@@ -466,7 +465,7 @@ function htmlShell(args: {
   jsonLdBlocks?: string[];
 }): string {
   return `<!DOCTYPE html>
- <html lang="cs">
+  <html lang="cs">
  <head>${head(args.seo)}
  </head>
  <body>
@@ -638,10 +637,9 @@ export function renderListPage(args: {
         args.intro ? `<p class="section-subtitle list-intro">${escapeHtml(args.intro)}</p>` : ""
       }</header>`;
 
-  // On home: featured strip (first 3) + stats bar + remaining posts grid.
+  // On home: featured strip + remaining posts grid (no stats bar).
   // On other list pages: standard grid.
   const homeFeatured = isHome ? featuredStrip(args.posts) : "";
-  const homeStats = isHome ? blogStats(args.posts, args.hubs ?? []) : "";
   const homeFeaturedIds = new Set(isHome ? args.posts.slice(0, 3).map((p) => p.slug) : []);
   const remainingPosts = isHome
     ? args.posts.filter((p) => !homeFeaturedIds.has(p.slug))
@@ -651,14 +649,25 @@ export function renderListPage(args: {
 
   const gridBlock =
     remainingPosts.length > 0
-      ? `<div class="post-grid${remainingPosts.length === 1 ? " post-grid--single" : ""}">${cards}</div>`
+      ? isHome
+        ? `<div class="post-carousel" data-carousel>
+              <button class="post-carousel__arrow post-carousel__arrow--prev" type="button" data-carousel-prev aria-label="Předchozí články" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="post-carousel__track" data-carousel-track>
+                <div class="post-grid post-grid--carousel">${cards}</div>
+              </div>
+              <button class="post-carousel__arrow post-carousel__arrow--next" type="button" data-carousel-next aria-label="Další články">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>`
+        : `<div class="post-grid${remainingPosts.length === 1 ? " post-grid--single" : ""}">${cards}</div>`
       : isHome
         ? ""
         : renderEmptyList();
 
   const listBody = `${hero}
      ${isHome ? homeFeatured : ""}
-     ${isHome ? homeStats : ""}
      <section class="section ${isHome ? "section-white" : "section-soft"}"><div class="container">
      ${listHeading}
      ${gridBlock}
