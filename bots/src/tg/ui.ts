@@ -21,7 +21,12 @@ async function saveMessageId(chatId: string, messageId: number): Promise<void> {
     .catch((e) => logger.warn(e, "failed to save ui state"));
 }
 
-export async function show(ctx: Context, text: string, keyboard?: InlineKeyboard): Promise<void> {
+export async function show(
+  ctx: Context,
+  text: string,
+  keyboard?: InlineKeyboard,
+  forceNew = false,
+): Promise<void> {
   if (!isPrivateChat(ctx)) return;
 
   const chatId = String(ctx.chat?.id ?? "");
@@ -30,7 +35,7 @@ export async function show(ctx: Context, text: string, keyboard?: InlineKeyboard
   };
 
   const pressedMessageId = ctx.callbackQuery?.message?.message_id ?? null;
-  const targetId = pressedMessageId ?? (await storedMessageId(chatId));
+  const targetId = forceNew ? null : (pressedMessageId ?? (await storedMessageId(chatId)));
 
   if (targetId) {
     try {
