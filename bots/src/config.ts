@@ -20,6 +20,13 @@ export const config = {
     botUsername: optional("TELEGRAM_BOT_USERNAME"),
     infoToken: optional("TELEGRAM_INFO_BOT_TOKEN"),
     ownerChatId: optional("OWNER_CHAT_ID"),
+    ownerChatIds: (() => {
+      const raw = optional("OWNER_CHAT_IDS") || optional("OWNER_CHAT_ID");
+      return raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    })(),
     channelId: optional("CHANNEL_ID", "@your_channel"),
     channelUsername: optional("CHANNEL_USERNAME"),
     managerContact: optional("MANAGER_CONTACT"),

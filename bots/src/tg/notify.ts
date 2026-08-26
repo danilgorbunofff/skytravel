@@ -5,18 +5,24 @@ import { ownerIntentText, ownerNewLeadText, ownerReviewText } from "./texts.js";
 import { getInfoBot } from "./infoBot.js";
 
 async function sendToOwnerRaw(text: string): Promise<void> {
-  if (!config.telegram.ownerChatId) return;
+  const targets = config.telegram.ownerChatIds;
+  if (targets.length === 0) return;
   const infoBot = getInfoBot();
-  if (infoBot) {
-    try {
-      await infoBot.api.sendMessage(config.telegram.ownerChatId, text);
-      return;
-    } catch (e) {
-      logger.warn(e, "info bot send failed, falling back to main bot");
+  for (const chatId of targets) {
+    let sent = false;
+    if (infoBot) {
+      try {
+        await infoBot.api.sendMessage(chatId, text);
+        sent = true;
+      } catch (e) {
+        logger.warn(e, `info bot send to ${chatId} failed, falling back to main bot`);
+      }
+    }
+    if (!sent) {
+      const { bot } = await import("./bot.js");
+      await bot.api.sendMessage(chatId, text);
     }
   }
-  const { bot } = await import("./bot.js");
-  await bot.api.sendMessage(config.telegram.ownerChatId, text);
 }
 
 export async function notifyOwnerNewLead(lead: BotLead): Promise<void> {
@@ -52,12 +58,19 @@ export async function forwardPhotoToOwner(
   fileId: string,
   caption?: string,
 ): Promise<void> {
-  if (!config.telegram.ownerChatId) return;
+  const targets = config.telegram.ownerChatIds;
+  if (targets.length === 0) return;
   try {
     await sendToOwnerRaw(ownerReviewText(lead, "photo", caption ?? ""));
     const infoBot = getInfoBot();
     const targetBot = infoBot ?? (await import("./bot.js")).bot;
-    await targetBot.api.sendPhoto(config.telegram.ownerChatId, fileId);
+    for (const chatId of targets) {
+      try {
+        await targetBot.api.sendPhoto(chatId, fileId);
+      } catch (e) {
+        logger.warn(e, `forward photo to ${chatId} failed`);
+      }
+    }
   } catch (e) {
     logger.error(e, "failed to forward photo");
   }
