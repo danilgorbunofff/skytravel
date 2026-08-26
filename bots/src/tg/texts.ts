@@ -261,12 +261,13 @@ export function ownerNewLeadText(lead: BotLead): string {
     "<b>🔔 Новый квалифицированный лид!</b>",
     leadHeader(lead),
     `<b>Направление:</b> ${ru().directionLabel(lead.direction ?? "")}`,
-    `<b>Когда:</b> ${ru().travelMonthLabel(lead.travelMonth ?? "")} · <b>Надолго:</b> ${ru().durationLabel(lead.duration ?? "")}`,
+    `<b>Когда:</b> ${ru().travelMonthLabel(lead.travelMonth ?? "")}`,
+    `<b>Надолго:</b> ${ru().durationLabel(lead.duration ?? "")}`,
     `<b>Состав:</b> ${ru().partySummary(lead.adults, lead.children, lead.childAges)} — всего ${ru().totalPeoplePhrase(lead.adults, lead.children)}`,
     `<b>Бюджет:</b> ${ru().budgetLabel(lead.budget)}`,
     `${lead.wishes ? `<b>Особые пожелания:</b> ${escapeHtml(lead.wishes)}\n` : ""}<b>Источник:</b> ${lead.source}`,
     "",
-    `ID лида: ${lead.id} · ответь в течение 2 минут!`,
+    `ID лида: ${lead.id}`,
   ].join("\n");
 }
 
