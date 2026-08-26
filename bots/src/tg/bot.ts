@@ -67,9 +67,9 @@ function menuKeyboard(lang: Lang): InlineKeyboard {
   const m = menuLabels(lang);
   const b = buttons(lang);
   const kb = new InlineKeyboard();
-  kb.text(m.guide, "menu:guide").row();
   kb.text(m.hot, "menu:hot").row();
   kb.text(m.select, "menu:select").row();
+  kb.text(m.guide, "menu:guide").row();
   kb.text(b.requests, "menu:requests").row();
   kb.text(b.langSwitch, "menu:lang").row();
   kb.url(b.group, channelLink());
