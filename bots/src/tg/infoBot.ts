@@ -8,6 +8,17 @@ export function getInfoBot(): Bot | null {
   const token = config.telegram.infoToken;
   if (!token) return null;
   _infoBot = new Bot(token);
+  _infoBot.api.config.use(async (prev, method, payload, signal) => {
+    if (
+      (method === "sendMessage" || method === "editMessageText") &&
+      payload &&
+      typeof payload === "object" &&
+      !("parse_mode" in payload)
+    ) {
+      (payload as { parse_mode?: string }).parse_mode = "HTML";
+    }
+    return prev(method, payload, signal);
+  });
   return _infoBot;
 }
 
