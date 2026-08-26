@@ -70,8 +70,8 @@ function menuKeyboard(lang: Lang): InlineKeyboard {
   kb.text(m.hot, "menu:hot").row();
   kb.text(m.select, "menu:select").row();
   kb.text(m.guide, "menu:guide").text(b.requests, "menu:requests").row();
+  kb.url(b.group, channelLink()).row();
   kb.text(b.langSwitch, "menu:lang").row();
-  kb.url(b.group, channelLink());
   return kb;
 }
 
