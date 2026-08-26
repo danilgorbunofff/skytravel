@@ -223,7 +223,7 @@ bot.command("start", async (ctx) => {
       return;
     default: {
       const greeting = existing ? welcomeBack(lang, firstName) : welcome(lang, firstName);
-      await show(ctx, greeting, menuKeyboard(lang), true);
+      await show(ctx, greeting, menuKeyboard(lang));
     }
   }
 });
