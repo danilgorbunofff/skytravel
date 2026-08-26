@@ -1,5 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
+import fs from "node:fs";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
@@ -21,6 +22,7 @@ import erasureRouter from "./routes/erasure.js";
 import { searchTimingMiddleware } from "./middleware/searchTiming.js";
 import healthRoutes from "./routes/health.js";
 import sitemapRouter from "./routes/sitemap.xml.js";
+import blogRouter from "./routes/blog.js";
 import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf.js";
 
 // Sentry — disabled unless SENTRY_DSN is configured
@@ -99,6 +101,47 @@ export function createApp() {
 
   // ── Health checks (no auth, no rate limit) ─────────────────────────
   app.use("/api", healthRoutes);
+
+  // ── Blog static assets (served before session so /assets never
+  //    touches the session store). The blog router itself is mounted
+  //    before the session middleware further down for the same reason.
+  //    Blog pages are pure SSR with no auth, no forms, no cookies, so
+  //    involving the MySQL session store on every anonymous visit is
+  //    both unnecessary and (in dev) a hard DB dependency.
+  const blogCssCandidates = [
+    path.resolve(process.cwd(), "../client/public/assets/blog.css"),
+    path.resolve(process.cwd(), "../client/public/blog.css"),
+    path.resolve(process.cwd(), "public/assets/blog.css"),
+  ];
+  for (const cssPath of blogCssCandidates) {
+    if (fs.existsSync(cssPath)) {
+      app.get("/assets/blog.css", (_req, res) => res.sendFile(cssPath));
+      app.get("/blog.css", (_req, res) => res.sendFile(cssPath));
+      break;
+    }
+  }
+  const publicAssetRoot = path.resolve(process.cwd(), "../client/public");
+  if (fs.existsSync(publicAssetRoot)) {
+    app.use(
+      "/assets",
+      express.static(publicAssetRoot + "/assets", {
+        setHeaders: (res) => {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        },
+      }),
+    );
+    app.use(
+      "/images",
+      express.static(publicAssetRoot + "/images", {
+        setHeaders: (res) => {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        },
+      }),
+    );
+  }
+
+  // ── Blog router mounted before session/CSRF — see block above. ──
+  app.use("/blog", blogRouter);
 
   // ── Body parsing ──────────────────────────────────────────────────────
   app.use(express.json({ limit: "1mb" }));

@@ -298,7 +298,7 @@ describe("renderHubPage", () => {
     assert.ok(page.includes("hub-bar"));
     assert.ok(page.includes("hub-bar__title"));
     assert.ok(page.includes("hub-bar__count"));
-    assert.ok(page.includes("Nejnovější články o Řecko"));
+    assert.ok(page.includes("Nejnovější články o Řecku"));
     assert.ok(page.includes("3 články"));
   });
 });

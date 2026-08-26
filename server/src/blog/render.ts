@@ -17,9 +17,9 @@ export const UI = {
   blogHome: "Blog",
   homeLink: "Domů",
   searchCta: "Hledat zájezdy",
-  searchInto: (name: string) => `Hledat zájezdy do ${name}`,
+  searchInto: (name: string) => `Hledat zájezdy do ${declineInto(name)}`,
   updatedOn: "Aktualizováno",
-  relatedArticles: (name: string) => `Další články o ${name}`,
+  relatedArticles: (name: string) => `Další články o ${declineAbout(name)}`,
   moreArticles: "Další články",
   byDestination: "Články podle destinace",
   pageOf: (page: number, total: number) => `Strana ${page} z ${total}`,
@@ -41,6 +41,38 @@ export const UI = {
 } as const;
 
 export type BreadcrumbItem = { name: string; url: string };
+
+/** Czech declension of destination names for UI strings (genitive: "do X"). */
+const DESTINATION_GENITIVE: Record<string, string> = {
+  Bulharsko: "Bulharska",
+  Chorvatsko: "Chorvatska",
+  Itálie: "Itálie",
+  Albánie: "Albánie",
+  "Černá Hora": "Černé Hory",
+  Řecko: "Řecka",
+  Turecko: "Turecka",
+  Španělsko: "Španělska",
+};
+
+/** Czech declension of destination names for UI strings (locative: "o X"). */
+const DESTINATION_LOCATIVE: Record<string, string> = {
+  Bulharsko: "Bulharsku",
+  Chorvatsko: "Chorvatsku",
+  Itálie: "Itálii",
+  Albánie: "Albánii",
+  "Černá Hora": "Černé Hoře",
+  Řecko: "Řecku",
+  Turecko: "Turecku",
+  Španělsko: "Španělsku",
+};
+
+function declineInto(name: string): string {
+  return DESTINATION_GENITIVE[name] ?? name;
+}
+
+function declineAbout(name: string): string {
+  return DESTINATION_LOCATIVE[name] ?? name;
+}
 
 export function escapeHtml(value: string): string {
   return value
@@ -231,11 +263,8 @@ function siteFooter(): string {
        <div class="footer-main">
          <div class="newsletter">
            <h5>Newsletter</h5>
-           <p>Přihlaste se k odběru novinek a získejte tipy na zájezdy jako první.</p>
-           <form action="/#kontakt" method="get" aria-label="Newsletter">
-             <input type="email" placeholder="Váš e-mail" aria-label="E-mail pro newsletter" disabled />
-             <a class="newsletter-link" href="/#kontakt">Odebírat</a>
-           </form>
+           <p>Chcete tipy na zájezdy a last minute nabídky jako první? Napište nám a zařadíme vás do odběru novinek.</p>
+           <a class="newsletter-link" href="/#kontakt">Zapsat se do odběru</a>
          </div>
          <div>
            <h5>Sledujte nás</h5>
@@ -287,28 +316,32 @@ const HUB_IMAGES: Record<string, string> = {
   Španělsko: "/assets/hub/spanelsko.jpg",
 };
 
+const BLOG_HERO_FALLBACK = "/assets/blog/hero-fallback.jpg";
+
+/** Every card reserves image space, so always resolve a cover — never render a blank block. */
+function coverFor(post: BlogPostMeta): string {
+  return post.coverImage ?? HUB_IMAGES[post.destinationCzechName ?? ""] ?? BLOG_HERO_FALLBACK;
+}
+
 function postCard(post: BlogPostMeta, options: { eagerImage?: boolean } = {}): string {
   const url = `/blog/${post.slug}/`;
   const readMin = post.readingMinutes ?? 3;
   const eager = options.eagerImage === true;
+  const cover = coverFor(post);
   return `<article class="post-card">
-     ${
-       post.coverImage
-         ? `<a class="post-card__image" href="${url}" tabindex="-1" aria-hidden="true"><img src="${escapeHtml(post.coverImage)}" alt="" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} width="360" height="202"/></a>`
-         : ""
-     }
-     <div class="post-card__body">
-       <div class="post-card__top">
-         ${post.destinationCzechName ? destinationBadge(post.destinationCzechName) : ""}
-         <span class="post-card__read">${readMin} ${UI.minReadSuffix}</span>
-       </div>
-       <p class="post-card__date"><time datetime="${escapeHtml(post.publishedAt)}">${formatDateCs(post.publishedAt)}</time></p>
-       <h2><a href="${url}">${escapeHtml(post.title)}</a></h2>
-       <p class="post-card__excerpt">${escapeHtml(post.description)}</p>
-       <div class="post-card__footer">
-         <a class="post-card__more" href="${url}">${UI.readMore} →</a>
-       </div>
-     </div>
+    <a class="post-card__image" href="${url}" tabindex="-1" aria-hidden="true"><img src="${escapeHtml(cover)}" alt="" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} width="360" height="202"/></a>
+    <div class="post-card__body">
+      <div class="post-card__top">
+        ${post.destinationCzechName ? destinationBadge(post.destinationCzechName) : ""}
+        <span class="post-card__read">${readMin} ${UI.minReadSuffix}</span>
+      </div>
+      <p class="post-card__date"><time datetime="${escapeHtml(post.publishedAt)}">${formatDateCs(post.publishedAt)}</time></p>
+      <h2><a href="${url}">${escapeHtml(post.title)}</a></h2>
+      <p class="post-card__excerpt">${escapeHtml(post.description)}</p>
+      <div class="post-card__footer">
+        <a class="post-card__more" href="${url}">${UI.readMore} →</a>
+      </div>
+    </div>
    </article>`;
 }
 
@@ -360,11 +393,14 @@ function blogStats(posts: BlogPostMeta[], hubs: Array<{ count: number }>): strin
   const total = posts.length;
   const destinations = hubs.length;
   const totalRead = posts.reduce((sum, p) => sum + (p.readingMinutes ?? 3), 0);
+  const latestYear = posts
+    .reduce((max, p) => (p.publishedAt > max ? p.publishedAt : max), posts[0].publishedAt)
+    .slice(0, 4);
   return `<div class="blog-stats" aria-label="Přehled blogu">
-     <div class="blog-stats__item"><span class="blog-stats__num">${total}+</span><span class="blog-stats__label">článků k přečtení</span></div>
+     <div class="blog-stats__item"><span class="blog-stats__num">${total}</span><span class="blog-stats__label">článků k přečtení</span></div>
      <div class="blog-stats__item"><span class="blog-stats__num">${destinations}</span><span class="blog-stats__label">destinací v nabídce</span></div>
      <div class="blog-stats__item"><span class="blog-stats__num">${totalRead} min</span><span class="blog-stats__label">celkem čtení</span></div>
-     <div class="blog-stats__item"><span class="blog-stats__num">2025</span><span class="blog-stats__label">rok expedice</span></div>
+     <div class="blog-stats__item"><span class="blog-stats__num">${escapeHtml(latestYear)}</span><span class="blog-stats__label">nejnovější články</span></div>
    </div>`;
 }
 
@@ -372,18 +408,18 @@ function featuredStrip(posts: BlogPostMeta[]): string {
   if (posts.length < 3) return "";
   const [main, side1, side2] = posts;
   const renderSide = (p: BlogPostMeta) => `<a class="blog-featured__side" href="/blog/${p.slug}/">
-     ${p.coverImage ? `<div class="blog-featured__side-img"><img src="${escapeHtml(p.coverImage)}" alt="" loading="eager" width="360" height="202"/></div>` : ""}
+     <div class="blog-featured__side-img"><img src="${escapeHtml(coverFor(p))}" alt="" loading="eager" width="360" height="202"/></div>
      <div class="blog-featured__side-body">
-       <h3><a href="/blog/${p.slug}/">${escapeHtml(p.title)}</a></h3>
-       <span class="blog-featured__side-meta">${formatDateCs(p.publishedAt)} · ${p.readingMinutes ?? 3} ${UI.minReadSuffix}</span>
+        <h3>${escapeHtml(p.title)}</h3>
+        <span class="blog-featured__side-meta">${formatDateCs(p.publishedAt)} · ${p.readingMinutes ?? 3} ${UI.minReadSuffix}</span>
      </div>
    </a>`;
   return `<section class="blog-featured" aria-label="Hlavní články">
      <a class="blog-featured__main" href="/blog/${main.slug}/">
-       ${main.coverImage ? `<div class="blog-featured__main-img"><img src="${escapeHtml(main.coverImage)}" alt="" loading="eager" fetchpriority="high" width="800" height="500"/></div>` : ""}
+       <div class="blog-featured__main-img"><img src="${escapeHtml(coverFor(main))}" alt="" loading="eager" fetchpriority="high" width="800" height="500"/></div>
        <div class="blog-featured__main-body">
          <span class="blog-featured__main-eyebrow">${main.destinationCzechName ? escapeHtml(main.destinationCzechName) : "Hlavní článek"}</span>
-         <h2><a href="/blog/${main.slug}/">${escapeHtml(main.title)}</a></h2>
+         <h2>${escapeHtml(main.title)}</h2>
          <p class="blog-featured__main-excerpt">${escapeHtml(main.description)}</p>
          <div class="blog-featured__main-meta">
            <span><strong>${formatDateCs(main.publishedAt)}</strong></span>
@@ -397,8 +433,6 @@ function featuredStrip(posts: BlogPostMeta[]): string {
      ${renderSide(side2)}
    </section>`;
 }
-
-const BLOG_HERO_FALLBACK = "/assets/blog/hero-fallback.jpg";
 
 function blogHero(args: {
   title: string;
@@ -617,7 +651,7 @@ export function renderListPage(args: {
 
   const gridBlock =
     remainingPosts.length > 0
-      ? `<div class="post-grid">${cards}</div>`
+      ? `<div class="post-grid${remainingPosts.length === 1 ? " post-grid--single" : ""}">${cards}</div>`
       : isHome
         ? ""
         : renderEmptyList();
@@ -757,10 +791,10 @@ export function renderHubPage(args: {
      ${
        args.posts.length > 0
          ? `<header class="hub-bar">
-       <h2 class="hub-bar__title">Nejnovější články o ${escapeHtml(args.destinationName)}</h2>
+       <h2 class="hub-bar__title">Nejnovější články o ${escapeHtml(declineAbout(args.destinationName))}</h2>
        <span class="hub-bar__count">${args.posts.length === 1 ? "1 článek" : args.posts.length < 5 ? `${args.posts.length} články` : `${args.posts.length} článků`}</span>
      </header>
-     <div class="post-grid">${args.posts.map((p, i) => postCard(p, { eagerImage: i < 3 })).join("")}</div>`
+     <div class="post-grid${args.posts.length === 1 ? " post-grid--single" : ""}">${args.posts.map((p, i) => postCard(p, { eagerImage: i < 3 })).join("")}</div>`
          : renderEmptyList()
      }
      ${renderPagination(args.page, args.totalPages, basePath)}

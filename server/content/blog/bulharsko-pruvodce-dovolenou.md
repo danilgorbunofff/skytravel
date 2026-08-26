@@ -1,6 +1,6 @@
 ---
 title: "Dovolená v Bulharsku: průvodce plážemi a letovisky"
-description: "Kompletní průvodce dovolenou v Bulharsku — Zlaté písky, Slunečné breh, Sozopol, ceny, kdy letet a na co si dat pozor."
+description: "Kompletní průvodce dovolenou v Bulharsku — Zlaté písky, Slunečný břeh, Sozopol, ceny, kdy letět a na co si dát pozor."
 destination: "Bulharsko"
 tags:
   - Bulharsko
@@ -21,7 +21,7 @@ srpnu (24–26 °C), nejvíce slunce se ale můžete těšit už v červenci.
 
 - **Červen** — méně turistů, nižší ceny, moře kolem 21 °C
 - **Červenec a srpen** — jistota počasí, plná sezonní atmosféra
-- **Září** — příjemné teploty, vyprahlé davy, moře ještě teplé
+- **Září** — příjemné teploty, menší davy, moře ještě teplé
 
 ## Nejpopulárnější letoviska
 

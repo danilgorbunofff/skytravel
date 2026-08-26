@@ -2,6 +2,7 @@
 title: "Řecko: 10 nejkrásnějších pláží na Krétě, Rhodu a Chalkidiki"
 description: "Vyberte si z desítky ověřených pláží v Řecku — laguny, tyrkysové zátoky a pláže s pozvolným vstupem do moře pro rodiny."
 destination: "Řecko"
+cover: "/assets/hub/recko.jpg"
 tags:
   - Řecko
   - pláže

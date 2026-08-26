@@ -2,6 +2,7 @@
 title: "Chorvatsko na vlastní pěst i s dopravou: kam v roce 2026"
 description: "Istrie, Dalmácie nebo Kvarner? Praktický průvodce chorvatským pobřežím — pláže, campery, trajekty a cestovní rady."
 destination: "Chorvatsko"
+cover: "/assets/hub/chorvatsko.jpg"
 tags:
   - Chorvatsko
   - průvodce

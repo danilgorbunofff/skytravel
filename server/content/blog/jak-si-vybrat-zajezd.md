@@ -1,6 +1,7 @@
 ---
 title: "Jak si vybrat zájezd: 7 kroků před rezervací dovolené"
 description: "Krok za krokem — jak porovnat pořadatele, termíny a ceny, co číst v podmínkách a kdy se vyplatí rezervace dopředu."
+cover: "/assets/blog/hero-fallback.jpg"
 tags:
   - rady
   - průvodce
