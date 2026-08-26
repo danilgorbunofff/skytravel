@@ -59,7 +59,7 @@ const ru: LangBundle = {
   LANG_SET_RU: "✅ Готово! Язык: русский.",
   LANG_SET_UK: "✅ Готово! Язык: украинский.",
   CHECKING_MEMBERSHIP: "Проверяю вступление…",
-  GROUP_BTN: "📢 Наша группа с турами",
+  GROUP_BTN: "📢 Наша группа",
   JOIN_GROUP_BTN: "📢 Вступить в группу",
   I_JOINED_BTN: "✅ Я вступил",
   OPEN_GROUP_BTN: "📢 Открыть группу",
