@@ -30,7 +30,7 @@ export const config = {
     channelId: optional("CHANNEL_ID", "@your_channel"),
     channelUsername: optional("CHANNEL_USERNAME"),
     managerContact: optional("MANAGER_CONTACT"),
-    polling: process.env.TELEGRAM_POLLING === "true",
+    polling: process.env.TELEGRAM_POLLING === "true" || process.env.TELEGRAM_POLLING === "1",
   },
 
   instagram: {
