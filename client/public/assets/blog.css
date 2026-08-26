@@ -823,6 +823,12 @@ html[lang="ru"] h3 {
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
   color: rgba(255, 255, 255, 0.92);
 }
+/* When the intro <p> is followed directly by a CTA (no .blog-hero__ctas
+   wrapper in the markup), give the button a clear vertical gap so the
+   paragraph and CTA don't visually touch. */
+.blog-hero__content p + .hero__btn {
+  margin-top: 1.6rem;
+}
 .blog-hero__ctas {
   display: flex;
   flex-wrap: wrap;
