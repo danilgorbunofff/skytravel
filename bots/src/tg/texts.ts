@@ -263,16 +263,11 @@ export function ownerNewLeadText(lead: BotLead): string {
     `<b>Направление:</b> ${ru().directionLabel(lead.direction ?? "")}`,
     `<b>Когда:</b> ${ru().travelMonthLabel(lead.travelMonth ?? "")} · <b>Надолго:</b> ${ru().durationLabel(lead.duration ?? "")}`,
     `<b>Состав:</b> ${ru().partySummary(lead.adults, lead.children, lead.childAges)} — всего ${ru().totalPeoplePhrase(lead.adults, lead.children)}`,
-    `<b>Бюджет:</b> ${ru().budgetLabel(lead.budget)}${perPersonRu(lead)}`,
+    `<b>Бюджет:</b> ${ru().budgetLabel(lead.budget)}`,
     `${lead.wishes ? `<b>Особые пожелания:</b> ${escapeHtml(lead.wishes)}\n` : ""}<b>Источник:</b> ${lead.source}`,
     "",
     `ID лида: ${lead.id} · ответь в течение 2 минут!`,
   ].join("\n");
-}
-
-function perPersonRu(lead: BotLead): string {
-  const label = ru().perPersonLabel(lead.budget, lead.adults, lead.children);
-  return label ? ` ${label}` : "";
 }
 
 export function ownerIntentText(lead: BotLead, intent: string): string {
