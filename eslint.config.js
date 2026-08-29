@@ -12,6 +12,12 @@ export default tseslint.config(
       "server/src/generated/**",
       "bots/src/generated/**",
       "ecosystem.config.cjs",
+      // Vendored tooling that ships browser-targeted .mjs scripts. Linting them
+      // under the repo's Node rules produced ~2 300 `no-undef` errors and made
+      // `npm run lint` (and therefore CI deploy) permanently red.
+      ".github/skills/**",
+      // Hand-written browser scripts served as static assets, not module code.
+      "client/public/**",
     ],
   },
   js.configs.recommended,

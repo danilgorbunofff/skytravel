@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchPublicAllProviderTours } from "../../../api/publicProviders";
 import type { ToursResult, UnifiedFilters, UnifiedTour } from "../../../types/providers";
 import { isPlausibleTourPrice, MIN_PUBLIC_TOUR_PRICE_CZK } from "../../../lib/prices";
@@ -11,6 +11,12 @@ export interface SearchResultsState {
   result: ToursResult | null;
   resultsLoading: boolean;
   error: string | null;
+  /** Retries the last request. Safe to call when idle or errored. */
+  retry: () => void;
+  /** True once any request has succeeded — keeps the price slider mounted. */
+  hasLoadedOnce: boolean;
+  /** True when the URL page and the last loaded page disagree (in-flight page change). */
+  pendingPage: boolean;
   displayedTours: UnifiedTour[];
   accumulatedItems: UnifiedTour[];
   naturalPriceRange: { min: number; max: number };
@@ -30,63 +36,90 @@ export function useSearchResults(
   page: number,
   favoriteTours: UnifiedTour[] = [],
 ): SearchResultsState {
-  const [resultsLoading, setResultsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ToursResult | null>(null);
+  // The result is stored together with the filter key that produced it, so a
+  // response for a stale filter set can never be rendered (previously page-5
+  // items were displayed next to a "page 1" pagination state).
+  const [resultState, setResultState] = useState<{ key: string; data: ToursResult } | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [accumulatedItems, setAccumulatedItems] = useState<UnifiedTour[]>([]);
   const [naturalPriceRange, setNaturalPriceRange] = useState({
     min: MIN_PUBLIC_TOUR_PRICE_CZK,
     max: 200_000,
   });
 
-  // Reset accumulator when filter changes (but not page)
+  // Reset accumulator when the filter set changes (but not on page change).
+  const accumulatedKeyRef = useRef(filterKeyWithoutPage);
   useEffect(() => {
-    setAccumulatedItems([]);
+    if (accumulatedKeyRef.current !== filterKeyWithoutPage) {
+      accumulatedKeyRef.current = filterKeyWithoutPage;
+      setAccumulatedItems([]);
+    }
   }, [filterKeyWithoutPage]);
 
-  // Accumulate items for mobile infinite scroll
+  const debouncedFilterKey = useDebounce(searchFilterKey, 300);
+  // Between the URL changing and the debounce settling we are conceptually
+  // already loading — surfacing that avoids a 300 ms window where stale data is
+  // shown as if it were current, and where "load more" is still clickable.
+  const isDebouncePending = searchFilterKey !== debouncedFilterKey;
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const requestKey = debouncedFilterKey;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setIsLoading(true);
+    // Clear the previous error immediately: a retry or a new filter set is a
+    // fresh attempt. The previous *result* is deliberately kept so the list
+    // doesn't collapse while the new one is in flight.
+    setError(null);
+    fetchPublicAllProviderTours(searchFilters, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setResultState({ key: requestKey, data });
+        setHasLoadedOnce(true);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Vyhledávání se nezdařilo.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedFilterKey, reloadToken]);
+
+  // Only the result matching the currently committed filter key is visible.
+  const result = resultState?.key === debouncedFilterKey ? resultState.data : null;
+
+  const retry = useCallback(() => setReloadToken((n) => n + 1), []);
+
+  // Compare the URL page against the page we last actually loaded. Using the
+  // stored (rather than the visible) result keeps this true across the debounce
+  // window, which is exactly when a second "load more" tap used to slip through.
+  const pendingPage = page !== (resultState?.data?.page ?? page);
+
+  // Accumulate items for mobile infinite scroll. Gated on the key-matched
+  // result only, so stale responses can never be appended.
   useEffect(() => {
     if (!result) return;
     setAccumulatedItems((prev) => {
-      if (page <= 1) return result.items;
+      if (result.page <= 1) return result.items;
       const seen = new Set(prev.map((tour) => `${tour.source}-${tour.externalId}`));
       const additions = result.items.filter(
         (tour) => !seen.has(`${tour.source}-${tour.externalId}`),
       );
       return additions.length ? [...prev, ...additions] : prev;
     });
-  }, [result, page]);
-
-  // Fetch results on filter change (debounced + abort)
-  const debouncedFilterKey = useDebounce(searchFilterKey, 300);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setResultsLoading(true);
-    setError(null);
-    fetchPublicAllProviderTours(searchFilters, controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setResult(data);
-        }
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        setResult(null);
-        setError(err instanceof Error ? err.message : "Vyhledávání se nezdařilo.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setResultsLoading(false);
-      });
-    return () => {
-      controller.abort();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedFilterKey]);
+  }, [result]);
 
   // Update natural price range when results change
   useEffect(() => {
@@ -148,8 +181,11 @@ export function useSearchResults(
 
   return {
     result: activeResult,
-    resultsLoading: showFavoritesOnly ? false : resultsLoading,
+    resultsLoading: showFavoritesOnly ? false : isLoading || isDebouncePending,
     error: showFavoritesOnly ? null : error,
+    retry,
+    hasLoadedOnce,
+    pendingPage: showFavoritesOnly ? false : pendingPage,
     displayedTours,
     accumulatedItems,
     naturalPriceRange,

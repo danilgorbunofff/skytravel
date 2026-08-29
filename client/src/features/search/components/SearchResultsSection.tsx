@@ -9,10 +9,7 @@ import { ActiveFilterChips, type ChipData } from "./ActiveFilterChips";
 
 /** Build pagination items array with ellipsis for smart pagination display.
  *  Returns (number | "...")[] e.g. [1, 2, "...", 9, 10] or [1, "...", 5, 6, 7, "...", 14] */
-function buildPaginationItems(
-  currentPage: number,
-  totalPages: number,
-): (number | "...")[] {
+function buildPaginationItems(currentPage: number, totalPages: number): (number | "...")[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
@@ -53,6 +50,10 @@ interface Props {
   loading: boolean;
   /** Human-readable error string, or null. */
   error: string | null;
+  /** Re-runs the last request after a failure. */
+  onRetry: () => void;
+  /** True when the URL page and the loaded page disagree (page change in flight). */
+  pendingPage: boolean;
   /** Current view mode. */
   viewMode: ViewMode;
   /** Switch between grid and list view. */
@@ -115,6 +116,12 @@ interface Props {
   onLoadMore: () => void;
   /** Whether we have user filters active (controls preset visibility). */
   hasUserFilters: boolean;
+  /** True when mobile accumulation hit its cap and further pages need pagination. */
+  mobileCapped: boolean;
+  /** Switches mobile from infinite accumulation to normal pagination. */
+  onShowAll: () => void;
+  /** True once mobile switched to normal pagination. */
+  mobileShowAll: boolean;
 }
 
 /**
@@ -129,6 +136,8 @@ export function SearchResultsSection({
   result,
   loading,
   error,
+  onRetry,
+  pendingPage,
   viewMode,
   onSetView,
   page,
@@ -160,9 +169,19 @@ export function SearchResultsSection({
   showFavoritesOnly,
   onLoadMore,
   hasUserFilters,
+  mobileCapped,
+  onShowAll,
+  mobileShowAll,
 }: Props) {
+  const busy = loading || pendingPage;
   return (
     <section className="search-results-main">
+      {/* Announce only the result count. A live region wrapping the whole grid
+          made screen readers re-read every card on each filter change. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {busy ? t("sStateLoading") : totalText}
+      </p>
+
       <SearchResultsToolbar
         t={t}
         totalText={totalText}
@@ -179,23 +198,41 @@ export function SearchResultsSection({
         onShare={onShare}
       />
 
-      {error && <div className="search-error" role="alert">{error}</div>}
-
-      {loading && !result && (
-        <TourCardSkeleton count={6} viewMode={viewMode} />
+      {error && (
+        <div className="search-error" role="alert">
+          <span>{error}</span>
+          <button type="button" className="search-error__retry" onClick={onRetry}>
+            {t("sRetry")}
+          </button>
+        </div>
       )}
 
-      {!loading && !error && result?.items.length === 0 && (
+      {loading && !result && <TourCardSkeleton count={6} viewMode={viewMode} />}
+
+      {!loading && !error && toursToRender.length === 0 && (
         <div className="search-empty search-empty--results">
-          <div className="search-empty__icon" aria-hidden="true">🔍</div>
-          <h3>{t("sNoResultsTitle")}</h3>
-          <p>{t("sNoResultsBody")}</p>
+          <div className="search-empty__icon" aria-hidden="true">
+            🔍
+          </div>
+          {showFavoritesOnly ? (
+            <>
+              <h3>{t("sNoFavoritesTitle")}</h3>
+              <p>{t("sNoFavoritesBody")}</p>
+            </>
+          ) : (
+            <>
+              <h3>{t("sNoResultsTitle")}</h3>
+              <p>{t("sNoResultsBody")}</p>
+            </>
+          )}
           <ul className="search-empty__tips">
-            <li>
-              <button type="button" onClick={onResetFilters}>
-                {t("sNoResultsTipReset")}
-              </button>
-            </li>
+            {!showFavoritesOnly && (
+              <li>
+                <button type="button" onClick={onResetFilters}>
+                  {t("sNoResultsTipReset")}
+                </button>
+              </li>
+            )}
             <li>{t("sNoResultsTipDates")}</li>
             <li>{t("sNoResultsTipRegion")}</li>
             <li>
@@ -227,7 +264,6 @@ export function SearchResultsSection({
       <div
         className={viewMode === "grid" ? "tour-grid" : "tour-list"}
         aria-busy={loading}
-        aria-live="polite"
         role="region"
         aria-label="Seznam zájezdů"
         style={
@@ -245,12 +281,12 @@ export function SearchResultsSection({
               tour={tour}
               viewMode={viewMode}
               isFavorite={isFavorite(tourId)}
-              onToggleFavorite={() => onToggleFavorite(tour)}
-              onOpenDetail={() => onOpenDetail(tour)}
+              onToggleFavorite={onToggleFavorite}
+              onOpenDetail={onOpenDetail}
               providerLabel={providerLabels[tour.source]}
               animationIndex={index}
               isCompared={isCompared(tourId)}
-              onToggleCompare={() => onToggleCompare(tour)}
+              onToggleCompare={onToggleCompare}
               compareFull={compareFull}
             />
           );
@@ -258,35 +294,46 @@ export function SearchResultsSection({
       </div>
 
       {loading && result && (
-        <p
-          className="search-updating-indicator"
-          aria-live="polite"
-        >
+        <p className="search-updating-indicator" aria-live="polite">
           {t("sStateUpdating")}
         </p>
       )}
 
-      {isMobile && !showFavoritesOnly && result && page < totalPages && (
+      {isMobile && !showFavoritesOnly && !mobileShowAll && result && page < totalPages && (
         <div className="mobile-load-more">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={onLoadMore}
-            disabled={loading}
-            aria-label={t("sLoadMore")}
-          >
-            {loading ? t("sLoadingMore") : t("sLoadMore")}
-          </button>
+          {mobileCapped ? (
+            <>
+              <p className="mobile-load-more__note">{t("sLoadMoreCapped")}</p>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onShowAll}
+                aria-label={t("sShowAll")}
+              >
+                {t("sShowAll")}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onLoadMore}
+              disabled={busy}
+              aria-label={t("sLoadMore")}
+            >
+              {busy ? t("sLoadingMore") : t("sLoadMore")}
+            </button>
+          )}
         </div>
       )}
 
-      {!isMobile && !showFavoritesOnly && result && totalPages > 1 && (
+      {(!isMobile || mobileShowAll) && !showFavoritesOnly && result && totalPages > 1 && (
         <nav className="search-pagination" aria-label="Stránkování">
           <button
             type="button"
             className="search-pagination__arrow"
             onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1 || loading}
+            disabled={page <= 1 || busy}
             aria-label={`${t("sPagePrev")} — ${t("sPageLabel")} ${page - 1}`}
           >
             <ChevronLeft size={18} aria-hidden="true" />
@@ -304,7 +351,7 @@ export function SearchResultsSection({
                   type="button"
                   className={`search-pagination__page${item === page ? " is-active" : ""}`}
                   onClick={() => onPageChange(item as number)}
-                  disabled={loading}
+                  disabled={busy}
                   aria-label={`${t("sPageLabel")} ${item}`}
                   aria-current={item === page ? "page" : undefined}
                 >
@@ -318,7 +365,7 @@ export function SearchResultsSection({
             type="button"
             className="search-pagination__arrow"
             onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages || loading}
+            disabled={page >= totalPages || busy}
             aria-label={`${t("sPageNext")} — ${t("sPageLabel")} ${page + 1}`}
           >
             <ChevronRight size={18} aria-hidden="true" />

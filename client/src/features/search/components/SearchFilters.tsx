@@ -1,8 +1,5 @@
-
-import {
-  Heart,
-  RotateCcw,
-} from "lucide-react";
+import { memo } from "react";
+import { Heart, RotateCcw } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { PriceRangeSlider } from "../../../components/PriceRangeSlider";
@@ -49,7 +46,7 @@ interface Props {
   showContactCta?: boolean;
 }
 
-export function SearchFilters({
+function SearchFiltersComponent({
   t,
   filters,
   destinations,
@@ -66,7 +63,6 @@ export function SearchFilters({
   onReset,
   showContactCta = true,
 }: Props) {
-
   return (
     <>
       {/* Destinations */}
@@ -75,38 +71,32 @@ export function SearchFilters({
         {destinationsStatus === "loading" && (
           <div className="search-region-list search-region-list--loading" aria-busy="true">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="skeleton-line h-6 my-1.5"
-              />
+              <div key={i} className="skeleton-line h-6 my-1.5" />
             ))}
           </div>
         )}
         {destinationsStatus === "error" && (
-          <div
-            role="alert"
-            className="search-error flex flex-col gap-2"
-          >
+          <div role="alert" className="search-error flex flex-col gap-2">
             <span>{destinationsError}</span>
-              <button
-                type="button"
-                onClick={onRetryDestinations}
-                className="self-start underline bg-transparent border-none text-inherit cursor-pointer p-0"
+            <button
+              type="button"
+              onClick={onRetryDestinations}
+              className="self-start underline bg-transparent border-none text-inherit cursor-pointer p-0"
             >
               {t("sFilterRetry")}
             </button>
           </div>
         )}
         {destinationsStatus === "ready" && destinations.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t("sFilterNoDestinations")}
-            </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t("sFilterNoDestinations")}</p>
         )}
         {destinationsStatus === "ready" && destinations.length > 0 && (
           <DestinationMultiSelect
             t={t}
             value={filters.activeDestinationSlug}
-            onChange={(value) => filters.updateParams({ destinationSlug: value || null, q: null, page: 1 })}
+            onChange={(value) =>
+              filters.updateParams({ destinationSlug: value || null, q: null, page: 1 })
+            }
             destinations={destinations}
           />
         )}
@@ -205,3 +195,10 @@ export function SearchFilters({
     </>
   );
 }
+
+/**
+ * Memoized: this sidebar re-rendered on every parent state change (scroll
+ * position, share toast, compare tray). Note it is mounted twice when the
+ * mobile drawer is open, so the saving is doubled there.
+ */
+export const SearchFilters = memo(SearchFiltersComponent);

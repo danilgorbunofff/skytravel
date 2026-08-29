@@ -1,23 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Clock, Search } from "lucide-react";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { favorites as popularDestinations } from "../../../data";
+import { useRecentSearches } from "../hooks/useRecentSearches";
 
-const RECENT_SEARCHES_KEY = "skytravel:recentSearches";
-const MAX_RECENT = 10;
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 200;
 
-export interface RecentSearch {
-  query: string;
-  timestamp: number;
-  resultCount?: number;
-}
-
-interface Suggestion {
+export interface Suggestion {
   type: "destination" | "recent";
   label: string;
   slug?: string;
@@ -34,31 +27,6 @@ interface Props {
   placeholder?: string;
 }
 
-function getRecentSearches(): RecentSearch[] {
-  try {
-    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveRecentSearch(query: string, resultCount?: number) {
-  if (!query.trim()) return;
-  try {
-    const existing = getRecentSearches();
-    const filtered = existing.filter(
-      (s) => s.query.toLowerCase() !== query.trim().toLowerCase(),
-    );
-    filtered.unshift({ query: query.trim(), timestamp: Date.now(), resultCount });
-    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT)));
-  } catch {
-    // localStorage unavailable
-  }
-}
-
 function normalize(text: string): string {
   return text
     .normalize("NFD")
@@ -71,7 +39,9 @@ function getDestinationImage(destinationName: string): string | null {
   const normalizedName = normalize(destinationName);
   const match = popularDestinations.find((item) => {
     const normalizedFavorite = normalize(item.destination);
-    return normalizedName.includes(normalizedFavorite) || normalizedFavorite.includes(normalizedName);
+    return (
+      normalizedName.includes(normalizedFavorite) || normalizedFavorite.includes(normalizedName)
+    );
   });
   return match?.image ?? null;
 }
@@ -92,6 +62,10 @@ export function SearchAutocomplete({
   const listRef = useRef<HTMLUListElement>(null);
   const debounceTimer = useRef<number | null>(null);
 
+  // Recent searches come from a useSyncExternalStore-backed hook, so they are
+  // read once per store change instead of hitting localStorage on every render.
+  const { searches: recentSearches } = useRecentSearches();
+
   // Debounce input
   useEffect(() => {
     if (debounceTimer.current != null) window.clearTimeout(debounceTimer.current);
@@ -103,18 +77,19 @@ export function SearchAutocomplete({
     };
   }, [value]);
 
-  // Compute suggestions
-  const suggestions: Suggestion[] = (() => {
+  const suggestions = useMemo<Suggestion[]>(() => {
     const items: Suggestion[] = [];
     const normalizedInput = normalize(debouncedValue);
 
     if (normalizedInput.length >= MIN_CHARS) {
-      // Destination matches
       const destMatches = destinations
         .filter((d) => {
           const normalizedCzech = normalize(d.czechName);
           const normalizedCanonical = normalize(d.canonicalName);
-          return normalizedCzech.includes(normalizedInput) || normalizedCanonical.includes(normalizedInput);
+          return (
+            normalizedCzech.includes(normalizedInput) ||
+            normalizedCanonical.includes(normalizedInput)
+          );
         })
         .sort((a, b) => b.count - a.count)
         .slice(0, 6);
@@ -130,25 +105,19 @@ export function SearchAutocomplete({
       }
     }
 
-    // Recent searches (show when input is focused, even with short input)
-    const recents = getRecentSearches();
-    const recentMatches = normalizedInput.length >= 1
-      ? recents.filter((r) => normalize(r.query).includes(normalizedInput))
-      : recents;
+    const recentMatches =
+      normalizedInput.length >= 1
+        ? recentSearches.filter((r) => normalize(r.query).includes(normalizedInput))
+        : recentSearches;
 
     for (const r of recentMatches.slice(0, 4)) {
-      // Don't duplicate if already in destination results
       if (!items.some((s) => s.label.toLowerCase() === r.query.toLowerCase())) {
-        items.push({
-          type: "recent",
-          label: r.query,
-          count: r.resultCount,
-        });
+        items.push({ type: "recent", label: r.query, count: r.resultCount });
       }
     }
 
     return items;
-  })();
+  }, [debouncedValue, destinations, recentSearches]);
 
   // Close on outside click
   useEffect(() => {
@@ -167,6 +136,17 @@ export function SearchAutocomplete({
     const item = listRef.current.children[activeIndex] as HTMLElement | undefined;
     item?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
+
+  const handleSelectItem = useCallback(
+    (suggestion: Suggestion) => {
+      onChange(suggestion.label);
+      onSelect(suggestion);
+      setOpen(false);
+      setActiveIndex(-1);
+      inputRef.current?.blur();
+    },
+    [onChange, onSelect],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -189,8 +169,10 @@ export function SearchAutocomplete({
           setActiveIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
           break;
         case "Enter":
-          e.preventDefault();
+          // Only swallow Enter when a suggestion is actually highlighted.
+          // Otherwise let it bubble so the surrounding <form> submits the search.
           if (activeIndex >= 0 && activeIndex < suggestions.length) {
+            e.preventDefault();
             handleSelectItem(suggestions[activeIndex]);
           }
           break;
@@ -200,16 +182,8 @@ export function SearchAutocomplete({
           break;
       }
     },
-    [open, suggestions, activeIndex],
+    [open, suggestions, activeIndex, handleSelectItem],
   );
-
-  function handleSelectItem(suggestion: Suggestion) {
-    onChange(suggestion.label);
-    onSelect(suggestion);
-    setOpen(false);
-    setActiveIndex(-1);
-    inputRef.current?.blur();
-  }
 
   function highlightMatch(text: string, query: string): React.ReactNode {
     if (!query || query.length < MIN_CHARS) return text;
@@ -228,6 +202,7 @@ export function SearchAutocomplete({
   }
 
   const showDropdown = open && suggestions.length > 0;
+  const recentChips = useMemo(() => suggestions.filter((s) => s.type === "recent"), [suggestions]);
 
   return (
     <div className="search-autocomplete" ref={containerRef}>
@@ -303,7 +278,11 @@ export function SearchAutocomplete({
                 </span>
                 {s.type === "destination" && (
                   <span className="search-autocomplete__meta">
-                    {s.count != null && <span>{s.count} {t("sStickyOffers")}</span>}
+                    {s.count != null && (
+                      <span>
+                        {s.count} {t("sStickyOffers")}
+                      </span>
+                    )}
                     {s.minPrice != null && isPlausibleTourPrice(s.minPrice) && (
                       <span className="search-autocomplete__price">
                         {t("from")} {formatPrice(s.minPrice)}
@@ -313,7 +292,9 @@ export function SearchAutocomplete({
                 )}
                 {s.type === "recent" && s.count != null && (
                   <span className="search-autocomplete__meta">
-                    <span>{s.count} {t("sStateHotels")}</span>
+                    <span>
+                      {s.count} {t("sStateHotels")}
+                    </span>
                   </span>
                 )}
               </li>
@@ -323,9 +304,9 @@ export function SearchAutocomplete({
       )}
 
       {/* Recent search chips shown on focus when input is empty */}
-      {open && !value && suggestions.filter((s) => s.type === "recent").length > 0 && (
+      {open && !value && recentChips.length > 0 && (
         <div className="search-autocomplete__chips">
-          {suggestions.filter((s) => s.type === "recent").slice(0, 4).map((s) => (
+          {recentChips.slice(0, 4).map((s) => (
             <button
               key={s.label}
               type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type LanguageKey = "cs" | "en" | "uk" | "ru";
 
@@ -38,12 +38,16 @@ export function useLanguage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
-  function t(key: string): string {
-    return dict?.[key] ?? key;
-  }
+  // Stable identity: `t` is drilled as a prop into memoized components
+  // (PublicTourCard, SearchFilters, SearchHero…). A fresh function on every
+  // render defeats React.memo on all of them. Recreated only when the
+  // dictionary (i.e. the language) actually changes.
+  const t = useCallback((key: string): string => dict?.[key] ?? key, [dict]);
 
   return { lang, setLang, t, loading };
 }

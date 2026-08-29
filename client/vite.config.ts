@@ -21,11 +21,28 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    allowedHosts: ["skytravel-client-production-dc5f.up.railway.app", "sky-travel.tours", "www.sky-travel.tours"],
+    allowedHosts: [
+      "skytravel-client-production-dc5f.up.railway.app",
+      "sky-travel.tours",
+      "www.sky-travel.tours",
+    ],
+    proxy: {
+      // In production nginx proxies /blog to the API server, which renders the
+      // blog server-side (Express + Markdown). Without this, Vite's SPA fallback
+      // serves index.html for /blog and the React app renders instead.
+      "/blog": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: true,
-    allowedHosts: ["skytravel-client-production-dc5f.up.railway.app", "sky-travel.tours", "www.sky-travel.tours"],
+    allowedHosts: [
+      "skytravel-client-production-dc5f.up.railway.app",
+      "sky-travel.tours",
+      "www.sky-travel.tours",
+    ],
   },
   build: {
     chunkSizeWarningLimit: 200,

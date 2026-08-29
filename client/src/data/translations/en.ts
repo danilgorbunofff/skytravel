@@ -209,6 +209,13 @@ const t: Record<string, string> = {
   sStartBody: "Enter a destination, dates, or pick a region, then start searching.",
   sNoResultsTitle: "No offers found",
   sNoResultsBody: "We couldn't find anything for the chosen filters. Try:",
+  sRetry: "Try again",
+  sShowAll: "Show all",
+  sLoadMoreCapped: "You are browsing the first few pages. Use pagination to see the rest.",
+
+  sNoFavoritesTitle: "You have no saved tours yet",
+  sNoFavoritesBody: "Tap the heart on any tour to save it here.",
+
   sNoResultsTipReset: "Clear all filters",
   sNoResultsTipDates: "Extending the departure date by ±1–2 weeks",
   sNoResultsTipRegion: "Picking a different region under Area",

@@ -211,6 +211,14 @@ const t: Record<string, string> = {
   sStartBody: "Введіть напрямок, дату або оберіть регіон, потім запустіть пошук.",
   sNoResultsTitle: "Пропозицій не знайдено",
   sNoResultsBody: "За вашими фільтрами нічого не знайшли. Спробуйте:",
+  sRetry: "Спробувати ще раз",
+  sShowAll: "Показати всі",
+  sLoadMoreCapped:
+    "Ви переглядаєте перші кілька сторінок. Решту результатів відкрийте через пагінацію.",
+
+  sNoFavoritesTitle: "У вас ще немає збережених турів",
+  sNoFavoritesBody: "Натисніть сердечко біля будь-якого туру, щоб зберегти його тут.",
+
   sNoResultsTipReset: "Скасувати всі фільтри",
   sNoResultsTipDates: "Розширити дату виїзду на ±1–2 тижні",
   sNoResultsTipRegion: "Обрати інший регіон у розділі Область",
@@ -286,7 +294,8 @@ const t: Record<string, string> = {
   sRecentSearchesClear: "Очистити",
   favoritesPageTitle: "Збережені тури",
   favoritesPageCount: "збережених турів",
-  favoritesPageEmpty: "У вас ще немає збережених турів. Натисніть на сердечко біля туру, щоб зберегти його.",
+  favoritesPageEmpty:
+    "У вас ще немає збережених турів. Натисніть на сердечко біля туру, щоб зберегти його.",
   favoritesPageBack: "Переглянути тури",
   sFilterViewAll: "Переглянути всі",
 };

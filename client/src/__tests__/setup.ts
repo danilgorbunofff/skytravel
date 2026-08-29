@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
 
+// jsdom does not implement scrollIntoView. Components that keep the active
+// option of a listbox in view call it directly, so stub it out.
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Vitest v4+ with jsdom may wrap localStorage in a file-based proxy that
 // lacks the full Storage API (e.g., .clear()). Restore a proper mock.
 const createMockStorage = (): Storage => {

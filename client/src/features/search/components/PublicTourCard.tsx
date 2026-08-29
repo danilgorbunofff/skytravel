@@ -1,5 +1,17 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { Heart, Search, Plane, Bus, Car, Train, Ship, Layers, Moon, Utensils, Coffee } from "lucide-react";
+import {
+  Heart,
+  Search,
+  Plane,
+  Bus,
+  Car,
+  Train,
+  Ship,
+  Layers,
+  Moon,
+  Utensils,
+  Coffee,
+} from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
@@ -67,10 +79,13 @@ interface Props {
   viewMode: "grid" | "list";
   /** Whether the tour is saved in the user's favorites. */
   isFavorite: boolean;
-  /** Toggle favorite status. */
-  onToggleFavorite: () => void;
+  /**
+   * Toggle favorite status. Takes the tour so the parent can pass a
+   * referentially stable handler and let `memo` actually hold.
+   */
+  onToggleFavorite: (tour: UnifiedTour) => void;
   /** Open the detail modal for this tour. */
-  onOpenDetail: () => void;
+  onOpenDetail: (tour: UnifiedTour) => void;
   /** Human-readable provider name shown as a badge. */
   providerLabel?: string;
   /** Index for staggered entrance animation delay. */
@@ -78,7 +93,7 @@ interface Props {
   /** Whether this tour is in the comparison tray. */
   isCompared?: boolean;
   /** Add or remove from the comparison list. */
-  onToggleCompare?: () => void;
+  onToggleCompare?: (tour: UnifiedTour) => void;
   /** Whether the comparison list has reached its capacity. */
   compareFull?: boolean;
 }
@@ -104,10 +119,12 @@ export const PublicTourCard = memo(function PublicTourCard({
   function handleCardKeyDown(event: React.KeyboardEvent<HTMLElement>) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    onOpenDetail();
+    onOpenDetail(tour);
   }
 
-  const imageSrc = isValidImageUrl(tour.image) ? tour.image : getTourFallbackImage(tour.destination);
+  const imageSrc = isValidImageUrl(tour.image)
+    ? tour.image
+    : getTourFallbackImage(tour.destination);
   const srcSet = buildSrcSet(imageSrc);
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
   const transportLabels = getTransportLabel(t);
@@ -139,14 +156,14 @@ export const PublicTourCard = memo(function PublicTourCard({
 
   // Grid view
   if (viewMode === "grid") {
-    const BoardIcon = tour.board ? BOARD_ICONS[tour.board] ?? null : null;
+    const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
 
     return (
       <article
         className="tour-card tour-card--grid"
         role="button"
         tabIndex={0}
-        onClick={onOpenDetail}
+        onClick={() => onOpenDetail(tour)}
         onKeyDown={handleCardKeyDown}
         style={staggerStyle}
       >
@@ -155,7 +172,9 @@ export const PublicTourCard = memo(function PublicTourCard({
             <img
               src={imageSrc}
               srcSet={srcSet}
-              sizes={srcSet ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" : undefined}
+              sizes={
+                srcSet ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" : undefined
+              }
               alt={tour.title}
               loading="lazy"
               decoding="async"
@@ -182,7 +201,7 @@ export const PublicTourCard = memo(function PublicTourCard({
             type="button"
             className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
             aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
-            onClick={(event) => stopCardAction(event, onToggleFavorite)}
+            onClick={(event) => stopCardAction(event, () => onToggleFavorite(tour))}
           >
             <Heart size={16} aria-hidden="true" />
           </button>
@@ -192,7 +211,7 @@ export const PublicTourCard = memo(function PublicTourCard({
               type="button"
               className={`tour-card__compare${isCompared ? " is-active" : ""}${!isCompared && compareFull ? " is-disabled" : ""}`}
               aria-label={isCompared ? "Odebrat z porovnání" : "Přidat k porovnání"}
-              onClick={(event) => stopCardAction(event, onToggleCompare)}
+              onClick={(event) => stopCardAction(event, () => onToggleCompare?.(tour))}
               disabled={!isCompared && compareFull}
             >
               <Layers size={14} aria-hidden="true" />
@@ -207,9 +226,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           )}
 
           {/* Provider label */}
-          {providerLabel && (
-            <span className="tour-card__provider">{providerLabel}</span>
-          )}
+          {providerLabel && <span className="tour-card__provider">{providerLabel}</span>}
 
           {/* Offers count badge */}
           {(tour.offersCount ?? 0) > 1 && (
@@ -270,14 +287,14 @@ export const PublicTourCard = memo(function PublicTourCard({
   }
 
   // List view
-  const BoardIcon = tour.board ? BOARD_ICONS[tour.board] ?? null : null;
+  const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
 
   return (
     <article
       className="tour-card tour-card--list"
       role="button"
       tabIndex={0}
-      onClick={onOpenDetail}
+      onClick={() => onOpenDetail(tour)}
       onKeyDown={handleCardKeyDown}
       style={staggerStyle}
     >
@@ -313,7 +330,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           type="button"
           className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
           aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
-          onClick={(event) => stopCardAction(event, onToggleFavorite)}
+          onClick={(event) => stopCardAction(event, () => onToggleFavorite(tour))}
         >
           <Heart size={16} aria-hidden="true" />
         </button>
@@ -338,11 +355,11 @@ export const PublicTourCard = memo(function PublicTourCard({
           <div className="tour-card__destination">{tour.destination}</div>
           <h3 className="tour-card__title">{tour.title}</h3>
           {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
-            <span className="tour-card__stars"><StarRating rating={Number(tour.stars)} /></span>
+            <span className="tour-card__stars">
+              <StarRating rating={Number(tour.stars)} />
+            </span>
           )}
-          {providerLabel && (
-            <span className="tour-card__provider-inline">{providerLabel}</span>
-          )}
+          {providerLabel && <span className="tour-card__provider-inline">{providerLabel}</span>}
         </div>
 
         <div className="tour-card__list-meta">
@@ -367,12 +384,14 @@ export const PublicTourCard = memo(function PublicTourCard({
 
         <div className="tour-card__list-actions">
           <div className="tour-card__price-row">
-            <strong className="tour-card__price-strong">{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}</strong>
+            <strong className="tour-card__price-strong">
+              {isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}
+            </strong>
           </div>
           <button
             type="button"
             className="tour-card__detail-btn"
-            onClick={(event) => stopCardAction(event, onOpenDetail)}
+            onClick={(event) => stopCardAction(event, () => onOpenDetail(tour))}
           >
             <Search size={16} aria-hidden="true" />
           </button>

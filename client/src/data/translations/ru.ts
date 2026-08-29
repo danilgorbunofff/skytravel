@@ -211,6 +211,14 @@ const t: Record<string, string> = {
   sStartBody: "Введите направление, дату или выберите регион, затем запустите поиск.",
   sNoResultsTitle: "Предложений не найдено",
   sNoResultsBody: "По выбранным фильтрам ничего не нашли. Попробуйте:",
+  sRetry: "Попробовать снова",
+  sShowAll: "Показать все",
+  sLoadMoreCapped:
+    "Вы просматриваете первые несколько страниц. Остальные результаты откройте через пагинацию.",
+
+  sNoFavoritesTitle: "У вас пока нет сохранённых туров",
+  sNoFavoritesBody: "Нажмите на сердечко у любого тура, чтобы сохранить его здесь.",
+
   sNoResultsTipReset: "Снять все фильтры",
   sNoResultsTipDates: "Расширить дату выезда на ±1–2 недели",
   sNoResultsTipRegion: "Выбрать другой регион в разделе Область",
@@ -286,7 +294,8 @@ const t: Record<string, string> = {
   sRecentSearchesClear: "Очистить",
   favoritesPageTitle: "Сохранённые туры",
   favoritesPageCount: "сохранённых туров",
-  favoritesPageEmpty: "У вас пока нет сохранённых туров. Нажмите на сердечко у тура, чтобы сохранить его.",
+  favoritesPageEmpty:
+    "У вас пока нет сохранённых туров. Нажмите на сердечко у тура, чтобы сохранить его.",
   favoritesPageBack: "Посмотреть туры",
   sFilterViewAll: "Посмотреть все",
 };

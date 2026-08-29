@@ -210,6 +210,13 @@ const t: Record<string, string> = {
   sStartBody: "Zadejte destinaci, termín nebo vyberte oblast a potom spusťte vyhledávání.",
   sNoResultsTitle: "Žádné nabídky nenalezeny",
   sNoResultsBody: "Pro zadané filtry jsme nic nenašli. Zkuste:",
+  sRetry: "Zkusit znovu",
+  sShowAll: "Zobrazit vše",
+  sLoadMoreCapped: "Prohlížíte prvních několik stran. Další výsledky zobrazíte přes stránkování.",
+
+  sNoFavoritesTitle: "Zatím nemáte uložené zájezdy",
+  sNoFavoritesBody: "Klikněte na srdíčko u libovolného zájezdu a uložte si ho sem.",
+
   sNoResultsTipReset: "Zrušit všechny filtry",
   sNoResultsTipDates: "Rozšířit datum odjezdu o ±1–2 týdny",
   sNoResultsTipRegion: "Vybrat jiný cílový region v záložce Oblast",
@@ -285,7 +292,8 @@ const t: Record<string, string> = {
   sRecentSearchesClear: "Vymazat",
   favoritesPageTitle: "Uložené zájezdy",
   favoritesPageCount: "uložených zájezdů",
-  favoritesPageEmpty: "Zatím nemáš uložené žádné zájezdy. Klikni na srdíčko u zájezdu, který tě zaujme.",
+  favoritesPageEmpty:
+    "Zatím nemáš uložené žádné zájezdy. Klikni na srdíčko u zájezdu, který tě zaujme.",
   favoritesPageBack: "Prohlédnout zájezdy",
   sFilterViewAll: "Zobrazit vše",
 };

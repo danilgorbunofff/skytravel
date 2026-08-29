@@ -20,53 +20,58 @@ export function useOfferGroups(
   const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
   const offerGroupControllers = useRef<Map<string, AbortController>>(new Map());
 
-  const openTourDetail = useCallback(
-    (tour: UnifiedTour) => {
-      const key = tour.offerGroupKey;
-      setDetailTour(tour);
-      if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItems[key]) return;
+  // `buildFilters` gets a new identity on every URL change. Reading it through
+  // a ref keeps `openTourDetail` referentially stable, which is what lets
+  // React.memo on PublicTourCard actually hold.
+  const buildFiltersRef = useRef(buildFilters);
+  buildFiltersRef.current = buildFilters;
+  const offerGroupItemsRef = useRef(offerGroupItems);
+  offerGroupItemsRef.current = offerGroupItems;
 
-      // Cancel any previous in-flight fetch for the same offer group
-      const previous = offerGroupControllers.current.get(key);
-      previous?.abort();
-      const controller = new AbortController();
-      offerGroupControllers.current.set(key, controller);
+  const openTourDetail = useCallback((tour: UnifiedTour) => {
+    const key = tour.offerGroupKey;
+    setDetailTour(tour);
+    if (!key || (tour.offersCount ?? 0) <= 1 || offerGroupItemsRef.current[key]) return;
 
-      setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
-      setOfferGroupErrors((prev) => {
-        const { [key]: _, ...rest } = prev;
-        return rest;
+    // Cancel any previous in-flight fetch for the same offer group
+    const previous = offerGroupControllers.current.get(key);
+    previous?.abort();
+    const controller = new AbortController();
+    offerGroupControllers.current.set(key, controller);
+
+    setOfferGroupLoading((prev) => ({ ...prev, [key]: true }));
+    setOfferGroupErrors((prev) => {
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+
+    fetchPublicProviderOfferGroup(
+      tour.source,
+      key,
+      buildFiltersRef.current({ includePaging: false }),
+      controller.signal,
+    )
+      .then((items) => {
+        if (offerGroupControllers.current.get(key) !== controller) return;
+        setOfferGroupItems((prev) => ({
+          ...prev,
+          [key]: items,
+        }));
+      })
+      .catch((err) => {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        if (offerGroupControllers.current.get(key) !== controller) return;
+        setOfferGroupErrors((prev) => ({
+          ...prev,
+          [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
+        }));
+      })
+      .finally(() => {
+        if (offerGroupControllers.current.get(key) !== controller) return;
+        offerGroupControllers.current.delete(key);
+        setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
       });
-
-      fetchPublicProviderOfferGroup(
-        tour.source,
-        key,
-        buildFilters({ includePaging: false }),
-        controller.signal,
-      )
-        .then((items) => {
-          if (offerGroupControllers.current.get(key) !== controller) return;
-          setOfferGroupItems((prev) => ({
-            ...prev,
-            [key]: items,
-          }));
-        })
-        .catch((err) => {
-          if ((err as { name?: string })?.name === "AbortError") return;
-          if (offerGroupControllers.current.get(key) !== controller) return;
-          setOfferGroupErrors((prev) => ({
-            ...prev,
-            [key]: err instanceof Error ? err.message : "Termíny se nepodařilo načíst.",
-          }));
-        })
-        .finally(() => {
-          if (offerGroupControllers.current.get(key) !== controller) return;
-          offerGroupControllers.current.delete(key);
-          setOfferGroupLoading((prev) => ({ ...prev, [key]: false }));
-        });
-    },
-    [buildFilters, offerGroupItems],
-  );
+  }, []);
 
   const closeDetail = useCallback(() => {
     setDetailTour(null);

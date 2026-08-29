@@ -5,7 +5,7 @@ export { SearchResultsToolbar } from "./SearchResultsToolbar";
 export { StickySearchBar } from "./StickySearchBar";
 export { TrustBar } from "./TrustBar";
 export { MobileFilterDrawer } from "./MobileFilterDrawer";
-export { SearchAutocomplete, saveRecentSearch } from "./SearchAutocomplete";
+export { SearchAutocomplete } from "./SearchAutocomplete";
 export { DateRangePicker } from "./DateRangePicker";
 export { DestinationMultiSelect } from "./DestinationMultiSelect";
 export { BoardMultiSelect } from "./BoardMultiSelect";

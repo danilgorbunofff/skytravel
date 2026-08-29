@@ -2,11 +2,34 @@ import { useCallback, useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { UnifiedFilters } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
-import { DEFAULT_PAGE_SIZE, DEFAULT_ADULTS, DEFAULT_CHILDREN } from "../constants";
+import {
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_ADULTS,
+  DEFAULT_CHILDREN,
+  MAX_PAGE,
+  MAX_PUBLIC_PAGE_SIZE,
+  MAX_QUERY_LENGTH,
+  MIN_ADULTS,
+  MAX_ADULTS,
+  MIN_CHILDREN,
+  MAX_CHILDREN,
+} from "../constants";
 
-function getParamNumber(searchParams: URLSearchParams, key: string, fallback: number): number {
+function getParamNumber(
+  searchParams: URLSearchParams,
+  key: string,
+  fallback: number,
+  min = 1,
+  max = Number.MAX_SAFE_INTEGER,
+): number {
   const value = Number(searchParams.get(key));
-  return Number.isFinite(value) && value > 0 ? value : fallback;
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function clampCount(value: number, fallback: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
 function parsePriceParam(value: string): number | null {
@@ -66,7 +89,10 @@ export interface SearchFilterState {
   setAdults: (v: number | ((prev: number) => number)) => void;
   setChildren: (v: number | ((prev: number) => number)) => void;
   setValidationError: (v: string | null) => void;
-  updateParams: (patch: Record<string, string | number | null | undefined>, replace?: boolean) => void;
+  updateParams: (
+    patch: Record<string, string | number | null | undefined>,
+    replace?: boolean,
+  ) => void;
   submitSearch: (event: React.FormEvent) => void;
   resetFilters: () => void;
   toggleSort: (field: "price" | "date") => void;
@@ -79,36 +105,52 @@ export interface SearchFilterState {
   filterKeyWithoutPage: string;
 }
 
-export function useSearchFilters(
-  t: (key: TranslationKey) => string,
-): SearchFilterState {
+export function useSearchFilters(t: (key: TranslationKey) => string): SearchFilterState {
   const [searchParams, setSearchParams] = useSearchParams();
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Local input state (controlled inputs, committed on submit)
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
-  const [dateStart, setDateStart] = useState(searchParams.get("dateStart") ?? "");
-  const [dateEnd, setDateEnd] = useState(searchParams.get("dateEnd") ?? "");
-  const [transport, setTransport] = useState(searchParams.get("transport") ?? "");
-  const [adults, setAdults] = useState(Number(searchParams.get("adults")) || DEFAULT_ADULTS);
-  const [children, setChildren] = useState(Number(searchParams.get("children")) || DEFAULT_CHILDREN);
+  // Read the raw URL values once so the sync effect below can depend on
+  // individual primitives instead of the whole `searchParams` object.
+  const urlQuery = searchParams.get("q") ?? "";
+  const urlDateStart = searchParams.get("dateStart") ?? "";
+  const urlDateEnd = searchParams.get("dateEnd") ?? "";
+  const urlTransport = searchParams.get("transport") ?? "";
+  const urlAdults = searchParams.get("adults");
+  const urlChildren = searchParams.get("children");
 
-  // Sync local state when URL changes (e.g., browser back/forward)
+  // Local input state (controlled inputs, committed on submit)
+  const [query, setQuery] = useState(urlQuery);
+  const [dateStart, setDateStart] = useState(urlDateStart);
+  const [dateEnd, setDateEnd] = useState(urlDateEnd);
+  const [transport, setTransport] = useState(urlTransport);
+  const [adults, setAdults] = useState(
+    clampCount(Number(urlAdults), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS),
+  );
+  const [children, setChildren] = useState(
+    clampCount(Number(urlChildren), DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN),
+  );
+
+  // Sync local state when the URL changes (e.g., browser back/forward).
+  //
+  // Depending on the individual values rather than `searchParams` matters:
+  // `searchParams` gets a new identity on *any* param change, so the previous
+  // version wiped whatever the user had typed in the hero the moment they
+  // touched an unrelated filter.
   useEffect(() => {
-    setQuery(searchParams.get("q") ?? "");
-    setDateStart(searchParams.get("dateStart") ?? "");
-    setDateEnd(searchParams.get("dateEnd") ?? "");
-    setTransport(searchParams.get("transport") ?? "");
-    setAdults(Number(searchParams.get("adults")) || DEFAULT_ADULTS);
-    setChildren(Number(searchParams.get("children")) || DEFAULT_CHILDREN);
-  }, [searchParams]);
+    setQuery(urlQuery);
+    setDateStart(urlDateStart);
+    setDateEnd(urlDateEnd);
+    setTransport(urlTransport);
+    setAdults(clampCount(Number(urlAdults), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS));
+    setChildren(clampCount(Number(urlChildren), DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN));
+  }, [urlQuery, urlDateStart, urlDateEnd, urlTransport, urlAdults, urlChildren]);
 
   // Read active URL params
-  const page = getParamNumber(searchParams, "page", 1);
-  const limit = getParamNumber(searchParams, "limit", DEFAULT_PAGE_SIZE);
+  const page = getParamNumber(searchParams, "page", 1, 1, MAX_PAGE);
+  const limit = getParamNumber(searchParams, "limit", DEFAULT_PAGE_SIZE, 1, MAX_PUBLIC_PAGE_SIZE);
   const sortBy = searchParams.get("sortBy") === "date" ? "date" : ("price" as const);
   const sortDir = searchParams.get("sortDir") === "desc" ? "desc" : ("asc" as const);
-  const activeQuery = searchParams.get("q")?.trim() ?? "";
+  const activeQuery = (searchParams.get("q") ?? "").trim().slice(0, MAX_QUERY_LENGTH);
   const activeDateStart = searchParams.get("dateStart") ?? "";
   const activeDateEnd = searchParams.get("dateEnd") ?? "";
   const activeTransport = searchParams.get("transport") ?? "";
@@ -121,14 +163,14 @@ export function useSearchFilters(
   const hasPriceFilter = Boolean(activePriceMin || activePriceMax);
   const hasUserFilters = Boolean(
     activeQuery ||
-      activeDateStart ||
-      activeDateEnd ||
-      activeTransport ||
-      activeDestinationSlug ||
-      activeNights ||
-      activeStars ||
-      activeBoard ||
-      hasPriceFilter,
+    activeDateStart ||
+    activeDateEnd ||
+    activeTransport ||
+    activeDestinationSlug ||
+    activeNights ||
+    activeStars ||
+    activeBoard ||
+    hasPriceFilter,
   );
 
   const dateError =
@@ -212,7 +254,7 @@ export function useSearchFilters(
         filters.page = page;
         filters.limit = limit;
       }
-      const q = searchParams.get("q")?.trim();
+      const q = (searchParams.get("q") ?? "").trim().slice(0, MAX_QUERY_LENGTH);
       const start = searchParams.get("dateStart");
       const end = searchParams.get("dateEnd");
       const urlTransport = searchParams.get("transport");
@@ -235,9 +277,17 @@ export function useSearchFilters(
       if (pMax) filters.priceMax = Number(pMax);
       const adultCount = searchParams.get("adults");
       const childCount = searchParams.get("children");
-      if (adultCount) filters.adults = Number(adultCount);
-      if (childCount) filters.children = Number(childCount);
-      if (searchParams.get("hotelOnly") === "1") filters.hotelOnly = "1";
+      if (adultCount) {
+        filters.adults = clampCount(Number(adultCount), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS);
+      }
+      if (childCount) {
+        filters.children = clampCount(
+          Number(childCount),
+          DEFAULT_CHILDREN,
+          MIN_CHILDREN,
+          MAX_CHILDREN,
+        );
+      }
       return filters;
     },
     [searchParams, page, limit, sortBy, sortDir],
@@ -251,48 +301,94 @@ export function useSearchFilters(
     return stableFilterKey(rest as UnifiedFilters);
   }, [searchFilters]);
 
-  return {
-    activeQuery,
-    activeDateStart,
-    activeDateEnd,
-    activeTransport,
-    activeDestinationSlug,
-    activeNights,
-    activeStars,
-    activeBoard,
-    activePriceMin,
-    activePriceMax,
-    page,
-    limit,
-    sortBy,
-    sortDir,
-    hasUserFilters,
-    hasPriceFilter,
-    query,
-    dateStart,
-    dateEnd,
-    transport,
-    adults,
-    children,
-    dateError,
-    validationError,
-    setQuery,
-    setDateStart,
-    setDateEnd,
-    setTransport,
-    setAdults,
-    setChildren,
-    setValidationError,
-    updateParams,
-    submitSearch,
-    resetFilters,
-    toggleSort,
-    pageTo,
-    buildFilters,
-    searchFilters,
-    searchFilterKey,
-    filterKeyWithoutPage,
-  };
+  // The whole state object is memoized so consumers like `SearchFilters` can be
+  // wrapped in React.memo — a fresh literal every render would defeat it.
+  return useMemo(
+    () => ({
+      activeQuery,
+      activeDateStart,
+      activeDateEnd,
+      activeTransport,
+      activeDestinationSlug,
+      activeNights,
+      activeStars,
+      activeBoard,
+      activePriceMin,
+      activePriceMax,
+      page,
+      limit,
+      sortBy,
+      sortDir,
+      hasUserFilters,
+      hasPriceFilter,
+      query,
+      dateStart,
+      dateEnd,
+      transport,
+      adults,
+      children,
+      dateError,
+      validationError,
+      setQuery,
+      setDateStart,
+      setDateEnd,
+      setTransport,
+      setAdults,
+      setChildren,
+      setValidationError,
+      updateParams,
+      submitSearch,
+      resetFilters,
+      toggleSort,
+      pageTo,
+      buildFilters,
+      searchFilters,
+      searchFilterKey,
+      filterKeyWithoutPage,
+    }),
+    [
+      activeQuery,
+      activeDateStart,
+      activeDateEnd,
+      activeTransport,
+      activeDestinationSlug,
+      activeNights,
+      activeStars,
+      activeBoard,
+      activePriceMin,
+      activePriceMax,
+      page,
+      limit,
+      sortBy,
+      sortDir,
+      hasUserFilters,
+      hasPriceFilter,
+      query,
+      dateStart,
+      dateEnd,
+      transport,
+      adults,
+      children,
+      dateError,
+      validationError,
+      setQuery,
+      setDateStart,
+      setDateEnd,
+      setTransport,
+      setAdults,
+      setChildren,
+      setValidationError,
+      updateParams,
+      submitSearch,
+      resetFilters,
+      toggleSort,
+      pageTo,
+      buildFilters,
+      searchFilters,
+      searchFilterKey,
+      filterKeyWithoutPage,
+    ],
+  );
 }
 
 export { parsePriceParam };

@@ -19,3 +19,4 @@ Thumbs.db
 server-api-access.md
 server/src/generated/
 bots/src/generated/
+.workbuddy-ai/

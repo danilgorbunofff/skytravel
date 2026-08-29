@@ -14,7 +14,9 @@ import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
 import { TourDetailModal } from "../features/search/components/TourDetailModal";
-const CompareViewLazy = lazy(() => import("../features/search/components/CompareView").then(m => ({ default: m.CompareView })));
+const CompareViewLazy = lazy(() =>
+  import("../features/search/components/CompareView").then((m) => ({ default: m.CompareView })),
+);
 import { useLanguage } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -34,6 +36,7 @@ import {
   getBoardOptions,
   getPresets,
   VIEW_MODE_KEY,
+  MAX_MOBILE_PAGES,
 } from "../features/search";
 import {
   SearchFilters,
@@ -42,7 +45,9 @@ import {
   StickySearchBar,
   TrustBar,
   MobileFilterDrawer,
+  RecentSearches,
 } from "../features/search/components";
+import { useRecentSearches } from "../features/search/hooks/useRecentSearches";
 import { CompareTray } from "../features/search/components/CompareTray";
 import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
@@ -61,8 +66,20 @@ export default function SearchPage() {
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [topQuery, setTopQuery] = useState(filters.query);
+  const {
+    searches: recentItems,
+    save: saveRecent,
+    clear: clearRecent,
+    remove: removeRecent,
+  } = useRecentSearches();
 
-  // Keep topQuery independent once initialized
+  // Keep the header box in step with the committed query. Previously it was
+  // seeded once from `filters.query` and never updated, so the header and the
+  // hero could show different text.
+  useEffect(() => {
+    setTopQuery(filters.activeQuery);
+  }, [filters.activeQuery]);
+
   const results = useSearchResults(
     filters.searchFilterKey,
     filters.searchFilters,
@@ -94,9 +111,13 @@ export default function SearchPage() {
     const externalId = rest.join("-");
     if (!providerId || !externalId) return;
     import("../api/publicProviders").then(({ fetchPublicSingleTour }) => {
-      fetchPublicSingleTour(providerId, externalId).then((tour) => {
-        offerGroups.openTourDetail(tour);
-      }).catch(() => { /* tour not found, silently ignore */ });
+      fetchPublicSingleTour(providerId, externalId)
+        .then((tour) => {
+          offerGroups.openTourDetail(tour);
+        })
+        .catch(() => {
+          /* tour not found, silently ignore */
+        });
     });
   }, [offerGroups]);
 
@@ -104,7 +125,10 @@ export default function SearchPage() {
   useEffect(() => {
     const url = new URL(window.location.href);
     if (offerGroups.detailTour) {
-      url.searchParams.set("tourId", `${offerGroups.detailTour.source}-${offerGroups.detailTour.externalId}`);
+      url.searchParams.set(
+        "tourId",
+        `${offerGroups.detailTour.source}-${offerGroups.detailTour.externalId}`,
+      );
     } else {
       url.searchParams.delete("tourId");
     }
@@ -115,6 +139,10 @@ export default function SearchPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [pastHero, setPastHero] = useState(false);
+  // Mobile switches from "accumulate pages" to normal pagination once the
+  // accumulated list would grow unbounded. Reset when the filters change so a
+  // new search starts in accumulation mode again.
+  const [mobileShowAll, setMobileShowAll] = useState(false);
   const [shareConfirmation, setShareConfirmation] = useState<"copied" | "failed" | null>(null);
   const shareTimeoutRef = useRef<number | null>(null);
   const resultsSectionRef = useRef<HTMLElement | null>(null);
@@ -263,6 +291,11 @@ export default function SearchPage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // A new filter set means a new list — drop back to mobile accumulation mode.
+  useEffect(() => {
+    setMobileShowAll(false);
+  }, [filters.filterKeyWithoutPage]);
 
   // Cleanup share timeout
   useEffect(
@@ -452,10 +485,31 @@ export default function SearchPage() {
     filters.activeBoard,
   ].filter(Boolean).length;
 
+  const mobileCapped =
+    isMobile && !showFavoritesOnly && !mobileShowAll && filters.page >= MAX_MOBILE_PAGES;
+
   const toursToRender =
-    isMobile && !showFavoritesOnly
+    isMobile && !showFavoritesOnly && !mobileShowAll
       ? results.accumulatedItems
       : results.displayedTours;
+
+  // Persist successful searches for the autocomplete / recent chips.
+  const savedQueryRef = useRef("");
+  useEffect(() => {
+    const q = filters.activeQuery;
+    if (!q || showFavoritesOnly) return;
+    if (results.resultsLoading || results.error || results.result == null) return;
+    if (savedQueryRef.current === q) return;
+    savedQueryRef.current = q;
+    saveRecent(q, results.result.filtered);
+  }, [
+    filters.activeQuery,
+    results.resultsLoading,
+    results.error,
+    results.result,
+    showFavoritesOnly,
+    saveRecent,
+  ]);
 
   // ─── Render ──────────────────────────────────────────────────────────
   return (
@@ -605,9 +659,28 @@ export default function SearchPage() {
             filters.setQuery(label);
             if (slug) {
               filters.updateParams({ destinationSlug: slug, q: null, page: 1 });
+            } else {
+              // Recent-search suggestions carry no slug. Previously this only
+              // filled the input, so clicking one never ran a search.
+              filters.updateParams({ q: label, page: 1 });
             }
           }}
         />
+
+        {!filters.hasUserFilters && (
+          <div className="container">
+            <RecentSearches
+              t={t}
+              searches={recentItems}
+              onSelect={(search) => {
+                filters.setQuery(search.query);
+                filters.updateParams({ q: search.query, page: 1 });
+              }}
+              onRemove={removeRecent}
+              onClear={clearRecent}
+            />
+          </div>
+        )}
 
         <TrustBar t={t} />
 
@@ -632,8 +705,15 @@ export default function SearchPage() {
                     />
                     <div className="dest-thumb__label">
                       <strong>{dest.destination}</strong>
-                      {isPlausibleTourPrice(destinationLivePrices[dest.destination]?.minPrice ?? dest.price) && (
-                        <span>od {formatPrice(destinationLivePrices[dest.destination]?.minPrice ?? dest.price)}</span>
+                      {isPlausibleTourPrice(
+                        destinationLivePrices[dest.destination]?.minPrice ?? dest.price,
+                      ) && (
+                        <span>
+                          od{" "}
+                          {formatPrice(
+                            destinationLivePrices[dest.destination]?.minPrice ?? dest.price,
+                          )}
+                        </span>
                       )}
                     </div>
                   </button>
@@ -657,7 +737,7 @@ export default function SearchPage() {
                 priceRange={results.priceRange}
                 priceMin={results.priceMin}
                 priceMax={results.priceMax}
-                hasResults={results.result !== null}
+                hasResults={results.hasLoadedOnce}
                 favoritesCount={favorites.length}
                 showFavoritesOnly={showFavoritesOnly}
                 onToggleFavoritesOnly={handleToggleFavoritesOnly}
@@ -670,6 +750,8 @@ export default function SearchPage() {
               result={results.result}
               loading={results.resultsLoading}
               error={results.error}
+              onRetry={results.retry}
+              pendingPage={results.pendingPage}
               viewMode={viewMode}
               onSetView={setView}
               page={filters.page}
@@ -700,9 +782,9 @@ export default function SearchPage() {
               providerLabels={bootstrap.providerLabels}
               isFavorite={isFavorite}
               onToggleFavorite={toggleFavorite}
-              onOpenDetail={(tour) => offerGroups.openTourDetail(tour)}
+              onOpenDetail={offerGroups.openTourDetail}
               isCompared={(id) => compare.isCompared(id)}
-              onToggleCompare={(tour) => compare.toggle(tour)}
+              onToggleCompare={compare.toggle}
               compareFull={compare.isFull}
               presets={PRESETS}
               onPresetClick={(params) => filters.updateParams({ ...params, page: 1 })}
@@ -710,12 +792,19 @@ export default function SearchPage() {
               showFavoritesOnly={showFavoritesOnly}
               onLoadMore={() => filters.updateParams({ page: filters.page + 1 })}
               hasUserFilters={filters.hasUserFilters}
+              mobileCapped={mobileCapped}
+              onShowAll={() => setMobileShowAll(true)}
+              mobileShowAll={mobileShowAll}
             />
           </div>
         </section>
 
         <div className="mobile-filter-fab mobile-only">
-          <button type="button" onClick={() => setMobileFiltersOpen(true)} aria-label={t("sFilterFab")}>
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            aria-label={t("sFilterFab")}
+          >
             {t("sFilterFab")}
             {mobileFilterCount > 0 && (
               <span className="mobile-filter-fab__count">{mobileFilterCount}</span>
@@ -755,8 +844,7 @@ export default function SearchPage() {
         <TourDetailModal
           tour={offerGroups.detailTour}
           providerLabel={
-            bootstrap.providerLabels[offerGroups.detailTour.source] ??
-            offerGroups.detailTour.source
+            bootstrap.providerLabels[offerGroups.detailTour.source] ?? offerGroups.detailTour.source
           }
           offers={
             offerGroups.detailTour.offerGroupKey &&
@@ -796,7 +884,10 @@ export default function SearchPage() {
             onRemove={compare.remove}
             onClear={compare.clear}
             onClose={() => setCompareExpanded(false)}
-            onOpenDetail={(tour) => { setCompareExpanded(false); offerGroups.openTourDetail(tour); }}
+            onOpenDetail={(tour) => {
+              setCompareExpanded(false);
+              offerGroups.openTourDetail(tour);
+            }}
             t={t}
           />
         </Suspense>
