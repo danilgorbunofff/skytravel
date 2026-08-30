@@ -4169,7 +4169,6 @@ html[lang="ru"] .logo {
   color: #4a5568;
   margin: 0 0 8px;
 }
-.sidebar-contact-phone,
 .sidebar-contact-email {
   display: block;
   font-weight: 700;
@@ -4177,7 +4176,6 @@ html[lang="ru"] .logo {
   margin-bottom: 6px;
   text-decoration: none;
 }
-.sidebar-contact-phone:hover,
 .sidebar-contact-email:hover {
   text-decoration: underline;
 }
@@ -6655,15 +6653,6 @@ html[lang="ru"] .logo {
   background: #0284c7;
 }
 
-.tour-price-card__call {
-  display: block;
-  text-align: center;
-  margin-top: 8px;
-  font-size: 0.8rem;
-  color: #64748b;
-  text-decoration: none;
-}
-
 .tour-price-card__provider {
   text-align: center;
   margin-top: 8px;
@@ -6939,13 +6928,6 @@ html[lang="ru"] .logo {
 .tour-inquiry-form__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.tour-inquiry-form__alt {
-  text-align: center;
-  margin-top: 10px;
-  font-size: 0.8rem;
-  color: #64748b;
 }
 
 /* Related Tours */

@@ -203,7 +203,6 @@ function siteHeader(): string {
        </form>
        <div class="header-contact-wrap">
          <div class="header-contact desktop-only">
-           <a href="tel:+420721163860">+420 721 163 860</a>
            <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
          </div>
          <div class="lang-toggle" aria-label="Výběr jazyka">
@@ -256,7 +255,6 @@ function siteFooter(): string {
          <div>
            <h4>SkyTravel</h4>
            <p>Křižíkova 6, Praha</p>
-           <p><a href="tel:+420721163860">+420 721 163 860</a></p>
            <p><a href="mailto:info@skytravel.cz">info@skytravel.cz</a></p>
            <p><a href="/#kontakt">Kontakt &amp; pobočky</a></p>
          </div>
@@ -275,7 +273,7 @@ function siteFooter(): string {
          <div>
            <h5>Kontakt</h5>
            <p>SkyTravel — zájezdy do Bulharska, Chorvatska, Itálie, Albánie, Černé Hory, Řecka, Turecka a Španělska.</p>
-           <p><a href="mailto:info@skytravel.cz">info@skytravel.cz</a> · <a href="tel:+420721163860">+420 721 163 860</a></p>
+           <p><a href="mailto:info@skytravel.cz">info@skytravel.cz</a></p>
          </div>
        </div>
        <div class="footer-bottom">

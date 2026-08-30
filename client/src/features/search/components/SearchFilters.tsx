@@ -183,9 +183,6 @@ function SearchFiltersComponent({
       {showContactCta && (
         <div className="sidebar-contact-cta">
           <p>{t("sSidebarContactPrompt")}</p>
-          <a href="tel:+420721163860" className="sidebar-contact-phone">
-            📞 +420 721 163 860
-          </a>
           <a href="mailto:info@skytravel.cz" className="sidebar-contact-email">
             ✉ info@skytravel.cz
           </a>

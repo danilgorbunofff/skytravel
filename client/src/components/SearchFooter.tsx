@@ -15,14 +15,11 @@ function SearchFooterComponent({ t }: Props) {
           <span> · Křižíkova 6, Praha · {t("footerHours")}</span>
         </div>
         <div className="search-footer__contact">
-          <a href="tel:+420721163860">+420 721 163 860</a>
-          <span aria-hidden="true"> · </span>
           <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
         </div>
         <nav className="search-footer__nav" aria-label="Legal">
           <Link to="/gdpr">{t("footerGdpr")}</Link>
           <Link to="/terms">{t("footerTerms")}</Link>
-          <a href="tel:+420721163860">{t("navContact")}</a>
         </nav>
       </div>
       <div className="container search-footer__bottom">

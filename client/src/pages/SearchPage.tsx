@@ -550,7 +550,6 @@ export default function SearchPage() {
 
           <div className="header-contact-wrap desktop-only">
             <div className="header-contact">
-              <a href="tel:+420721163860">+420 721 163 860</a>
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </div>
             <div className="lang-toggle" aria-label="Language switcher">

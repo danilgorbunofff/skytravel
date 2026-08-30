@@ -37,13 +37,7 @@ export function TourPriceCard({ tour, providerLabel, t, onInquiry }: Props) {
         {t("sModalSubmit")}
       </button>
 
-      <a href="tel:+420721163860" className="tour-price-card__call">
-        Nebo zavolejte: +420 721 163 860
-      </a>
-
-      <div className="tour-price-card__provider">
-        {providerLabel}
-      </div>
+      <div className="tour-price-card__provider">{providerLabel}</div>
     </div>
   );
 }

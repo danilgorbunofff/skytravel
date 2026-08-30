@@ -61,7 +61,9 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
       <div className="tour-inquiry-form tour-inquiry-form--success">
         <CheckCircle size={32} />
         <h4>Děkujeme za Váš zájem!</h4>
-        <p>Odpovíme Vám do 24 hodin na <strong>{email}</strong>.</p>
+        <p>
+          Odpovíme Vám do 24 hodin na <strong>{email}</strong>.
+        </p>
       </div>
     );
   }
@@ -112,21 +114,15 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
 
       {errorMsg && <p className="tour-inquiry-form__error">{errorMsg}</p>}
 
-      <button
-        type="submit"
-        className="tour-inquiry-form__submit"
-        disabled={status === "sending"}
-      >
+      <button type="submit" className="tour-inquiry-form__submit" disabled={status === "sending"}>
         {status === "sending" ? (
-          <><Loader2 size={16} className="animate-spin" /> Odesílám...</>
+          <>
+            <Loader2 size={16} className="animate-spin" /> Odesílám...
+          </>
         ) : (
           t("sModalSubmit")
         )}
       </button>
-
-      <p className="tour-inquiry-form__alt">
-        Nebo zavolejte: <a href="tel:+420721163860">+420 721 163 860</a>
-      </p>
     </form>
   );
 }
