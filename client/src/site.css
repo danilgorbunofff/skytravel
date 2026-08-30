@@ -1411,10 +1411,10 @@ html[lang="ru"] .logo {
 
 /* Search footer — minimal professional */
 .search-footer {
-  background: #eef3fa;
-  border-top: 1px solid #d7e0ee;
+  background: var(--blue-900);
+  border-top: 1px solid #0d2f6d;
   padding: 18px 0 16px;
-  color: #425778;
+  color: #c9d7f0;
   font-size: 0.85rem;
 }
 .search-footer__main {
@@ -1425,11 +1425,14 @@ html[lang="ru"] .logo {
   justify-content: space-between;
 }
 .search-footer__brand strong {
-  color: var(--blue-900);
+  color: #fff;
+}
+.search-footer__brand span {
+  color: #c9d7f0;
 }
 .search-footer__contact a,
 .search-footer__nav a {
-  color: var(--blue-900);
+  color: #fff;
   text-decoration: none;
   font-weight: 700;
 }
@@ -1437,6 +1440,7 @@ html[lang="ru"] .logo {
 .search-footer__nav a:hover {
   text-decoration: underline;
   text-underline-offset: 0.15em;
+  color: var(--yellow);
 }
 .search-footer__nav {
   display: flex;
@@ -1446,16 +1450,17 @@ html[lang="ru"] .logo {
 .search-footer__bottom {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #dfe7f2;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
   justify-content: space-between;
-  color: #6b778b;
+  color: #aab9d4;
   font-size: 0.8rem;
 }
 .search-footer__note {
-  opacity: 0.9;
+  opacity: 0.95;
+  color: #c9d7f0;
 }
 @media (max-width: 767px) {
   .search-footer__main {
