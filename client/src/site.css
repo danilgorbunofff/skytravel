@@ -2794,7 +2794,7 @@ html[lang="ru"] .logo {
   pointer-events: none;
   -webkit-appearance: none;
   appearance: none;
-  height: 18px;
+  height: 4px;
   background: transparent;
   outline: none;
   margin: 0;
@@ -2823,7 +2823,7 @@ html[lang="ru"] .logo {
   border-radius: 50%;
   background: var(--blue);
   cursor: pointer;
-  margin-top: 0;
+  margin-top: -7px;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   position: relative;
