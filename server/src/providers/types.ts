@@ -132,6 +132,9 @@ export interface TourProvider {
   getProviderFilters(): FilterFieldDescriptor[];
   fetchTours(filters: UnifiedFilters): Promise<ToursResult>;
   fetchOfferGroup(filters: UnifiedFilters, offerGroupKey: string): Promise<UnifiedTour[]>;
+
+  /** Single-tour lookup by externalId for deep links (optional convenience). */
+  getTourByExternalId?(externalId: string): Promise<UnifiedTour | null>;
   streamTours(filters: UnifiedFilters, onBatch: StreamCallback): Promise<void>;
   importTours(ids: string[], regionCtx: Record<string, unknown>): Promise<ImportResult>;
   warmCache(): Promise<void>;

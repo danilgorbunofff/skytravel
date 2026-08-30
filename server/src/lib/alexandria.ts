@@ -116,28 +116,42 @@ function ensureArray<T>(v: T | T[] | undefined | null): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
-/** Map transport string from Alexandria termin/@misto */
+/** Map transport string from Alexandria termin/@misto.
+ * Real API values observed: "Pobyt" (hotel-only stay, most common) and "Bus".
+ * "Pobyt" means the price covers accommodation only — no transport, so we
+ * return "" and the UI hides the transport badge. */
 function mapTransport(raw: string): string {
   const lc = raw.toLowerCase();
   if (lc.includes("bus") || lc.includes("autobus")) return "bus";
   if (lc.includes("let") || lc.includes("air") || lc.includes("plane")) return "plane";
   if (lc.includes("vlak") || lc.includes("train")) return "train";
-  if (lc.includes("lo") || lc.includes("boat")) return "boat";
-  if (lc.includes("pobyt") || lc.includes("vlastn") || lc.includes("car")) return "car";
-  return "bus";
+  if (lc.includes("lod") || lc.includes("boat")) return "boat";
+  if (lc.includes("vlastn") || lc.includes("car")) return "car";
+  if (lc.includes("pobyt")) return "";
+  return "";
 }
 
-/** Map board type from Alexandria termin/@typstravy to short code */
+/** Map board type from Alexandria termin/@typstravy to short code.
+ * Real API values observed: HB, RO, DN, LN, ALL and "" (empty, most common).
+ * Unknown/empty values map to "" so the UI hides the board badge instead of
+ * showing a wrong "Bez stravy" label. */
 export function mapBoard(raw: string): string {
-  const lc = raw.toLowerCase().trim();
+  const lc = raw
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+  if (!lc) return "";
   const VALID_CODES = new Set(["ai", "uai", "fb", "hb", "bb", "ro"]);
-  if (VALID_CODES.has(lc)) return raw;
+  if (VALID_CODES.has(lc)) return raw.trim().toUpperCase();
   if (lc.includes("ultra")) return "UAI";
-  if (lc.includes("all inclusive")) return "AI";
+  if (lc === "all" || lc.includes("all inclusive")) return "AI";
   if (lc.includes("plna penze") || lc.includes("plna")) return "FB";
   if (lc.includes("polopenze") || lc.includes("polopen")) return "HB";
   if (lc.includes("snidane") || lc.includes("snidan")) return "BB";
-  return "RO";
+  // "DN" / "LN" are Alexandria-specific codes with no documented meaning —
+  // leave them unmapped rather than guessing.
+  return "";
 }
 
 /** Map star rating from Alexandria objekt/@hvezdy to numeric string */
@@ -188,14 +202,13 @@ function selectCenaPrice(
     .filter((candidate) => Number.isFinite(candidate.price) && candidate.price > 0)
     .sort(
       (left, right) =>
-        // Sort by score descending, then by price (ascending when labels
-        // exist for cheaper base price; descending when no labels so the
-        // highest price — most likely the base adult fare — wins).
+        // Sort by score descending. Labeled nodes (score > 0) then prefer the
+        // cheapest price; unlabeled nodes fall back to document order — the
+        // FIRST cena node is the base adult fare, later ones are child fares
+        // and small surcharge fees. Picking max would inflate prices, min
+        // would pick surcharge fees.
         right.score - left.score ||
-        (left.score === 0 && right.score === 0
-          ? right.price - left.price
-          : left.price - right.price) ||
-        left.index - right.index,
+        (left.score > 0 && right.score > 0 ? left.price - right.price : left.index - right.index),
     );
   const best = candidates[0];
   if (!best) return 0;

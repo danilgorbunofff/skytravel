@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { AlexandriaLastMinuteItem } from "../../api";
 import type { TranslationKey } from "../../hooks/useLanguage";
+import { getBoardLabel, getTransportLabel } from "../../features/search/constants";
 import { formatPrice } from "../../utils";
 import { EmptyState } from "../EmptyState";
 import { Skeleton } from "../Skeleton";
@@ -25,8 +26,7 @@ function formatRange(start: string, end: string): string {
     const s = new Date(start);
     const e = new Date(end);
     if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
-    const fmt = (d: Date) =>
-      d.toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit" });
+    const fmt = (d: Date) => d.toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit" });
     return `${fmt(s)} – ${fmt(e)}`;
   } catch {
     return "";
@@ -83,6 +83,8 @@ function renderCard(
 ) {
   const starsNum = Number(item.stars) || 0;
   const hasOriginalPrice = item.originalPrice > 0 && item.originalPrice > item.price;
+  const boardLabelMap = getBoardLabel(t);
+  const transportLabelMap = getTransportLabel(t);
 
   return (
     <article
@@ -119,9 +121,11 @@ function renderCard(
       <div className="lm-card__body">
         <div className="hotel-topline">
           {starsNum > 0 && <StarRating rating={starsNum} />}
-          {item.board ? (
-            <span className="hotel-board-badge">{item.board}</span>
-          ) : null}
+          {(() => {
+            const boardCode = (item.board ?? "").toUpperCase();
+            const boardLabel = boardLabelMap[boardCode];
+            return boardLabel ? <span className="hotel-board-badge">{boardLabel}</span> : null;
+          })()}
         </div>
 
         <h3 title={item.title}>{item.title}</h3>
@@ -134,19 +138,20 @@ function renderCard(
           <div className="hotel-line">
             <span>{formatRange(item.startDate, item.endDate)}</span>
           </div>
-          {item.transport ? (
-            <div className="hotel-line">
-              <span>{item.transport}</span>
-            </div>
-          ) : null}
+          {(() => {
+            const transportLabel = transportLabelMap[(item.transport ?? "").toLowerCase()];
+            return transportLabel ? (
+              <div className="hotel-line">
+                <span>{transportLabel}</span>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         <div className="hotel-price">
           {t("from")} {formatPrice(item.price)}
           {hasOriginalPrice ? (
-            <span className="hotel-price__original">
-              {formatPrice(item.originalPrice)}
-            </span>
+            <span className="hotel-price__original">{formatPrice(item.originalPrice)}</span>
           ) : null}
         </div>
       </div>
@@ -154,12 +159,7 @@ function renderCard(
   );
 }
 
-export default function LastMinuteDeals({
-  lastMinuteItems,
-  loading,
-  onItemClick,
-  t,
-}: Props) {
+export default function LastMinuteDeals({ lastMinuteItems, loading, onItemClick, t }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
   const rAFRef = useRef<number | null>(null);
@@ -176,8 +176,12 @@ export default function LastMinuteDeals({
   }, [pairs]);
 
   // Hover pause handlers
-  const pauseAuto = useCallback(() => { pausedRef.current = true; }, []);
-  const resumeAuto = useCallback(() => { pausedRef.current = false; }, []);
+  const pauseAuto = useCallback(() => {
+    pausedRef.current = true;
+  }, []);
+  const resumeAuto = useCallback(() => {
+    pausedRef.current = false;
+  }, []);
 
   // Safe rAF helper that gets cleaned up on unmount
   const scheduleRAF = useCallback((fn: () => void) => {
@@ -233,8 +237,8 @@ export default function LastMinuteDeals({
     const left = track.scrollLeft;
 
     // Clones are at index 0 (last pair clone) and slides.length-1 (first pair clone)
-    const realFirstAt = sw;                        // scrollLeft for real pair 0
-    const realLastAt = sw * (slides.length - 2);    // scrollLeft for real last pair
+    const realFirstAt = sw; // scrollLeft for real pair 0
+    const realLastAt = sw * (slides.length - 2); // scrollLeft for real last pair
 
     if (left < sw / 2) {
       // Scrolled into clone at start → jump to real last pair
@@ -309,11 +313,7 @@ export default function LastMinuteDeals({
         <article className="last-minute-card">
           <h3>{t("sectionLastMinute")}</h3>
 
-          <div
-            className="lm-carousel"
-            onMouseEnter={pauseAuto}
-            onMouseLeave={resumeAuto}
-          >
+          <div className="lm-carousel" onMouseEnter={pauseAuto} onMouseLeave={resumeAuto}>
             {showArrows && (
               <button
                 type="button"
@@ -325,13 +325,10 @@ export default function LastMinuteDeals({
               </button>
             )}
 
-            <div
-              className="lm-track"
-              ref={trackRef}
-              onScroll={handleScroll}
-            >
+            <div className="lm-track" ref={trackRef} onScroll={handleScroll}>
               {slides.map((pair, slideIdx) => {
-                const isClone = slides.length > 2 && (slideIdx === 0 || slideIdx === slides.length - 1);
+                const isClone =
+                  slides.length > 2 && (slideIdx === 0 || slideIdx === slides.length - 1);
                 return (
                   <div
                     className="lm-slide"

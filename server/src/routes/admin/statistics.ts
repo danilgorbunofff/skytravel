@@ -53,22 +53,15 @@ router.get(
 
     // Daily trends: efficient single-query date-grouping via raw SQL
     const dbType = "mysql";
-    const dateFn =
-      dbType === "mysql"
-        ? "DATE(syncedAt)"
-        : "date(syncedAt)";
+    const dateFn = dbType === "mysql" ? "DATE(syncedAt)" : "date(syncedAt)";
 
-    const providerTourDaily = await prisma.$queryRawUnsafe<
-      { day: string; count: bigint }[]
-    >(
-      `SELECT ${dateFn} AS day, COUNT(*) AS count FROM ProviderTour WHERE syncedAt >= ? GROUP BY ${dateFn} ORDER BY day ASC`,
+    const providerTourDaily = await prisma.$queryRawUnsafe<{ day: string; count: bigint }[]>(
+      `SELECT ${dateFn} AS day, COUNT(*) AS count FROM \`ProviderTour\` WHERE \`syncedAt\` >= ? GROUP BY ${dateFn} ORDER BY day ASC`,
       since,
     );
 
-    const leadDaily = await prisma.$queryRawUnsafe<
-      { day: string; count: bigint }[]
-    >(
-      `SELECT DATE(createdAt) AS day, COUNT(*) AS count FROM Lead WHERE createdAt >= ? GROUP BY DATE(createdAt) ORDER BY day ASC`,
+    const leadDaily = await prisma.$queryRawUnsafe<{ day: string; count: bigint }[]>(
+      "SELECT DATE(`createdAt`) AS day, COUNT(*) AS count FROM `Lead` WHERE `createdAt` >= ? GROUP BY DATE(`createdAt`) ORDER BY day ASC",
       since,
     );
 
@@ -76,13 +69,15 @@ router.get(
     const pMap = new Map<string, number>();
     for (const r of providerTourDaily) {
       const dayVal = r.day as unknown;
-      const d = dayVal instanceof Date ? dayVal.toISOString().slice(0, 10) : String(dayVal).slice(0, 10);
+      const d =
+        dayVal instanceof Date ? dayVal.toISOString().slice(0, 10) : String(dayVal).slice(0, 10);
       pMap.set(d, Number(r.count));
     }
     const lMap = new Map<string, number>();
     for (const r of leadDaily) {
       const dayVal = r.day as unknown;
-      const d = dayVal instanceof Date ? dayVal.toISOString().slice(0, 10) : String(dayVal).slice(0, 10);
+      const d =
+        dayVal instanceof Date ? dayVal.toISOString().slice(0, 10) : String(dayVal).slice(0, 10);
       lMap.set(d, Number(r.count));
     }
 
