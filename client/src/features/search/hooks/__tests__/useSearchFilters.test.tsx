@@ -63,4 +63,31 @@ describe("useSearchFilters — URL parameter hygiene", () => {
     const { result } = renderFilters(`/search?q=${long}`);
     expect(result.current.activeQuery).toHaveLength(120);
   });
+
+  // Regression: the 1-hotel × 307-pages incident was caused by
+  // Number(null) === 0 → limit clamped to 1 when ?limit was absent.
+  it("defaults limit to 24 when the param is absent (not 1)", () => {
+    const { result } = renderFilters("/search");
+    expect(result.current.limit).toBe(24);
+  });
+
+  it("treats limit=0 as 1 (min guard), not 24", () => {
+    const { result } = renderFilters("/search?limit=0");
+    expect(result.current.limit).toBe(1);
+  });
+
+  it("defaults page to 1 when the param is absent", () => {
+    const { result } = renderFilters("/search");
+    expect(result.current.page).toBe(1);
+  });
+
+  it("defaults adults to 2 when the param is absent", () => {
+    const { result } = renderFilters("/search");
+    expect(result.current.adults).toBe(2);
+  });
+
+  it("defaults children to 0 when the param is absent", () => {
+    const { result } = renderFilters("/search");
+    expect(result.current.children).toBe(0);
+  });
 });
