@@ -839,8 +839,13 @@ html[lang="ru"] .logo {
 }
 
 @keyframes lm-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ── Mobile (< 768px): stack cards vertically, 1 per view ──── */
@@ -2765,31 +2770,47 @@ html[lang="ru"] .logo {
   position: relative;
   height: 18px;
 }
+/* Visual track rendered once on the container so both thumbs sit OVER it.
+   Previously only the first input's track was visible (z-index 2) which
+   painted over the second (max) thumb — making the max handle appear
+   "under" the line. */
+.price-slider__track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  background: #dbe7f7;
+  border-radius: 2px;
+  pointer-events: none;
+}
 .price-slider__track input[type="range"] {
   width: 100%;
   position: absolute;
-  top: 0;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
+  height: 18px;
   background: transparent;
   outline: none;
+  margin: 0;
 }
 .price-slider__track input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: #dbe7f7;
+  background: transparent;
   border-radius: 2px;
 }
 .price-slider__track input[type="range"]::-moz-range-track {
   height: 4px;
-  background: #dbe7f7;
+  background: transparent;
   border-radius: 2px;
   border: none;
 }
-.price-slider__track input[type="range"]:first-of-type {
-  z-index: 2;
-}
+.price-slider__track input[type="range"]:first-of-type,
 .price-slider__track input[type="range"]:last-of-type {
   z-index: 1;
 }
@@ -2802,9 +2823,11 @@ html[lang="ru"] .logo {
   border-radius: 50%;
   background: var(--blue);
   cursor: pointer;
-  margin-top: -7px;
+  margin-top: 0;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 3;
 }
 .price-slider__track input[type="range"]::-moz-range-thumb {
   pointer-events: all;
@@ -2815,13 +2838,8 @@ html[lang="ru"] .logo {
   cursor: pointer;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-/* Hide the second input's track so it doesn't draw through first thumb */
-.price-slider__track input[type="range"]:last-of-type::-webkit-slider-runnable-track {
-  background: transparent;
-}
-.price-slider__track input[type="range"]:last-of-type::-moz-range-track {
-  background: transparent;
+  position: relative;
+  z-index: 3;
 }
 
 /* Sidebar filter select */
@@ -7483,7 +7501,6 @@ html[lang="ru"] .logo {
   padding: 16px;
 }
 
-
 /* Touch target minimum sizes */
 @media (max-width: 767px) {
   .bottom-sheet-overlay {
@@ -7813,7 +7830,9 @@ html[lang="ru"] .logo {
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .back-to-top:hover {
