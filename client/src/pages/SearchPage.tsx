@@ -45,7 +45,6 @@ import {
   StickySearchBar,
   TrustBar,
   MobileFilterDrawer,
-  RecentSearches,
 } from "../features/search/components";
 import { useRecentSearches } from "../features/search/hooks/useRecentSearches";
 import { CompareTray } from "../features/search/components/CompareTray";
@@ -66,12 +65,7 @@ export default function SearchPage() {
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [topQuery, setTopQuery] = useState(filters.query);
-  const {
-    searches: recentItems,
-    save: saveRecent,
-    clear: clearRecent,
-    remove: removeRecent,
-  } = useRecentSearches();
+  const { save: saveRecent } = useRecentSearches();
 
   // Keep the header box in step with the committed query. Previously it was
   // seeded once from `filters.query` and never updated, so the header and the
@@ -666,21 +660,6 @@ export default function SearchPage() {
             }
           }}
         />
-
-        {!filters.hasUserFilters && (
-          <div className="container">
-            <RecentSearches
-              t={t}
-              searches={recentItems}
-              onSelect={(search) => {
-                filters.setQuery(search.query);
-                filters.updateParams({ q: search.query, page: 1 });
-              }}
-              onRemove={removeRecent}
-              onClear={clearRecent}
-            />
-          </div>
-        )}
 
         <TrustBar t={t} />
 

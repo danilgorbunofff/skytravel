@@ -5081,34 +5081,6 @@ html[lang="ru"] .logo {
   list-style: none;
 }
 
-.search-autocomplete__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 0 2px;
-}
-
-.search-autocomplete__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.78rem;
-  color: #475569;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.search-autocomplete__chip:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-}
-
 .search-autocomplete__item {
   display: flex;
   align-items: center;
@@ -5138,6 +5110,7 @@ html[lang="ru"] .logo {
 .search-autocomplete__label {
   flex: 1;
   font-size: 0.9rem;
+  color: #1e293b;
 }
 
 .search-autocomplete__label mark {
