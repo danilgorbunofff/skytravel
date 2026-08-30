@@ -2524,6 +2524,26 @@ html[lang="ru"] .logo {
   font-size: 0.85rem;
 }
 
+.search-region-list__extra {
+  overflow: hidden;
+  transition:
+    height 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 220ms ease;
+  will-change: height, opacity;
+}
+
+.search-region-list__extra-inner {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.45rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-region-list__extra {
+    transition: none;
+  }
+}
+
 .search-region-toggle {
   background: transparent !important;
   color: var(--blue-900) !important;
