@@ -293,6 +293,7 @@ const t: Record<string, string> = {
   favoritesPageCount: "saved tours",
   favoritesPageEmpty: "No saved tours yet. Tap the heart icon on any tour to save it.",
   favoritesPageBack: "Browse tours",
+  sFooterNote: "Partner offers · prices indicative, confirm on inquiry.",
   sFilterViewAll: "View all",
 };
 

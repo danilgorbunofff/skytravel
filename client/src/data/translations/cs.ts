@@ -295,6 +295,7 @@ const t: Record<string, string> = {
   favoritesPageEmpty:
     "Zatím nemáš uložené žádné zájezdy. Klikni na srdíčko u zájezdu, který tě zaujme.",
   favoritesPageBack: "Prohlédnout zájezdy",
+  sFooterNote: "Nabídky partnerů · ceny orientační, ověřte při poptávce.",
   sFilterViewAll: "Zobrazit vše",
 };
 

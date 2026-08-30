@@ -48,6 +48,7 @@ import {
 } from "../features/search/components";
 import { useRecentSearches } from "../features/search/hooks/useRecentSearches";
 import { CompareTray } from "../features/search/components/CompareTray";
+import { SearchFooter } from "../components/SearchFooter";
 import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
@@ -791,6 +792,8 @@ export default function SearchPage() {
           </button>
         </div>
       </main>
+
+      <SearchFooter t={t} />
 
       <MobileFilterDrawer
         t={t}
