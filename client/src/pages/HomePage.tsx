@@ -3,9 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { favorites, heroImages, type OwnTour } from "../data";
 import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
-import { fetchPublicDestinations, fetchPublicAllProviderTours } from "../api/publicProviders";
+import {
+  fetchPublicDestinations,
+  fetchPublicAllProviderTours,
+  fetchPublicSingleTour,
+} from "../api/publicProviders";
 import type { PublicDestinationSummary, UnifiedTour, UnifiedFilters } from "../types/providers";
 import { TourDetailModal } from "../features/search/components/TourDetailModal";
+import { needsHydration } from "../features/search/hooks/useOfferGroups";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -162,6 +167,24 @@ export default function HomePage() {
       window.removeEventListener("focus", onFocus);
     };
   }, []);
+
+  // All-inclusive cards come from `omitHeavy` queries (no photos/description).
+  // Fetch the full row when one is opened so the modal gallery is complete.
+  function openAllIncDetail(tour: UnifiedTour) {
+    setAllIncDetail(tour);
+    if (!needsHydration(tour)) return;
+    fetchPublicSingleTour(tour.source, tour.externalId)
+      .then((full) =>
+        setAllIncDetail((prev) =>
+          prev && `${prev.source}-${prev.externalId}` === `${tour.source}-${tour.externalId}`
+            ? full
+            : prev,
+        ),
+      )
+      .catch(() => {
+        // Keep the card data; the gallery still has the fallback image.
+      });
+  }
 
   function openLastMinuteModal(item: AlexandriaLastMinuteItem) {
     const tour: UnifiedTour = {
@@ -650,7 +673,7 @@ export default function HomePage() {
                       viewMode="grid"
                       isFavorite={false}
                       onToggleFavorite={() => {}}
-                      onOpenDetail={() => setAllIncDetail(tour)}
+                      onOpenDetail={() => openAllIncDetail(tour)}
                       providerLabel="Alexandria"
                     />
                   ))}
@@ -865,7 +888,7 @@ export default function HomePage() {
           loading={false}
           relatedTours={allIncRelated}
           onClose={() => setAllIncDetail(null)}
-          onNavigateToTour={(tour) => setAllIncDetail(tour)}
+          onNavigateToTour={openAllIncDetail}
         />
       )}
 

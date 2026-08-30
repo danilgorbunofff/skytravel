@@ -829,7 +829,7 @@ export default function SearchPage() {
           }
           offers={
             offerGroups.detailTour.offerGroupKey &&
-            offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]
+            offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]?.length
               ? offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]
               : [offerGroups.detailTour]
           }
