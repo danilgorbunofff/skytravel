@@ -6,8 +6,18 @@ export type CookiePrefs = {
   marketing: boolean;
 };
 
+const CONSENT_STORAGE_KEY = "cookieConsentGiven";
+
+function readStoredConsent(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function useCookieConsent() {
-  const [showCookies, setShowCookies] = useState(true);
+  const [showCookies, setShowCookies] = useState(() => !readStoredConsent());
   const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
   const [cookiePrefs, setCookiePrefs] = useState<CookiePrefs>({
     necessary: true,
@@ -19,6 +29,11 @@ export function useCookieConsent() {
     setCookiePrefs(prefs);
     setShowCookies(false);
     setCookieSettingsOpen(false);
+    try {
+      localStorage.setItem(CONSENT_STORAGE_KEY, "true");
+    } catch {
+      // storage unavailable (private mode) — banner simply reappears next visit
+    }
   }
 
   return {

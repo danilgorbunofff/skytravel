@@ -814,15 +814,12 @@ export default function HomePage() {
             <h4>{t("footerCity")}</h4>
             <p>SkyTravel</p>
             <p>Křižíkova 6, Praha</p>
-            <p>{t("footerHours")}</p>
-          </div>
-          <div>
-            <h4>{t("footerContact")}</h4>
             <p>
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </p>
+            <p>{t("footerHours")}</p>
           </div>
-          <form className="newsletter" onSubmit={handleNewsletterSubmit}>
+          <form className="newsletter newsletter--wide" onSubmit={handleNewsletterSubmit}>
             <h4>{t("footerNewsTitle")}</h4>
             <input
               type="email"

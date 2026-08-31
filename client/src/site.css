@@ -23,6 +23,7 @@ body {
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 90px;
 }
 
 body {
@@ -241,8 +242,10 @@ html[lang="ru"] .logo {
 .hero-slide {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   opacity: 0;
   transition: opacity 900ms ease;
 }
@@ -362,6 +365,7 @@ html[lang="ru"] .logo {
   border: 0;
   font: inherit;
   font-size: 0.93rem;
+  min-height: 44px;
   width: 100%;
   color: #596981;
   background: transparent;
@@ -1319,10 +1323,15 @@ html[lang="ru"] .logo {
 .footer-main {
   margin-top: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 1rem 3rem;
 }
 
+.newsletter--wide {
+  max-width: 560px;
+}
+
+.footer-main h4,
 .footer-main h5 {
   font-size: 2.1rem;
   color: var(--blue-900);
@@ -1340,23 +1349,34 @@ html[lang="ru"] .logo {
 
 .newsletter input[type="email"] {
   width: 100%;
-  border: 0;
+  border: 1px solid #fff;
   border-radius: 12px;
   min-height: 46px;
   padding: 0 0.9rem;
   font: inherit;
   margin-bottom: 0.6rem;
+  background: #fff;
+  color: var(--blue-900);
+}
+
+.newsletter input[type="email"]::placeholder {
+  color: #8ea0bf;
+}
+
+.newsletter input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 0.2rem;
+  accent-color: var(--blue-700);
+  flex-shrink: 0;
 }
 
 .newsletter label {
   display: flex;
-  align-items: flex-start;
   gap: 0.5rem;
-}
-
-.newsletter input[type="checkbox"] {
-  margin-top: 0.2rem;
-  flex-shrink: 0;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.4rem 0;
 }
 
 .newsletter button {
@@ -2072,6 +2092,7 @@ html[lang="ru"] .logo {
 
 .gdpr-page {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 2rem 1.2rem 3rem;
   background: linear-gradient(180deg, #eef3fb 0%, #f8faff 60%);
   display: grid;
@@ -2172,6 +2193,7 @@ html[lang="ru"] .logo {
 
 .admin-login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 2rem 1rem;
@@ -2278,11 +2300,13 @@ html[lang="ru"] .logo {
 
 .admin-guard {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #eef3fa;
 }
 
 .search-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #eef3fa;
 }
 
@@ -2522,6 +2546,7 @@ html[lang="ru"] .logo {
   position: sticky;
   top: 165px;
   max-height: calc(100vh - 185px);
+  max-height: calc(100dvh - 185px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -3384,6 +3409,7 @@ html[lang="ru"] .logo {
   grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
   width: min(1120px, calc(100vw - 48px));
   height: min(780px, calc(100vh - 48px));
+  height: min(780px, calc(100dvh - 48px));
   margin: auto;
   background: #fff;
   border-radius: 20px;
@@ -4069,8 +4095,10 @@ html[lang="ru"] .logo {
 }
 @media (max-width: 640px) {
   .trust-bar__inner {
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    align-items: center;
     padding: 0 16px;
   }
 }
@@ -4263,7 +4291,7 @@ html[lang="ru"] .logo {
 /* Mobile FAB filter button */
 .mobile-filter-fab {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -4383,7 +4411,7 @@ html[lang="ru"] .logo {
   min-height: 0;
 }
 .mobile-filter-drawer__footer {
-  padding: 12px 20px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #e2e8f0;
   flex-shrink: 0;
 }
@@ -4640,7 +4668,8 @@ html[lang="ru"] .logo {
   background: #f3f7ff;
   color: #1f335a;
   border-radius: 10px;
-  padding: 0.4rem 0.75rem;
+  padding: 0.55rem 0.9rem;
+  min-height: 44px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -4727,6 +4756,7 @@ html[lang="ru"] .logo {
     max-width: 100%;
     height: 100%;
     max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     box-shadow: none;
   }
@@ -4787,11 +4817,13 @@ html[lang="ru"] .logo {
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
+    padding: 0.55rem 0;
+    min-height: 0;
   }
 
   .logo {
     order: 1;
+    font-size: 2rem;
   }
 
   .mobile-header-actions {
@@ -4805,6 +4837,18 @@ html[lang="ru"] .logo {
     order: 3;
     width: 100%;
     margin-top: 1rem;
+  }
+
+  /* Home hero has the full search panel — the header copy is redundant on phones.
+     Header precedes the hero in DOM, so key off the page containing a hero. */
+  body:has(.hero) .top-search {
+    display: none;
+  }
+
+  .top-search input,
+  .top-search select,
+  .top-search button {
+    min-height: 44px;
   }
 
   .hamburger {
@@ -4832,6 +4876,7 @@ html[lang="ru"] .logo {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     border-bottom: 1px solid var(--line);
     max-height: calc(100vh - 150px);
+    max-height: calc(100dvh - 150px);
     overflow-y: auto;
   }
 
@@ -4868,6 +4913,7 @@ html[lang="ru"] .logo {
 
   .hero {
     min-height: 840px;
+    min-height: max(680px, 72svh);
   }
 
   .hero__content {
@@ -4947,6 +4993,7 @@ html[lang="ru"] .logo {
 
   .hero {
     min-height: 960px;
+    min-height: max(620px, 62svh);
   }
 
   .hero__content h1 {
@@ -4981,7 +5028,8 @@ html[lang="ru"] .logo {
 
   .hero-search input,
   .hero-search select {
-    font-size: 0.95rem;
+    font-size: 16px; /* 16px prevents iOS focus zoom */
+    min-height: 44px;
   }
 
   .hero-search__footer {
@@ -7011,6 +7059,7 @@ html[lang="ru"] .logo {
     max-width: 100%;
     width: 100%;
     max-height: 100vh;
+    max-height: 100dvh;
     height: 100%;
     border-radius: 0;
   }
@@ -7888,4 +7937,84 @@ html[lang="ru"] .logo {
 
 .star-rating__icon {
   flex-shrink: 0;
+}
+
+/* ===== Mobile UX pass (P0): FAB/compare-tray collision, card overflow, dvh fallbacks, safe areas ===== */
+
+/* FAB must not sit under the fixed compare tray (bottom:0, ~68px tall) */
+.mobile-filter-fab.is-tray-visible {
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Destination cards: aspect-ratio + min-height force 400px width in ~359px columns
+   => horizontal page overflow on ≤390px phones. Fixed height instead on mobile. */
+@media (max-width: 768px) {
+  .destination-card {
+    aspect-ratio: auto;
+    min-height: 0;
+    height: 220px;
+  }
+}
+
+/* Belt-and-braces: never let decorations force horizontal scroll on phones */
+@media (max-width: 768px) {
+  body {
+    overflow-x: clip;
+  }
+}
+
+/* Cookie banner: respect home-indicator safe area on phones */
+@media (max-width: 768px) {
+  .cookie-banner {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.75rem 1rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  }
+  .cookie-banner__content {
+    width: 100%;
+  }
+  .cookie-banner__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .cookie-banner__actions .cookie-btn {
+    width: 100%;
+  }
+}
+
+/* Search footer email: comfortable tap target on the go */
+.search-footer__contact a {
+  display: inline-block;
+  padding: 10px 0;
+  font-size: 1.05rem;
+}
+
+/* Newsletter submit: 44px tap target */
+.newsletter button {
+  min-height: 44px;
+}
+
+/* ===== Mobile UX pass (P3): tablet sidebar breakpoint, scroll padding ===== */
+
+/* 769–1100px tablets: sidebar is visible, so the mobile FAB/drawer is redundant.
+   !important required to beat the pre-existing .mobile-only flex rule at ≤1100px. */
+@media (min-width: 769px) {
+  .mobile-filter-fab {
+    display: none !important;
+  }
+  .search-sidebar {
+    display: grid;
+  }
+}
+
+/* Compact lang switcher on phones (44px touch target, slimmer header row) */
+@media (max-width: 768px) {
+  .lang-toggle {
+    padding: 0.1rem;
+  }
+  .lang-btn {
+    min-height: 42px;
+    padding: 0.25rem 0.7rem;
+  }
 }

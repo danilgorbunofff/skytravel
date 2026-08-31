@@ -20,10 +20,10 @@ export type Favorite = {
 };
 
 export const heroImages = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2200&q=80",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=1080&q=80",
 ];
 
 export const defaultOwnTours: OwnTour[] = [
@@ -167,5 +167,3 @@ export const favorites: Favorite[] = [
       "https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=1200&q=80",
   },
 ];
-
-

@@ -44,6 +44,18 @@
         "value": "1.2rem",
         "createdAt": "2026-08-26T11:50:08.544Z",
         "reason": "user accepted: clamp lower bound for side-card h3 (between h3 1.25rem and h2 2rem)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "manrope",
+        "createdAt": "2026-08-30T20:09:15.824Z",
+        "reason": "pre-existing body font shipped via Google Fonts link; DESIGN.md documents Inter+Barlow but Manrope is the incumbent UI font used throughout site.css"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "noto sans",
+        "createdAt": "2026-08-30T20:09:15.890Z",
+        "reason": "pre-existing fallback family for html[lang=uk]/[lang=ru] headings declared in site.css; required for non-Czech locales"
       }
     ]
   }

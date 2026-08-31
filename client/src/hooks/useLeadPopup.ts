@@ -11,7 +11,7 @@ export function useLeadPopup() {
 
   useEffect(() => {
     const raw = localStorage.getItem("leadPopupEnabled");
-    const enabled = raw === null ? true : raw === "true";
+    const enabled = raw === "true";
     if (!enabled) return;
     const timer = window.setTimeout(() => setShowLeadPopup(true), 5000);
     return () => window.clearTimeout(timer);

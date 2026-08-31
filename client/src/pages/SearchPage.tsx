@@ -778,7 +778,9 @@ export default function SearchPage() {
           </div>
         </section>
 
-        <div className="mobile-filter-fab mobile-only">
+        <div
+          className={`mobile-filter-fab mobile-only${compare.tours.length > 0 ? " is-tray-visible" : ""}`}
+        >
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}

@@ -39,10 +39,14 @@ export default function SearchHero({
     <section id="home" className="hero">
       <div id="heroCarousel" className="hero-carousel" aria-hidden="true">
         {heroImages.map((url, index) => (
-          <div
+          <img
             key={url}
             className={`hero-slide${index === heroIndex ? " is-active" : ""}`}
-            style={{ backgroundImage: `url('${url}')` }}
+            src={url}
+            alt=""
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchPriority={index === 0 ? "high" : undefined}
+            decoding="async"
           />
         ))}
       </div>
@@ -104,11 +108,7 @@ export default function SearchHero({
                       onChange={(e) => onDateChange("end", e.target.value)}
                     />
                   </div>
-                  <button
-                    type="button"
-                    className="popover-done"
-                    onClick={onDateToggle}
-                  >
+                  <button type="button" className="popover-done" onClick={onDateToggle}>
                     {t("searchDone")}
                   </button>
                 </div>
