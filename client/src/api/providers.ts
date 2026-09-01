@@ -7,6 +7,7 @@ import type {
   UnifiedFilters,
 } from "../types/providers";
 import { safeParseJSON } from "./safeParseJSON";
+import { csrfFetch } from "../lib/csrf";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -47,8 +48,11 @@ export async function fetchProviderRegions(providerId: string): Promise<Provider
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  const data = await safeParseJSON<{ items: ProviderRegion[] }>(res, "regiony poskytovatele");
-  return data.items as ProviderRegion[];
+  const body = await safeParseJSON<{ data?: { items?: ProviderRegion[] } }>(
+    res,
+    "regiony poskytovatele",
+  );
+  return (body.data?.items ?? []) as ProviderRegion[];
 }
 
 export async function fetchProviderTours(
@@ -61,7 +65,9 @@ export async function fetchProviderTours(
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  return safeParseJSON<ToursResult>(res, "zájezdy poskytovatele");
+  const body = await safeParseJSON<{ data?: ToursResult }>(res, "zájezdy poskytovatele");
+  if (!body.data) throw new Error("Neplatná odpověď serveru (zájezdy poskytovatele).");
+  return body.data;
 }
 
 export async function importProviderTours(
@@ -69,23 +75,24 @@ export async function importProviderTours(
   ids: string[],
   regionCtx?: Record<string, unknown>,
 ): Promise<ImportResult> {
-  const res = await fetch(
+  const res = await csrfFetch(
     `${API_URL}/api/admin/providers/${encodeURIComponent(providerId)}/import`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ ids, regionCtx: regionCtx ?? {} }),
     },
   );
   await throwIfNotOk(res);
-  return safeParseJSON<ImportResult>(res, "import zájezdů");
+  const body = await safeParseJSON<{ data?: ImportResult }>(res, "import zájezdů");
+  if (!body.data) throw new Error("Neplatná odpověď serveru (import zájezdů).");
+  return body.data;
 }
 
 export async function refreshProviderCache(providerId: string): Promise<void> {
-  const res = await fetch(
+  const res = await csrfFetch(
     `${API_URL}/api/admin/providers/${encodeURIComponent(providerId)}/refresh`,
-    { method: "POST", credentials: "include" },
+    { method: "POST" },
   );
   await throwIfNotOk(res);
 }
@@ -96,7 +103,9 @@ export async function fetchProviderCacheStatus(providerId: string): Promise<Cach
     { credentials: "include" },
   );
   await throwIfNotOk(res);
-  return safeParseJSON<CacheStatus>(res, "stav cache");
+  const body = await safeParseJSON<{ data?: CacheStatus }>(res, "stav cache");
+  if (!body.data) throw new Error("Neplatná odpověď serveru (stav cache).");
+  return body.data;
 }
 
 export type AdminBootstrap = {
@@ -109,9 +118,10 @@ export async function fetchAdminBootstrap(): Promise<AdminBootstrap> {
     credentials: "include",
   });
   await throwIfNotOk(res);
-  const data = await safeParseJSON<AdminBootstrap>(res, "admin inicializace");
+  const body = await safeParseJSON<{ data?: AdminBootstrap }>(res, "admin inicializace");
+  if (!body.data) throw new Error("Neplatná odpověď serveru (admin inicializace).");
   return {
-    providers: data.providers as ProviderMeta[],
-    regionsByProvider: data.regionsByProvider as Record<string, ProviderRegion[]>,
+    providers: body.data.providers as ProviderMeta[],
+    regionsByProvider: body.data.regionsByProvider as Record<string, ProviderRegion[]>,
   };
 }

@@ -41,8 +41,14 @@ export async function sendBatchedEmail(
     throw new Error("SMTP not configured");
   }
   const { bcc, ...rest } = options;
+  const listUnsub = `<mailto:${options.from}?subject=unsubscribe>`;
+  const baseHeaders: Record<string, string> = {
+    ...(rest.headers ?? {}),
+    "List-Unsubscribe": listUnsub,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
   for (let i = 0; i < bcc.length; i += batchSize) {
     const batch = bcc.slice(i, i + batchSize);
-    await transporter.sendMail({ ...rest, bcc: batch });
+    await transporter.sendMail({ ...rest, headers: baseHeaders, bcc: batch });
   }
 }

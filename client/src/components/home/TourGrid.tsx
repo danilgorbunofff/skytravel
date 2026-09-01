@@ -32,7 +32,7 @@ export default function TourGrid({ ownTours, loading, error, onTourClick, t }: P
             <h2>{t("sectionOwnTitle")}</h2>
             <p className="section-subtitle">{t("sectionOwnSub")}</p>
           </header>
-          <div className="destination-grid">
+          <div className="exclusive-row">
             {Array.from({ length: 3 }).map((_, i) => (
               <TourCardSkeleton key={i} />
             ))}
@@ -59,7 +59,7 @@ export default function TourGrid({ ownTours, loading, error, onTourClick, t }: P
           <h2>{t("sectionOwnTitle")}</h2>
           <p className="section-subtitle">{t("sectionOwnSub")}</p>
         </header>
-        <div id="ownGrid" className="destination-grid">
+        <div id="ownGrid" className="exclusive-row">
           {ownTours.map((tour) => (
             <TourCard
               key={`${tour.id ?? tour.destination}`}

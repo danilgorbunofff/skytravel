@@ -9,7 +9,7 @@
  *   create duplicate sources of truth and cause filter/URL drift.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
-import { Link } from "react-router-dom";
+import SiteHeader from "../components/SiteHeader";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -54,7 +54,7 @@ import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
 
 export default function SearchPage() {
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
   usePageTitle("Vyhledávání zájezdů");
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -131,7 +131,6 @@ export default function SearchPage() {
   }, [offerGroups.detailTour]);
 
   // ─── Transient UI state ──────────────────────────────────────────────
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [pastHero, setPastHero] = useState(false);
   // Mobile switches from "accumulate pages" to normal pagination once the
@@ -518,13 +517,8 @@ export default function SearchPage() {
         filteredCount={results.result?.filtered ?? null}
       />
 
-      <header className="site-header">
-        <div className="container header-top">
-          <Link className="logo" to="/">
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </Link>
-
+      <SiteHeader
+        topSearch={
           <form
             className="top-search"
             onSubmit={(e) => {
@@ -547,76 +541,8 @@ export default function SearchPage() {
               GO
             </button>
           </form>
-
-          <div className="header-contact-wrap desktop-only">
-            <div className="header-contact">
-              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-            </div>
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿" },
-                  { code: "uk", flag: "🇺🇦" },
-                  { code: "en", flag: "🇬🇧" },
-                  { code: "ru", flag: "🇷🇺" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mobile-header-actions mobile-only">
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿" },
-                  { code: "uk", flag: "🇺🇦" },
-                  { code: "en", flag: "🇬🇧" },
-                  { code: "ru", flag: "🇷🇺" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-            <button
-              className="hamburger"
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? "✕" : "☰"}
-            </button>
-          </div>
-        </div>
-
-        <div className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
-          <div className="container site-nav-inner">
-            <nav className="main-nav">
-              <a href="/#vlastni">{t("navExclusive")}</a>
-              <a href="/#allinclusive">{t("navPartner")}</a>
-              <a href="/#destinace">{t("navTop")}</a>
-              <a href="/#lastminute">Last minute</a>
-              <a href="/#sluzby">{t("navServices")}</a>
-              <a href="/#kontakt">{t("navContact")}</a>
-              <Link to="/admin-login">{t("navAdmin")}</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       <main id="main-content" className="search-page">
         <SearchHero

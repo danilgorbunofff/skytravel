@@ -1,4 +1,5 @@
-import type { OwnTour } from "../types";
+import type { Lead, OwnTour } from "../types";
+import { csrfFetch } from "../../../lib/csrf";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -11,7 +12,7 @@ export async function fetchAdminMe() {
 }
 
 export async function loginAdmin(login: string, password: string) {
-  const res = await fetch(`${API_URL}/api/admin/login`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -22,7 +23,7 @@ export async function loginAdmin(login: string, password: string) {
 }
 
 export async function logoutAdmin() {
-  await fetch(`${API_URL}/api/admin/logout`, { method: "POST", credentials: "include" });
+  await csrfFetch(`${API_URL}/api/admin/logout`, { method: "POST" });
 }
 
 // ── Tours CRUD ────────────────────────────────────────────────────────────
@@ -30,36 +31,36 @@ export async function logoutAdmin() {
 export async function fetchAdminTours() {
   const res = await fetch(`${API_URL}/api/admin/tours`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to load tours");
-  const data = await res.json();
-  return data.items as OwnTour[];
+  const body = (await res.json()) as { data?: { items?: OwnTour[] } };
+  return body.data?.items ?? [];
 }
 
 export async function createTour(payload: OwnTour) {
-  const res = await fetch(`${API_URL}/api/admin/tours`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/tours`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Failed to create tour");
-  const data = await res.json();
-  return data.item as OwnTour;
+  const body = (await res.json()) as { data?: { item?: OwnTour } };
+  return body.data?.item as OwnTour;
 }
 
 export async function updateTour(id: number, payload: OwnTour) {
-  const res = await fetch(`${API_URL}/api/admin/tours/${id}`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/tours/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Failed to update tour");
-  const data = await res.json();
-  return data.item as OwnTour;
+  const body = (await res.json()) as { data?: { item?: OwnTour } };
+  return body.data?.item as OwnTour;
 }
 
 export async function deleteTour(id: number) {
-  const res = await fetch(`${API_URL}/api/admin/tours/${id}`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/tours/${id}`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -67,7 +68,7 @@ export async function deleteTour(id: number) {
 }
 
 export async function updateTourOrder(ids: number[]) {
-  const res = await fetch(`${API_URL}/api/admin/tours/order`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/tours/order`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -80,29 +81,43 @@ export async function updateTourOrder(ids: number[]) {
 // ── Uploads ───────────────────────────────────────────────────────────────
 
 export async function uploadAdminImages(files: FileList | File[]) {
-  const body = new FormData();
-  Array.from(files).forEach((file) => body.append("images", file));
-  const res = await fetch(`${API_URL}/api/admin/uploads`, {
+  const formData = new FormData();
+  Array.from(files).forEach((file) => formData.append("images", file));
+  const res = await csrfFetch(`${API_URL}/api/admin/uploads`, {
     method: "POST",
-    body,
+    body: formData,
     credentials: "include",
   });
   if (!res.ok) throw new Error("Failed to upload images");
-  return res.json() as Promise<{ urls: string[] }>;
+  const body = (await res.json()) as { data?: { urls?: string[] } };
+  return { urls: body.data?.urls ?? [] };
 }
 
 // ── Leads & Campaigns ────────────────────────────────────────────────────
 
-export async function fetchLeads() {
-  const res = await fetch(`${API_URL}/api/admin/leads`, { credentials: "include" });
+export async function fetchLeads(params?: {
+  segment?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const qs = new URLSearchParams();
+  if (params?.segment) qs.set("segment", params.segment);
+  if (params?.q) qs.set("q", params.q);
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  if (params?.offset != null) qs.set("offset", String(params.offset));
+  const suffix = qs.toString() ? `?${qs}` : "";
+  const res = await fetch(`${API_URL}/api/admin/leads${suffix}`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch leads");
-  return res.json();
+  return res.json() as Promise<
+    | { ok: boolean; data: { items: Lead[]; total: number; limit: number; offset: number } }
+    | { ok: boolean; data: { items: unknown[] } }
+  >;
 }
 
 export async function deleteLead(id: number) {
-  const res = await fetch(`${API_URL}/api/admin/leads/${id}`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/leads/${id}`, {
     method: "DELETE",
-    credentials: "include",
   });
   if (!res.ok && res.status !== 204) throw new Error("Failed to delete lead");
 }
@@ -114,7 +129,7 @@ export async function sendCampaign(payload: {
   html: string;
   segment: string;
 }) {
-  const res = await fetch(`${API_URL}/api/admin/campaigns/send`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/campaigns/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -134,7 +149,7 @@ export async function sendTestCampaign(payload: {
   html: string;
   testEmail: string;
 }) {
-  const res = await fetch(`${API_URL}/api/admin/campaigns/test`, {
+  const res = await csrfFetch(`${API_URL}/api/admin/campaigns/test`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -150,12 +165,16 @@ export async function sendTestCampaign(payload: {
 // ── Statistics ────────────────────────────────────────────────────────────
 
 export interface StatisticsData {
-  totalVisits: number;
+  totalVisits: number; // deprecated alias for totalOffers
   inquiries: number;
-  conversionRate: number;
+  inquiriesConsented: number;
+  consentRate: number;
+  conversionRate: number; // deprecated alias for consentRate
+  totalOffers: number;
   topDestination: string;
-  visitsTrend: { label: string; value: number }[];
+  visitsTrend: { label: string; value: number }[]; // deprecated alias for inquiriesTrend
   inquiriesTrend: { label: string; value: number }[];
+  trendGranularity: "day" | "month";
   channels: { label: string; pct: number }[];
   destinationBreakdown: { label: string; value: number }[];
   perDestination: { destination: string; inquiries: number }[];

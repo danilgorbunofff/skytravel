@@ -1,4 +1,7 @@
 const base: Record<string, string> = {
+  navHome: "Domů",
+  navSearch: "Hledat zájezdy",
+  navAdmin: "Administrace",
   navExclusive: "Exkluzivní nabídky",
   navPartner: "Partnerské zájezdy",
   navTop: "Top destinace",

@@ -144,6 +144,400 @@
         }
       },
       "footerShown": true
+    },
+    "bf338b95-79dc-463e-8498-f34227749604": {
+      "updatedAt": 1788197338839,
+      "files": {
+        "/Users/danil/.copilot/repos/skytravel/client/src/hooks/useAdminAuth.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/data/translations/en.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/data/translations/uk.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/data/translations/ru.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/data/translations/base.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/data/translations/cs.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/components/SiteHeader.tsx": {
+          "editCount": 2,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/HomePage.tsx": {
+          "editCount": 10,
+          "findings": ["design-system-color:680:#4e5f79"]
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/components/home/SearchHero.tsx": {
+          "editCount": 4,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/SearchPage.tsx": {
+          "editCount": 6,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/FavoritesPage.tsx": {
+          "editCount": 6,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/blog/render.ts": {
+          "editCount": 2,
+          "findings": []
+        }
+      },
+      "footerShown": true
+    },
+    "f4171527-e85c-4977-ac1f-de1840342a82": {
+      "updatedAt": 1788210262034,
+      "files": {
+        "/Users/danil/.copilot/repos/skytravel/client/src/data.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/hooks/useTours.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/components/home/TourGrid.tsx": {
+          "editCount": 4,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/components/home/ExclusiveTourDetailModal.tsx": {
+          "editCount": 2,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/HomePage.tsx": {
+          "editCount": 14,
+          "findings": ["design-system-color:483:#4e5f79"]
+        }
+      },
+      "footerShown": true
+    },
+    "c9b4825d-a172-4f07-bc78-d966f455daae": {
+      "updatedAt": 1788284316801,
+      "files": {
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/admin/statistics.ts": {
+          "editCount": 4,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/AdminStatisticsPage.tsx": {
+          "editCount": 6,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/features/admin/services/adminApi.ts": {
+          "editCount": 16,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/AdminEmailPage.tsx": {
+          "editCount": 12,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/admin.css": {
+          "editCount": 0,
+          "findings": [
+            "bounce-easing:1427:cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+            "design-system-color:20:#f5f8ff",
+            "design-system-color:20:#e1e9f6",
+            "design-system-color:34:#0f2f6d",
+            "design-system-color:34:#19408b",
+            "design-system-font-size:43:2.1rem",
+            "design-system-color:53:#f7d36c",
+            "design-system-radius:65:12px",
+            "design-system-radius:82:14px",
+            "design-system-font-size:90:1rem",
+            "design-system-color:133:#e6a11c",
+            "design-system-font-size:141:2.1rem",
+            "design-system-font-size:172:1.8rem",
+            "design-system-font-size:179:0.92rem",
+            "design-system-color:189:#2e4770",
+            "design-system-color:224:#8cb4ff",
+            "design-system-color:225:rgba(140, 180, 255, 0.35)",
+            "design-system-color:231:#8cb4ff",
+            "design-system-color:232:rgba(140, 180, 255, 0.35)",
+            "design-system-radius:260:12px",
+            "design-system-color:261:#c7d6ef",
+            "design-system-color:262:#f7faff",
+            "design-system-color:275:rgba(10, 26, 56, 0.35)",
+            "design-system-color:276:rgba(39, 93, 174, 0.2)",
+            "design-system-color:281:#4f6282",
+            "design-system-color:307:rgba(18, 46, 90, 0.08)",
+            "design-system-color:313:rgba(18, 46, 90, 0.2)",
+            "design-system-color:332:#2a6bdc",
+            "design-system-color:333:rgba(42, 107, 220, 0.18)",
+            "design-system-color:351:rgba(15, 47, 109, 0.85)",
+            "design-system-color:371:#2f4f84",
+            "design-system-color:384:#c8d6ef",
+            "design-system-font-size:391:0.95rem",
+            "design-system-color:394:#516687",
+            "design-system-color:406:#4b5f80",
+            "design-system-color:432:rgba(242, 201, 76, 0.35)",
+            "design-system-color:436:#dce8fb",
+            "design-system-radius:452:12px",
+            "design-system-radius:465:8px",
+            "design-system-font-size:471:1rem",
+            "design-system-color:477:#4a6084",
+            "design-system-color:500:#dce8fb",
+            "design-system-color:505:#fee2e2",
+            "design-system-color:506:#9a2525",
+            "design-system-color:529:#536580",
+            "design-system-radius:538:12px",
+            "design-system-font-size:560:1rem",
+            "design-system-color:567:#60738f",
+            "design-system-color:576:#5d7190",
+            "design-system-color:584:#e2ebfb",
+            "design-system-radius:604:8px",
+            "design-system-color:606:#335286",
+            "design-system-color:644:#2f4a78",
+            "design-system-color:669:#f8fbff",
+            "design-system-color:670:#e0e7f3",
+            "design-system-radius:671:12px",
+            "design-system-color:678:#5c6f8b",
+            "design-system-color:685:#1e3f73",
+            "design-system-color:695:#1b8d5a",
+            "design-system-color:699:#b03b3b",
+            "design-system-color:710:#e0e7f3",
+            "design-system-radius:711:12px",
+            "design-system-color:721:#2a406b",
+            "design-system-color:727:#6a7b94",
+            "design-system-color:736:#dfe6f3",
+            "design-system-color:741:#6b7d96",
+            "design-system-color:750:#5c6f8b",
+            "design-system-color:774:#4f637f",
+            "design-system-color:821:#dce8fb",
+            "design-system-color:846:#e0e7f3",
+            "design-system-radius:847:14px",
+            "design-system-color:856:#1d3b6e",
+            "design-system-color:875:#5a6d8b",
+            "design-system-color:880:#f8fbff",
+            "design-system-color:881:#e0e7f3",
+            "design-system-radius:882:12px",
+            "design-system-color:893:#6c7f98",
+            "design-system-color:907:#daf2e5",
+            "design-system-color:908:#1b7a52",
+            "design-system-color:912:#fff1db",
+            "design-system-color:913:#9a5a19",
+            "design-system-color:924:#2c4674",
+            "design-system-color:928:#cddaf0",
+            "design-system-radius:929:12px",
+            "design-system-color:945:#274579",
+            "design-system-radius:946:8px",
+            "design-system-radius:959:12px",
+            "design-system-color:962:#20365d",
+            "design-system-font-size:963:0.95rem",
+            "design-system-color:970:#f5f8ff",
+            "design-system-color:987:#c7d3ea",
+            "design-system-color:989:#2b4a7a",
+            "design-system-color:1031:rgba(12, 20, 34, 0.55)",
+            "design-system-color:1041:rgba(9, 18, 40, 0.22)",
+            "design-system-color:1050:#1f3968",
+            "design-system-color:1059:#2b4a7a",
+            "design-system-color:1068:#5a6d8b",
+            "design-system-radius:1073:12px",
+            "design-system-color:1080:#b03b3b",
+            "design-system-color:1090:#e2e9f6",
+            "design-system-color:1097:#cfd8ea",
+            "design-system-color:1112:rgba(18, 32, 54, 0.15)",
+            "design-system-color:1132:#fee2e2",
+            "design-system-color:1133:#9a2525",
+            "design-system-radius:1138:8px",
+            "design-system-radius:1161:14px",
+            "design-system-color:1162:#f7f9fd",
+            "design-system-color:1168:#cbd6ea",
+            "design-system-radius:1169:12px",
+            "design-system-color:1172:#60738f",
+            "design-system-color:1188:#f5f8fe",
+            "design-system-radius:1190:12px",
+            "design-system-font-size:1221:1.8rem",
+            "design-system-color:1267:#f7faff",
+            "design-system-font-size:1286:1rem",
+            "design-system-color:1293:#4b5f80",
+            "design-system-radius:1309:14px",
+            "design-system-color:1310:rgba(12, 34, 74, 0.18)",
+            "design-system-color:1329:rgba(18, 46, 90, 0.16)",
+            "design-system-color:1332:#2f4f84",
+            "design-system-color:1346:#c7d6ef",
+            "design-system-color:1352:#5a7fd1",
+            "design-system-color:1362:#ffeaa7",
+            "design-system-color:1363:#684d00",
+            "design-system-color:1379:#5a6f8e",
+            "design-system-font-size:1380:0.92rem",
+            "design-system-color:1392:#6f839f",
+            "design-system-font-size:1399:0.95rem",
+            "design-system-color:1400:#1f335a",
+            "design-system-color:1410:rgba(12, 22, 39, 0.45)",
+            "design-system-radius:1421:20px",
+            "design-system-color:1425:rgba(0, 0, 0, 0.2)",
+            "design-system-color:1439:#e11d48",
+            "design-system-color:1455:#64748b",
+            "design-system-radius:1467:12px",
+            "design-system-color:1476:#475569",
+            "design-system-color:1480:#e2e8f0",
+            "design-system-color:1484:#e11d48",
+            "design-system-color:1489:#be123c",
+            "design-system-color:1491:rgba(225, 29, 72, 0.3)",
+            "design-system-radius:1524:14px",
+            "design-system-color:1557:#2e4770",
+            "design-system-font-size:1568:0.92rem",
+            "design-system-color:1578:#8cb4ff",
+            "design-system-color:1579:rgba(140, 180, 255, 0.35)",
+            "design-system-font-size:1625:0.92rem",
+            "design-system-color:1634:#8cb4ff",
+            "design-system-color:1635:rgba(140, 180, 255, 0.35)",
+            "design-system-color:1646:#e53935",
+            "design-system-color:1647:rgba(229, 57, 53, 0.18)",
+            "design-system-font-size:1670:0.92rem",
+            "design-system-color:1674:rgba(39, 93, 174, 0.22)",
+            "design-system-color:1682:rgba(39, 93, 174, 0.3)",
+            "design-system-color:1695:#b8cbe9",
+            "design-system-color:1750:rgba(39, 93, 174, 0.2)",
+            "design-system-radius:1776:12px",
+            "design-system-color:1805:#f8faff",
+            "design-system-radius:1829:8px",
+            "design-system-color:1830:#e4eaf5",
+            "design-system-radius:1839:8px",
+            "design-system-font-size:1852:0.95rem",
+            "design-system-color:1867:#8899b4",
+            "design-system-font-size:1872:0.95rem",
+            "design-system-color:1873:#1a5c1c",
+            "design-system-color:1911:#c5d3ee",
+            "design-system-radius:1912:20px",
+            "design-system-font-size:1927:1rem",
+            "design-system-color:1942:#c62828",
+            "design-system-color:1948:#e53935",
+            "design-system-color:1949:rgba(229, 57, 53, 0.18)",
+            "design-system-font-size:1986:0.74rem",
+            "design-system-color:1992:#fff8e1",
+            "design-system-color:1993:#e65100",
+            "design-system-color:1998:#e8f5e9",
+            "design-system-color:1999:#1b5e20",
+            "design-system-color:2003:#e3f2fd",
+            "design-system-color:2004:#1565c0",
+            "design-system-color:2008:#f59e0b",
+            "design-system-font-size:2015:0.72rem",
+            "design-system-radius:2018:4px",
+            "design-system-color:2019:#e8f5e9",
+            "design-system-color:2020:#1b5e20",
+            "design-system-font-size:2050:0.92rem",
+            "design-system-radius:2072:8px",
+            "design-system-color:2081:#dde7f7",
+            "design-system-color:2179:#999",
+            "design-system-radius:2196:8px",
+            "design-system-radius:2228:8px",
+            "design-system-radius:2259:8px",
+            "design-system-color:2270:rgba(0, 0, 0, 0.45)",
+            "design-system-color:2286:rgba(0, 0, 0, 0.15)",
+            "design-system-color:2347:#dde7f7",
+            "design-system-font-size:2405:0.95rem",
+            "design-system-color:2411:#1a5c1c",
+            "design-system-color:2478:rgba(39, 93, 174, 0.2)",
+            "design-system-color:2490:rgba(0, 0, 0, 0.85)",
+            "design-system-radius:2503:8px",
+            "design-system-color:2542:#94a3b8",
+            "design-system-font-size:2557:1.05rem",
+            "design-system-color:2581:#1e40af",
+            "design-system-radius:2596:3px",
+            "design-system-color:2611:#3b82f6",
+            "design-system-radius:2612:3px",
+            "design-system-font-size:2630:1rem",
+            "design-system-color:2649:#1e40af",
+            "design-system-radius:2663:5px"
+          ]
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/admin/campaigns.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/lib/mail.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/admin/leads.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/siteSettings.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/app.ts": {
+          "editCount": 6,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/admin/index.ts": {
+          "editCount": 4,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/AdminSettingsPage.tsx": {
+          "editCount": 8,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/hooks/useLeadPopup.ts": {
+          "editCount": 6,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/components/AdminLayout.tsx": {
+          "editCount": 10,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/AdminPage.tsx": {
+          "editCount": 2,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/server/src/routes/admin/tours.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/stores/searchStore.ts": {
+          "editCount": 8,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/AdminSearchPage.tsx": {
+          "editCount": 2,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/pages/SearchPage.tsx": {
+          "editCount": 2,
+          "findings": [],
+          "cleanAcked": true
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/lib/csrf.ts": {
+          "editCount": 2,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/api/providers.ts": {
+          "editCount": 16,
+          "findings": []
+        },
+        "/Users/danil/.copilot/repos/skytravel/client/src/features/admin/hooks/useTourPhotos.ts": {
+          "editCount": 2,
+          "findings": []
+        }
+      },
+      "footerShown": true
     }
   }
 }

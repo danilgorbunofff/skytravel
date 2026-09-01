@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SiteHeader from "../components/SiteHeader";
 import { favorites, heroImages, type OwnTour } from "../data";
-import { formatPrice } from "../utils";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
 import {
   fetchPublicDestinations,
@@ -18,18 +18,18 @@ import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
 import { SkipToContent } from "../components/SkipToContent";
-import TourModal, { type ModalDetail } from "../components/TourModal";
 import LeadPopup from "../components/LeadPopup";
 import CookieConsent from "../components/CookieConsent";
 import SearchHero from "../components/home/SearchHero";
 import TourGrid from "../components/home/TourGrid";
+import { ExclusiveTourDetailModal } from "../components/home/ExclusiveTourDetailModal";
 import LastMinuteDeals from "../components/home/LastMinuteDeals";
 import FavoriteDestinations from "../components/home/FavoriteDestinations";
 import "../site.css";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { lang, setLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
   usePageTitle();
   const ownTours = useTours();
   const leadPopup = useLeadPopup();
@@ -43,26 +43,15 @@ export default function HomePage() {
     { value: 35000, label: "35 000+ Kč" },
   ];
 
-  function formatDateRange(start?: string, end?: string) {
-    if (!start || !end) return t("transportOffer");
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return t("transportOffer");
-    }
-    return `${startDate.toLocaleDateString("cs-CZ")} - ${endDate.toLocaleDateString("cs-CZ")}`;
-  }
-
   const [activeBudget, setActiveBudget] = useState(20000);
   const [heroIndex, setHeroIndex] = useState(0);
-  const [modalDetail, setModalDetail] = useState<ModalDetail | null>(null);
+  const [exclusiveTour, setExclusiveTour] = useState<OwnTour | null>(null);
   const [lastMinuteDetail, setLastMinuteDetail] = useState<UnifiedTour | null>(null);
   const [allIncTours, setAllIncTours] = useState<UnifiedTour[]>([]);
   const [allIncLoading, setAllIncLoading] = useState(true);
   const [allIncDetail, setAllIncDetail] = useState<UnifiedTour | null>(null);
   const [carouselLeftDisabled, setCarouselLeftDisabled] = useState(true);
   const [carouselRightDisabled, setCarouselRightDisabled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -291,23 +280,7 @@ export default function HomePage() {
   }
 
   function openOwnTourModal(tour: OwnTour) {
-    const i18n = tour.i18n?.[lang] || {};
-    const photos = tour.photos && tour.photos.length > 0 ? tour.photos : [tour.image];
-    const transportLabel = tour.transport
-      ? t(tour.transport) || tour.transport
-      : t("transportOffer");
-    setModalDetail({
-      type: t("modalTypeOwn"),
-      title: i18n.destination || tour.destination,
-      description: i18n.description || tour.description || t("modalDescOwn"),
-      location: i18n.destination || tour.destination,
-      term: formatDateRange(tour.startDate, tour.endDate),
-      meta: `${t("from")} ${formatPrice(tour.price)}`,
-      source: transportLabel,
-      photos,
-      isOwnTour: true,
-      tourId: tour.id,
-    });
+    setExclusiveTour(tour);
   }
 
   function openFavoriteSearch(item: { destination: string }) {
@@ -329,7 +302,7 @@ export default function HomePage() {
     );
   }, [allIncDetail, allIncTours]);
 
-  const closeModal = useCallback(() => setModalDetail(null), []);
+  const closeModal = useCallback(() => setExclusiveTour(null), []);
 
   function handleBudgetClick(value: number) {
     setActiveBudget(value);
@@ -368,18 +341,6 @@ export default function HomePage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  function handleNavClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
-    const href = event.currentTarget.getAttribute("href");
-    if (!href || !href.startsWith("#")) return;
-    const target = document.querySelector(href);
-    if (!target) return;
-    event.preventDefault();
-    const header = document.querySelector(".site-header") as HTMLElement | null;
-    const headerOffset = header ? header.offsetHeight : 0;
-    const top = target.getBoundingClientRect().top + window.scrollY - headerOffset - 8;
-    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
-  }
-
   function handleDateToggle() {
     setIsDatePickerOpen((prev) => !prev);
   }
@@ -409,20 +370,8 @@ export default function HomePage() {
   return (
     <div>
       <SkipToContent />
-      <header className="site-header">
-        <div className="container header-top">
-          <a
-            className="logo"
-            href="#home"
-            onClick={(e) => {
-              handleNavClick(e);
-              setMobileMenuOpen(false);
-            }}
-          >
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </a>
-
+      <SiteHeader
+        topSearch={
           <form id="topSearch" className="top-search" onSubmit={handleTopSearchSubmit}>
             <input
               id="topSearchInput"
@@ -434,166 +383,8 @@ export default function HomePage() {
               GO
             </button>
           </form>
-
-          {/* Desktop Right Side */}
-          <div className="header-contact-wrap desktop-only">
-            <div className="header-contact">
-              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-            </div>
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿", label: "Přepnout do češtiny" },
-                  { code: "uk", flag: "🇺🇦", label: "Перейти на українську" },
-                  { code: "en", flag: "🇬🇧", label: "Switch to English" },
-                  { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                  aria-label={item.label}
-                  aria-pressed={lang === item.code}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mobile Right Side */}
-          <div className="mobile-header-actions mobile-only">
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿", label: "Přepnout do češtiny" },
-                  { code: "uk", flag: "🇺🇦", label: "Перейти на українську" },
-                  { code: "en", flag: "🇬🇧", label: "Switch to English" },
-                  { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                  aria-label={item.label}
-                  aria-pressed={lang === item.code}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-            <button
-              className="hamburger"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle mobile menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? (
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              ) : (
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Desktop Nav / Mobile Drawer */}
-        <div className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
-          <div className="container site-nav-inner">
-            <div className="header-contact mobile-only mobile-contact">
-              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-            </div>
-            <nav className="main-nav">
-              <a
-                href="#vlastni"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {t("navExclusive")}
-              </a>
-              <a
-                href="#allinclusive"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {t("navPartner")}
-              </a>
-              <a
-                href="#destinace"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {t("navTop")}
-              </a>
-              <a
-                href="#lastminute"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                Last minute
-              </a>
-              <a
-                href="#sluzby"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {t("navServices")}
-              </a>
-              <a
-                href="#kontakt"
-                onClick={(e) => {
-                  handleNavClick(e);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                {t("navContact")}
-              </a>
-              {import.meta.env.DEV && (
-                <Link to="/admin-login" onClick={() => setMobileMenuOpen(false)}>
-                  {t("navAdmin")}
-                </Link>
-              )}
-            </nav>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       <main id="main-content">
         <SearchHero
@@ -609,7 +400,6 @@ export default function HomePage() {
           onSearchSubmit={handleSearchSubmit}
           onDateToggle={handleDateToggle}
           onDateChange={handleDateChange}
-          onNavClick={handleNavClick}
         />
 
         <TourGrid ownTours={ownTours} onTourClick={openOwnTourModal} t={t} />
@@ -863,7 +653,9 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {modalDetail && <TourModal detail={modalDetail} onClose={closeModal} />}
+      {exclusiveTour && (
+        <ExclusiveTourDetailModal tour={exclusiveTour} lang={lang} t={t} onClose={closeModal} />
+      )}
 
       {lastMinuteDetail && (
         <TourDetailModal

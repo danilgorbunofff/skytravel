@@ -26,8 +26,8 @@ export function useTourPhotos(initialPhotos: string[] = []) {
           credentials: "include",
         });
         if (!res.ok) throw new Error("Upload failed");
-        const data = await res.json();
-        const urls = (data.urls || []) as string[];
+        const body = (await res.json()) as { data?: { urls?: string[] } };
+        const urls = (body.data?.urls || []) as string[];
         const normalized = urls.map((url) => (url.startsWith("/") ? `${API_BASE}${url}` : url));
         setPhotos((prev) => [...prev, ...normalized]);
         return null;

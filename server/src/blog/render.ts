@@ -214,13 +214,9 @@ function siteHeader(): string {
      <div class="site-nav-wrapper">
        <div class="container">
          <nav class="main-nav" aria-label="Hlavní navigace">
-           <a href="/#vlastni">Exkluzivní nabídky</a>
-           <a href="/#allinclusive">Partnerské zájezdy</a>
-           <a href="/#destinace">Top destinace</a>
-           <a href="/#lastminute">Last minute</a>
+           <a href="/">Domů</a>
+           <a href="/search">Hledat zájezdy</a>
            <a href="/blog/" class="is-active" aria-current="page">Blog</a>
-           <a href="/#sluzby">Služby</a>
-           <a href="/#kontakt">Kontakt</a>
          </nav>
        </div>
      </div>

@@ -1,10 +1,12 @@
 const t: Record<string, string> = {
+  navHome: "Главная",
+  navSearch: "Поиск туров",
+  navAdmin: "Админ",
   navExclusive: "Эксклюзивные предложения",
   navPartner: "Партнерские туры",
   navTop: "Топ направления",
   navServices: "Услуги",
   navContact: "Контакт",
-  navAdmin: "Админ",
   heroTitle: "ЭКЗОТИКА ПРИ ЛЮБОЙ ПОГОДЕ",
   heroSubtitle: "Эксклюзивные предложения SkyTravel + проверенные партнерские туры.",
   heroBtn: "ПОКАЗАТЬ БОЛЬШЕ",

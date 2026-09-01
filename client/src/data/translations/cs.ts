@@ -1,10 +1,12 @@
 const t: Record<string, string> = {
+  navHome: "Domů",
+  navSearch: "Hledat zájezdy",
+  navAdmin: "Administrace",
   navExclusive: "Exkluzivní nabídky",
   navPartner: "Partnerské zájezdy",
   navTop: "Top destinace",
   navServices: "Služby",
   navContact: "Kontakt",
-  navAdmin: "Admin",
   heroTitle: "EXOTIKA ZA KAŽDÉHO POČASÍ",
   heroSubtitle: "SkyTravel exkluzivní nabídky + ověřené partnerské zájezdy.",
   heroBtn: "ZOBRAZIT VÍCE",

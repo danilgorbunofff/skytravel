@@ -24,6 +24,7 @@ import healthRoutes from "./routes/health.js";
 import sitemapRouter from "./routes/sitemap.xml.js";
 import blogRouter from "./routes/blog.js";
 import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf.js";
+import { siteSettingsPublicRouter } from "./routes/siteSettings.js";
 
 // Sentry — disabled unless SENTRY_DSN is configured
 if (process.env.SENTRY_DSN) {
@@ -259,6 +260,7 @@ export function createApp() {
     });
   }
 
+  app.use("/api/site-settings", siteSettingsPublicRouter);
   app.use("/api", publicRoutes);
   app.use("/api/alexandria", alexandriaPublicRoutes);
   app.use(

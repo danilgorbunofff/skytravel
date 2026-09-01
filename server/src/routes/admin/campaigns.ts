@@ -16,13 +16,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const { subject, preheader, fromEmail, html, segment } = req.body;
     const segmentValue = segment ?? "consented";
+    if (segmentValue !== "consented") {
+      fail("FORBIDDEN_SEGMENT", "Campaigns can only be sent to the consented segment.", 400);
+    }
 
-    const where =
-      segmentValue === "all"
-        ? {}
-        : segmentValue === "pending"
-          ? { marketingConsent: false }
-          : { marketingConsent: true };
+    const where = { marketingConsent: true };
 
     const leads = await prisma.lead.findMany({ where, select: { email: true } });
     if (leads.length === 0) {

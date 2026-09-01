@@ -18,14 +18,14 @@ export function useTours() {
             const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
             return dateB - dateA;
           });
-          setTours(sorted);
+          setTours(sorted.slice(0, 3));
         } else {
-          setTours(defaultOwnTours);
+          setTours(defaultOwnTours.slice(0, 3));
         }
       })
       .catch((err) => {
         if (err instanceof Error && err.name === "AbortError") return;
-        setTours(defaultOwnTours);
+        setTours(defaultOwnTours.slice(0, 3));
       });
     return () => controller.abort();
   }, []);

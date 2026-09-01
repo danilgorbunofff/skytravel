@@ -14,7 +14,7 @@ interface Props {
   onSearchSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onDateToggle: () => void;
   onDateChange: (field: "start" | "end", value: string) => void;
-  onNavClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  onNavClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 export default function SearchHero({
@@ -54,7 +54,11 @@ export default function SearchHero({
       <div className="container hero__content">
         <h1>{t("heroTitle")}</h1>
         <p>{t("heroSubtitle")}</p>
-        <a className="hero__btn" href="#vlastni" onClick={onNavClick}>
+        <a
+          className="hero__btn"
+          href="#vlastni"
+          onClick={onNavClick ? (e) => onNavClick(e) : undefined}
+        >
           {t("heroBtn")}
         </a>
       </div>
