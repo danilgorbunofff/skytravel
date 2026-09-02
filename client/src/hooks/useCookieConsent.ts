@@ -10,6 +10,8 @@ const CONSENT_STORAGE_KEY = "cookieConsentGiven";
 
 function readStoredConsent(): boolean {
   try {
+    // Disabled in dev so the banner never interrupts local design review; prod unaffected.
+    if (import.meta.env.DEV) return true;
     return localStorage.getItem(CONSENT_STORAGE_KEY) === "true";
   } catch {
     return false;

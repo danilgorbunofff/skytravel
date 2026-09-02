@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 interface Props {
   open: boolean;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function MobileBottomSheet({ open, onClose, title, children }: Props) {
+  const { t } = useLanguage();
   const [translateY, setTranslateY] = useState(100); // percent
   const startY = useRef(0);
   const currentTranslate = useRef(100);
@@ -25,7 +27,9 @@ export function MobileBottomSheet({ open, onClose, title, children }: Props) {
       currentTranslate.current = 100;
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -75,14 +79,12 @@ export function MobileBottomSheet({ open, onClose, title, children }: Props) {
         {title && (
           <div className="bottom-sheet__header">
             <h3>{title}</h3>
-            <button type="button" onClick={onClose} aria-label="Zavřít">
+            <button type="button" onClick={onClose} aria-label={t("sAriaClose")}>
               <X size={20} />
             </button>
           </div>
         )}
-        <div className="bottom-sheet__content">
-          {children}
-        </div>
+        <div className="bottom-sheet__content">{children}</div>
       </div>
     </div>
   );

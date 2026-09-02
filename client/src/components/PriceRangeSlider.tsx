@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { localeForText } from "../lib/locale";
+import { useLanguage } from "../hooks/useLanguage";
 
 interface Props {
   min: number;
@@ -13,6 +15,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Props) {
+  const { t } = useLanguage();
   const [localMin, setLocalMin] = useState(() => clamp(valueMin, min, max));
   const [localMax, setLocalMax] = useState(() => clamp(valueMax, min, max));
   const [pending, setPending] = useState(false);
@@ -44,7 +47,7 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
     return (
       <div className="price-slider price-slider--empty" aria-disabled="true">
         <div className="price-slider__labels">
-          <span>{Number.isFinite(min) ? min.toLocaleString("cs-CZ") : "—"} Kč</span>
+          <span>{Number.isFinite(min) ? min.toLocaleString(localeForText()) : "—"} Kč</span>
         </div>
         <p className="price-slider__empty-note">Cenové rozpětí není dostupné</p>
       </div>
@@ -58,8 +61,8 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
       style={pending ? { opacity: 0.9 } : undefined}
     >
       <div className="price-slider__labels">
-        <span>{localMin.toLocaleString("cs-CZ")} Kč</span>
-        <span>{localMax.toLocaleString("cs-CZ")} Kč</span>
+        <span>{localMin.toLocaleString(localeForText())} Kč</span>
+        <span>{localMax.toLocaleString(localeForText())} Kč</span>
       </div>
       <div className="price-slider__track">
         <input
@@ -68,7 +71,7 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
           max={max}
           step={500}
           value={localMin}
-          aria-label={`Cena od ${localMin.toLocaleString("cs-CZ")} Kč`}
+          aria-label={`${t("sAriaPriceFrom")} ${localMin.toLocaleString(localeForText())} Kč`}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={localMin}
@@ -85,7 +88,7 @@ export function PriceRangeSlider({ min, max, valueMin, valueMax, onChange }: Pro
           max={max}
           step={500}
           value={localMax}
-          aria-label={`Cena do ${localMax.toLocaleString("cs-CZ")} Kč`}
+          aria-label={`${t("sAriaPriceTo")} ${localMax.toLocaleString(localeForText())} Kč`}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={localMax}

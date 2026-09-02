@@ -88,13 +88,13 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Telefon (volitelný)"
+          placeholder={t("sFormPhonePlaceholder")}
           className="tour-inquiry-form__input"
         />
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Poznámka (volitelná)"
+          placeholder={t("sFormNotePlaceholder")}
           className="tour-inquiry-form__textarea"
           rows={3}
         />

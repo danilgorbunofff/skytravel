@@ -78,15 +78,15 @@ export function getTransportLabel(t: (key: TranslationKey) => string): Record<st
   };
 }
 
-export function getBoardLabel(_t: (key: TranslationKey) => string): Record<string, string> {
+export function getBoardLabel(t: (key: TranslationKey) => string): Record<string, string> {
   return {
-    AI: "All Inclusive",
-    UAI: "Ultra All Inclusive",
-    FB: "Plná penze",
-    HB: "Polopenze",
-    BB: "Pouze snídaně",
-    RO: "Bez stravy",
-    SC: "Bez stravy",
+    AI: t("boardAI"),
+    UAI: t("boardUAI"),
+    FB: t("boardFB"),
+    HB: t("boardHB"),
+    BB: t("boardBB"),
+    RO: t("boardRO"),
+    SC: t("boardRO"),
   };
 }
 

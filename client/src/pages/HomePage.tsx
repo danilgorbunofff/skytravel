@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SiteHeader from "../components/SiteHeader";
 import { favorites, heroImages, type OwnTour } from "../data";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
@@ -20,6 +20,7 @@ import { useCookieConsent } from "../hooks/useCookieConsent";
 import { SkipToContent } from "../components/SkipToContent";
 import LeadPopup from "../components/LeadPopup";
 import CookieConsent from "../components/CookieConsent";
+import { AppFooter } from "../components/AppFooter";
 import SearchHero from "../components/home/SearchHero";
 import TourGrid from "../components/home/TourGrid";
 import { ExclusiveTourDetailModal } from "../components/home/ExclusiveTourDetailModal";
@@ -61,11 +62,6 @@ export default function HomePage() {
   const [destinationCounts, setDestinationCounts] = useState<
     Record<string, PublicDestinationSummary>
   >({});
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterConsent, setNewsletterConsent] = useState(false);
-  const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
-  const [newsletterError, setNewsletterError] = useState("");
-
   const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
   const searchTransportRef = useRef<HTMLSelectElement | null>(null);
@@ -350,23 +346,6 @@ export default function HomePage() {
     else setSearchDateEnd(value);
   }
 
-  function handleNewsletterSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!newsletterEmail.trim() || !newsletterEmail.includes("@")) {
-      setNewsletterError(t("modalEmailPlaceholder") || "Zadejte platný e-mail");
-      return;
-    }
-    if (!newsletterConsent) {
-      setNewsletterError("Souhlas se zpracováním je vyžadován.");
-      return;
-    }
-    setNewsletterError("");
-    setNewsletterSubmitted(true);
-    setNewsletterEmail("");
-    setNewsletterConsent(false);
-    // TODO: connect to backend newsletter endpoint
-  }
-
   return (
     <div>
       <SkipToContent />
@@ -379,7 +358,7 @@ export default function HomePage() {
               type="text"
               placeholder={t("searchPlaceholder")}
             />
-            <button type="submit" aria-label="Vyhledat">
+            <button type="submit" aria-label={t("sAriaSearch")}>
               GO
             </button>
           </form>
@@ -394,7 +373,6 @@ export default function HomePage() {
           searchTransportRef={searchTransportRef}
           searchDateStart={searchDateStart}
           searchDateEnd={searchDateEnd}
-          lang={lang}
           isDatePickerOpen={isDatePickerOpen}
           t={t}
           onSearchSubmit={handleSearchSubmit}
@@ -446,7 +424,7 @@ export default function HomePage() {
                   className={`allinc-carousel__arrow allinc-carousel__arrow--left${carouselLeftDisabled ? " is-disabled" : ""}`}
                   onClick={() => scrollCarousel("left")}
                   disabled={carouselLeftDisabled}
-                  aria-label="Předchozí"
+                  aria-label={t("sAriaPrev")}
                 >
                   ‹
                 </button>
@@ -473,7 +451,7 @@ export default function HomePage() {
                   className={`allinc-carousel__arrow allinc-carousel__arrow--right${carouselRightDisabled ? " is-disabled" : ""}`}
                   onClick={() => scrollCarousel("right")}
                   disabled={carouselRightDisabled}
-                  aria-label="Další"
+                  aria-label={t("sAriaNext")}
                 >
                   ›
                 </button>
@@ -503,7 +481,7 @@ export default function HomePage() {
                   href="https://instagram.com/skytravel.cz"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Instagram"
+                  aria-label={t("sAriaInstagram")}
                 >
                   <svg
                     width="20"
@@ -538,7 +516,7 @@ export default function HomePage() {
                   href="https://facebook.com/skytravel.cz"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Facebook"
+                  aria-label={t("sAriaFacebook")}
                 >
                   <svg
                     width="20"
@@ -555,7 +533,7 @@ export default function HomePage() {
                   href="https://tiktok.com/@skytravel.cz"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="TikTok"
+                  aria-label={t("sAriaTikTok")}
                 >
                   <svg
                     width="20"
@@ -598,60 +576,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer id="kontakt" className="footer">
-        <div className="container footer-main">
-          <div>
-            <h4>{t("footerCity")}</h4>
-            <p>SkyTravel</p>
-            <p>Křižíkova 6, Praha</p>
-            <p>
-              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-            </p>
-            <p>{t("footerHours")}</p>
-          </div>
-          <form className="newsletter newsletter--wide" onSubmit={handleNewsletterSubmit}>
-            <h4>{t("footerNewsTitle")}</h4>
-            <input
-              type="email"
-              placeholder={t("modalEmailPlaceholder")}
-              value={newsletterEmail}
-              onChange={(e) => setNewsletterEmail(e.target.value)}
-            />
-            <label>
-              <input
-                type="checkbox"
-                checked={newsletterConsent}
-                onChange={(e) => setNewsletterConsent(e.target.checked)}
-              />{" "}
-              {t("modalConsentGdpr")} <Link to="/gdpr">{t("modalGdprLink")}.</Link>
-            </label>
-            {newsletterError && <p className="newsletter__error">{newsletterError}</p>}
-            {newsletterSubmitted ? (
-              <p className="newsletter__success">{t("footerNewsSuccess")}</p>
-            ) : (
-              <button type="submit">{t("footerNewsBtn")}</button>
-            )}
-          </form>
-        </div>
-
-        <div className="container footer-bottom">
-          <a href="#" className="footer-bottom__link">
-            {t("navContact")}
-          </a>
-          <a href="#" className="footer-bottom__link">
-            {t("f3_1")}
-          </a>
-          <Link to="/gdpr" className="footer-bottom__link">
-            {t("footerGdpr")}
-          </Link>
-          <Link to="/terms" className="footer-bottom__link">
-            {t("footerTerms")}
-          </Link>
-          <span>
-            &copy; <span>{new Date().getFullYear()}</span> SkyTravel
-          </span>
-        </div>
-      </footer>
+      <AppFooter t={t} />
 
       {exclusiveTour && (
         <ExclusiveTourDetailModal tour={exclusiveTour} lang={lang} t={t} onClose={closeModal} />
@@ -697,7 +622,7 @@ export default function HomePage() {
           type="button"
           className="back-to-top"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Zpět nahoru"
+          aria-label={t("sAriaBackToTop")}
         >
           <svg
             width="24"

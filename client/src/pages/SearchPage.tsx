@@ -48,10 +48,11 @@ import {
 } from "../features/search/components";
 import { useRecentSearches } from "../features/search/hooks/useRecentSearches";
 import { CompareTray } from "../features/search/components/CompareTray";
-import { SearchFooter } from "../components/SearchFooter";
+import { AppFooter } from "../components/AppFooter";
 import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
+import { localeForText } from "../lib/locale";
 
 export default function SearchPage() {
   const { t } = useLanguage();
@@ -222,7 +223,7 @@ export default function SearchPage() {
     }
     if (filters.activePriceMin || filters.activePriceMax) {
       chips.push({
-        label: `${t("sChipPrice")}: ${results.priceMin.toLocaleString("cs-CZ")} – ${results.priceMax.toLocaleString("cs-CZ")} Kč`,
+        label: `${t("sChipPrice")}: ${results.priceMin.toLocaleString(localeForText())} – ${results.priceMax.toLocaleString(localeForText())} Kč`,
         onClear: () => filters.updateParams({ priceMin: null, priceMax: null, page: 1 }),
       });
     }
@@ -458,11 +459,11 @@ export default function SearchPage() {
     ? Math.min(results.result.page * results.result.limit, results.result.filtered)
     : 0;
   const totalText = showFavoritesOnly
-    ? `${results.displayedTours.length.toLocaleString("cs-CZ")} ${t("sStateSavedHotels")}`
+    ? `${results.displayedTours.length.toLocaleString(localeForText())} ${t("sStateSavedHotels")}`
     : results.result
       ? !filters.hasUserFilters
         ? t("sBestDealsTitle")
-        : `${t("sStateShown")} ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} ${t("sStateOf")} ${results.result.filtered.toLocaleString("cs-CZ")} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString("cs-CZ")} ${t("sStateTerms")})` : ""}`
+        : `${t("sStateShown")} ${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())} ${t("sStateOf")} ${results.result.filtered.toLocaleString(localeForText())} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString(localeForText())} ${t("sStateTerms")})` : ""}`
       : results.resultsLoading
         ? t("sStateLoading")
         : filters.hasUserFilters
@@ -720,7 +721,7 @@ export default function SearchPage() {
         </div>
       </main>
 
-      <SearchFooter t={t} />
+      <AppFooter t={t} />
 
       <MobileFilterDrawer
         t={t}

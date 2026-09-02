@@ -608,6 +608,11 @@ html[lang="ru"] .logo {
 }
 
 .destination-card {
+  /* width must come from the grid track: with aspect-ratio + min-height the
+     browser derives width from height (300px × 4/3 = 400px) and overflows
+     any column narrower than that. */
+  width: 100%;
+  min-width: 0;
   min-height: 300px;
   border-radius: 16px;
   position: relative;
@@ -814,6 +819,8 @@ html[lang="ru"] .logo {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* long single-word hotel names (e.g. "BlackSeaRama") must wrap, not clip */
+  overflow-wrap: break-word;
   min-height: 2.6em;
   font-size: 1.5rem;
   color: var(--blue-900);
@@ -948,6 +955,27 @@ html[lang="ru"] .logo {
   overflow: visible;
 }
 
+/* Chips need ~850px; the 92vw container overflows below ~950px viewport,
+   so allow horizontal scrolling between the ≤760px rule and 1100px. */
+@media (max-width: 1100px) {
+  .budget-filters {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100%;
+  }
+
+  .budget-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .budget-filters button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
 .budget-indicator {
   position: absolute;
   top: 0.55rem;
@@ -1072,6 +1100,26 @@ html[lang="ru"] .logo {
   pointer-events: none;
 }
 
+/* Mobile: 3 cards per view ≤1024px, 2 ≤768px. Arrows overflow the
+   container via negative margins and are redundant next to touch swipe. */
+@media (max-width: 1024px) {
+  .allinc-carousel__track > .tour-card--grid,
+  .allinc-carousel__skeleton {
+    width: calc((100% - 2rem) / 3);
+  }
+}
+
+@media (max-width: 768px) {
+  .allinc-carousel__arrow {
+    display: none;
+  }
+
+  .allinc-carousel__track > .tour-card--grid,
+  .allinc-carousel__skeleton {
+    width: calc((100% - 1rem) / 2);
+  }
+}
+
 .hotel-card {
   background: #f3f4f7;
   border-radius: 16px;
@@ -1105,9 +1153,12 @@ html[lang="ru"] .logo {
 
 .hotel-topline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  /* narrow cards (favorite-grid span-3) can't fit stars + badge on one line */
+  row-gap: 0.25rem;
   width: 100%;
 }
 
@@ -8221,5 +8272,47 @@ html[lang="ru"] .logo {
   .lang-btn {
     min-height: 42px;
     padding: 0.25rem 0.7rem;
+  }
+}
+
+/* ── Narrow phones: shrink polaroids and let them overlap slightly so the
+      rotated social cards stay inside the viewport. Kept at end of file —
+      must win over the @760 polaroid rule (L~5190). ── */
+@media (max-width: 480px) {
+  .polaroid {
+    width: 130px;
+    height: 155px;
+    padding: 0.35rem 0.35rem 0.5rem;
+  }
+
+  .polaroid img {
+    height: 100px;
+  }
+
+  .polaroid span {
+    padding-top: 0.35rem;
+  }
+
+  .social-cards {
+    gap: 0;
+  }
+
+  .polaroid--alt {
+    margin-left: -22px;
+  }
+}
+
+@media (max-width: 360px) {
+  .polaroid {
+    width: 120px;
+    height: 145px;
+  }
+
+  .polaroid img {
+    height: 92px;
+  }
+
+  .polaroid--alt {
+    margin-left: -26px;
   }
 }

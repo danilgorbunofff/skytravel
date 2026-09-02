@@ -16,7 +16,13 @@ interface Props {
 }
 
 const BOARD_RANK: Record<string, number> = {
-  AI: 6, UAI: 5, FB: 4, HB: 3, BB: 2, RO: 1, SC: 0,
+  AI: 6,
+  UAI: 5,
+  FB: 4,
+  HB: 3,
+  BB: 2,
+  RO: 1,
+  SC: 0,
 };
 
 function findBest(tours: UnifiedTour[], field: "price" | "stars" | "board"): Set<string> {
@@ -34,13 +40,17 @@ function findBest(tours: UnifiedTour[], field: "price" | "stars" | "board"): Set
     case "stars": {
       const max = Math.max(...tours.map((t) => Number(t.stars) || 0));
       if (max === 0) return ids;
-      tours.filter((t) => Number(t.stars) === max).forEach((t) => ids.add(`${t.source}-${t.externalId}`));
+      tours
+        .filter((t) => Number(t.stars) === max)
+        .forEach((t) => ids.add(`${t.source}-${t.externalId}`));
       break;
     }
     case "board": {
       const max = Math.max(...tours.map((t) => BOARD_RANK[t.board] ?? -1));
       if (max < 0) return ids;
-      tours.filter((t) => (BOARD_RANK[t.board] ?? -1) === max).forEach((t) => ids.add(`${t.source}-${t.externalId}`));
+      tours
+        .filter((t) => (BOARD_RANK[t.board] ?? -1) === max)
+        .forEach((t) => ids.add(`${t.source}-${t.externalId}`));
       break;
     }
   }
@@ -54,24 +64,35 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
   const bestStars = findBest(tours, "stars");
   const bestBoard = findBest(tours, "board");
 
-  const cheapest = tours.reduce((min, tour) =>
-    isPlausibleTourPrice(tour.price) && tour.price < (min?.price ?? Infinity) ? tour : min,
+  const cheapest = tours.reduce(
+    (min, tour) =>
+      isPlausibleTourPrice(tour.price) && tour.price < (min?.price ?? Infinity) ? tour : min,
     null as UnifiedTour | null,
   );
 
   return (
     <div className="compare-view">
       <div className="compare-view__header">
-        <h2>Porovnání zájezdů</h2>
+        <h2>{t("sCompareTitle")}</h2>
         <div className="compare-view__header-actions">
-          <button type="button" onClick={onClear}>Vymazat vše</button>
-          <button type="button" className="compare-view__close" onClick={onClose} aria-label="Zavřít">
+          <button type="button" onClick={onClear}>
+            {t("sCompareClearAll")}
+          </button>
+          <button
+            type="button"
+            className="compare-view__close"
+            onClick={onClose}
+            aria-label={t("sAriaClose")}
+          >
             <X size={20} />
           </button>
         </div>
       </div>
 
-      <div className="compare-view__grid" style={{ gridTemplateColumns: `repeat(${tours.length}, 1fr)` }}>
+      <div
+        className="compare-view__grid"
+        style={{ gridTemplateColumns: `repeat(${tours.length}, 1fr)` }}
+      >
         {/* Card headers */}
         {tours.map((tour) => {
           const id = `${tour.source}-${tour.externalId}`;
@@ -81,7 +102,13 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
                 src={tour.image || "/placeholder-tour.svg"}
                 alt={tour.title}
                 className="compare-view__image"
-                onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; } }}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  if (!img.dataset.fallback) {
+                    img.dataset.fallback = "1";
+                    img.src = "/placeholder-tour.svg";
+                  }
+                }}
               />
               <h3>{tour.title}</h3>
               <p>{tour.destination}</p>
@@ -97,11 +124,12 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         })}
 
         {/* Price row */}
-        <div className="compare-view__row-label">Cena</div>
+        <div className="compare-view__row-label">{t("sCompareRowPrice")}</div>
         {tours.map((tour) => {
           const id = `${tour.source}-${tour.externalId}`;
           const isBest = bestPrice.has(id);
-          const diff = cheapest && isPlausibleTourPrice(tour.price) ? tour.price - cheapest.price : 0;
+          const diff =
+            cheapest && isPlausibleTourPrice(tour.price) ? tour.price - cheapest.price : 0;
           return (
             <div key={id} className={`compare-view__cell${isBest ? " is-best" : ""}`}>
               <strong>{isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : "–"}</strong>
@@ -112,7 +140,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         })}
 
         {/* Dates row */}
-        <div className="compare-view__row-label">Termín</div>
+        <div className="compare-view__row-label">{t("sOfferSortDate")}</div>
         {tours.map((tour) => (
           <div key={`${tour.source}-${tour.externalId}`} className="compare-view__cell">
             {fmtDate(tour.startDate)} – {fmtDate(tour.endDate)}
@@ -120,7 +148,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         ))}
 
         {/* Nights row */}
-        <div className="compare-view__row-label">Nocí</div>
+        <div className="compare-view__row-label">{t("sCompareRowNights")}</div>
         {tours.map((tour) => (
           <div key={`${tour.source}-${tour.externalId}`} className="compare-view__cell">
             {tour.nights ?? "–"}
@@ -128,7 +156,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         ))}
 
         {/* Board row */}
-        <div className="compare-view__row-label">Strava</div>
+        <div className="compare-view__row-label">{t("sCompareRowBoard")}</div>
         {tours.map((tour) => {
           const id = `${tour.source}-${tour.externalId}`;
           const isBest = bestBoard.has(id);
@@ -141,7 +169,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         })}
 
         {/* Transport row */}
-        <div className="compare-view__row-label">Doprava</div>
+        <div className="compare-view__row-label">{t("sCompareRowTransport")}</div>
         {tours.map((tour) => (
           <div key={`${tour.source}-${tour.externalId}`} className="compare-view__cell">
             {transportLabels[tour.transport] ?? tour.transport}
@@ -149,7 +177,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         ))}
 
         {/* Stars row */}
-        <div className="compare-view__row-label">Hvězdy</div>
+        <div className="compare-view__row-label">{t("sCompareRowStars")}</div>
         {tours.map((tour) => {
           const id = `${tour.source}-${tour.externalId}`;
           const isBest = bestStars.has(id);
@@ -162,10 +190,17 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
         })}
 
         {/* Actions row */}
-        <div className="compare-view__row-label">Akce</div>
+        <div className="compare-view__row-label">{t("sCompareRowAction")}</div>
         {tours.map((tour) => (
-          <div key={`${tour.source}-${tour.externalId}`} className="compare-view__cell compare-view__cell--actions">
-            <button type="button" className="compare-view__detail-btn" onClick={() => onOpenDetail(tour)}>
+          <div
+            key={`${tour.source}-${tour.externalId}`}
+            className="compare-view__cell compare-view__cell--actions"
+          >
+            <button
+              type="button"
+              className="compare-view__detail-btn"
+              onClick={() => onOpenDetail(tour)}
+            >
               <ArrowRight size={14} /> Detail
             </button>
           </div>

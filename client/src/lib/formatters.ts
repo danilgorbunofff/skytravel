@@ -4,9 +4,11 @@
  * and admin/public surfaces stay consistent.
  */
 
+import { formatDate } from "./locale";
+
 export function fmtDate(value: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("cs-CZ");
+  return Number.isNaN(date.getTime()) ? value : formatDate(value);
 }
 
 export function starsDisplay(value: string | number | undefined | null): string {

@@ -2,6 +2,7 @@ import type { Favorite } from "../../data";
 import type { PublicDestinationSummary } from "../../types/providers";
 import type { TranslationKey } from "../../hooks/useLanguage";
 import { formatPrice } from "../../utils";
+import { localeForText } from "../../lib/locale";
 
 interface Props {
   favorites: Favorite[];
@@ -10,12 +11,7 @@ interface Props {
   t: (key: TranslationKey) => string;
 }
 
-export default function FavoriteDestinations({
-  favorites,
-  destinationCounts,
-  onClick,
-  t,
-}: Props) {
+export default function FavoriteDestinations({ favorites, destinationCounts, onClick, t }: Props) {
   return (
     <section id="destinace" className="section section-white">
       <div className="container">
@@ -41,7 +37,12 @@ export default function FavoriteDestinations({
                   </span>
                   {liveCount > 0 && (
                     <span className="favorite-card__count">
-                      {liveCount.toLocaleString("cs-CZ")} termínů
+                      {liveCount.toLocaleString(localeForText())}{" "}
+                      {liveCount === 1
+                        ? t("sTermsCountOne")
+                        : liveCount < 5
+                          ? t("sTermsCountFew")
+                          : t("sTermsCountMany")}
                     </span>
                   )}
                 </div>

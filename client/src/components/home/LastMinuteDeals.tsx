@@ -6,6 +6,7 @@ import { formatPrice } from "../../utils";
 import { EmptyState } from "../EmptyState";
 import { Skeleton } from "../Skeleton";
 import StarRating from "../StarRating";
+import { formatDate } from "../../lib/locale";
 
 interface Props {
   lastMinuteItems: AlexandriaLastMinuteItem[];
@@ -26,7 +27,7 @@ function formatRange(start: string, end: string): string {
     const s = new Date(start);
     const e = new Date(end);
     if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "";
-    const fmt = (d: Date) => d.toLocaleDateString("cs-CZ", { day: "2-digit", month: "2-digit" });
+    const fmt = (d: Date) => formatDate(d, { day: "2-digit", month: "2-digit" });
     return `${fmt(s)} – ${fmt(e)}`;
   } catch {
     return "";

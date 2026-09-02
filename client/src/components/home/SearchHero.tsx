@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import type { TranslationKey } from "../../hooks/useLanguage";
+import { formatDate } from "../../lib/locale";
 
 interface Props {
   heroImages: string[];
@@ -8,7 +9,6 @@ interface Props {
   searchTransportRef: Ref<HTMLSelectElement>;
   searchDateStart: string;
   searchDateEnd: string;
-  lang: string;
   isDatePickerOpen: boolean;
   t: (key: TranslationKey) => string;
   onSearchSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -24,7 +24,6 @@ export default function SearchHero({
   searchTransportRef,
   searchDateStart,
   searchDateEnd,
-  lang,
   isDatePickerOpen,
   t,
   onSearchSubmit,
@@ -32,8 +31,7 @@ export default function SearchHero({
   onDateChange,
   onNavClick,
 }: Props) {
-  const dateLocale = lang === "en" ? "en-US" : "cs-CZ";
-  const displayDate = `${new Date(searchDateStart).toLocaleDateString(dateLocale)} – ${new Date(searchDateEnd).toLocaleDateString(dateLocale)}`;
+  const displayDate = `${formatDate(searchDateStart)} – ${formatDate(searchDateEnd)}`;
 
   return (
     <section id="home" className="hero">

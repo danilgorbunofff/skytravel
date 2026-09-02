@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
+import { getLocale } from "../../../lib/locale";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -17,7 +18,7 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
 
   const sorted = [...destinations].sort((a, b) => {
     if (a.count !== b.count) return b.count - a.count;
-    return a.czechName.localeCompare(b.czechName, "cs-CZ");
+    return a.czechName.localeCompare(b.czechName, getLocale());
   });
 
   const COLLAPSED = 6;

@@ -17,20 +17,24 @@ export function useLeadPopup() {
       if (cancelled || !enabled) return;
       timer = window.setTimeout(() => setShowLeadPopup(true), 5000);
     };
-    fetch(`${API_URL}/api/site-settings`, { credentials: "omit" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body: unknown) => {
-        const enabled = (body as { data?: { leadPopupEnabled?: boolean } } | null)?.data
-          ?.leadPopupEnabled;
-        const effective =
-          typeof enabled === "boolean"
-            ? enabled
-            : localStorage.getItem("leadPopupEnabled") !== "false";
-        scheduleIfEnabled(effective);
-      })
-      .catch(() => {
-        scheduleIfEnabled(localStorage.getItem("leadPopupEnabled") !== "false");
-      });
+    // Disabled in dev so popups never interrupt local design review; prod unaffected.
+    scheduleIfEnabled(false);
+    if (!import.meta.env.DEV) {
+      fetch(`${API_URL}/api/site-settings`, { credentials: "omit" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body: unknown) => {
+          const enabled = (body as { data?: { leadPopupEnabled?: boolean } } | null)?.data
+            ?.leadPopupEnabled;
+          const effective =
+            typeof enabled === "boolean"
+              ? enabled
+              : localStorage.getItem("leadPopupEnabled") !== "false";
+          scheduleIfEnabled(effective);
+        })
+        .catch(() => {
+          scheduleIfEnabled(localStorage.getItem("leadPopupEnabled") !== "false");
+        });
+    }
     return () => {
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
@@ -46,6 +50,7 @@ export function useLeadPopup() {
 
     let cancelled = false;
     const API_URL = import.meta.env.VITE_API_URL || "";
+    // Disabled in dev so popups never interrupt local design review; prod unaffected.
     const armIfEnabled = (enabled: boolean) => {
       if (cancelled || !enabled) return;
       const attach = () => {
@@ -65,20 +70,22 @@ export function useLeadPopup() {
       }
     };
 
-    fetch(`${API_URL}/api/site-settings`, { credentials: "omit" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body: unknown) => {
-        const enabled = (body as { data?: { leadPopupEnabled?: boolean } } | null)?.data
-          ?.leadPopupEnabled;
-        const effective =
-          typeof enabled === "boolean"
-            ? enabled
-            : localStorage.getItem("leadPopupEnabled") !== "false";
-        armIfEnabled(effective);
-      })
-      .catch(() => {
-        armIfEnabled(localStorage.getItem("leadPopupEnabled") !== "false");
-      });
+    if (!import.meta.env.DEV) {
+      fetch(`${API_URL}/api/site-settings`, { credentials: "omit" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body: unknown) => {
+          const enabled = (body as { data?: { leadPopupEnabled?: boolean } } | null)?.data
+            ?.leadPopupEnabled;
+          const effective =
+            typeof enabled === "boolean"
+              ? enabled
+              : localStorage.getItem("leadPopupEnabled") !== "false";
+          armIfEnabled(effective);
+        })
+        .catch(() => {
+          armIfEnabled(localStorage.getItem("leadPopupEnabled") !== "false");
+        });
+    }
 
     return () => {
       cancelled = true;

@@ -1,5 +1,6 @@
 import { fmtDate } from "../../../lib/formatters";
 import type { TranslationKey } from "../../../hooks/useLanguage";
+import { localeForText } from "../../../lib/locale";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -9,7 +10,13 @@ interface Props {
   filteredCount: number | null;
 }
 
-export function StickySearchBar({ t, visible, activeQuery, activeDateStart, filteredCount }: Props) {
+export function StickySearchBar({
+  t,
+  visible,
+  activeQuery,
+  activeDateStart,
+  filteredCount,
+}: Props) {
   return (
     <div className={`sticky-search-bar${visible ? " is-visible" : ""}`}>
       <div className="container sticky-search-bar__inner">
@@ -26,7 +33,7 @@ export function StickySearchBar({ t, visible, activeQuery, activeDateStart, filt
         </button>
         {filteredCount !== null && (
           <span className="sticky-search-bar__count">
-            {filteredCount.toLocaleString("cs-CZ")} {t("sStickyOffers")}
+            {filteredCount.toLocaleString(localeForText())} {t("sStickyOffers")}
           </span>
         )}
       </div>

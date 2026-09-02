@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { UnifiedTour } from "../types/providers";
 import { formatPrice } from "../utils";
+import { useLanguage } from "../hooks/useLanguage";
 
 interface Props {
   tour: UnifiedTour;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function PriceAlertModal({ tour, onClose }: Props) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [priceMax, setPriceMax] = useState(Math.ceil(tour.price * 0.9));
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -37,19 +39,24 @@ export function PriceAlertModal({ tour, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" type="button" onClick={onClose} aria-label="Zavřít">
+        <button
+          className="modal-close"
+          type="button"
+          onClick={onClose}
+          aria-label={t("sModalClose")}
+        >
           ✕
         </button>
-        <h2>🔔 Upozornit na slevu</h2>
+        <h2>🔔 {t("sPriceAlertTitle")}</h2>
         <p className="modal-subtitle">{tour.title}</p>
         {status === "done" ? (
           <p className="alert-success">
-            ✓ Zaregistrováno! Pošleme vám email, jakmile cena klesne pod {formatPrice(priceMax)}.
+            ✓ {t("sPriceAlertDone")} {formatPrice(priceMax)}
           </p>
         ) : (
           <form onSubmit={submit}>
             <label>
-              Váš email
+              {t("sModalEmailLabel")}
               <input
                 type="email"
                 value={email}
@@ -59,7 +66,7 @@ export function PriceAlertModal({ tour, onClose }: Props) {
               />
             </label>
             <label>
-              Upozornit při ceně pod (Kč)
+              {t("sPriceAlertLabel")}
               <input
                 type="number"
                 min={1}
@@ -68,9 +75,9 @@ export function PriceAlertModal({ tour, onClose }: Props) {
                 required
               />
             </label>
-            {status === "error" && <p className="alert-error">Chyba. Zkuste to prosím znovu.</p>}
+            {status === "error" && <p className="alert-error">{t("modalError")}</p>}
             <button type="submit" disabled={status === "loading"} className="btn-primary">
-              {status === "loading" ? "Ukládám…" : "Zaregistrovat upozornění"}
+              {status === "loading" ? t("sPriceAlertSaving") : t("sPriceAlertSubmit")}
             </button>
           </form>
         )}
