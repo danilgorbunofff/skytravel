@@ -377,9 +377,21 @@ html[lang="ru"] .logo {
 }
 
 .hero-search__icon {
-  color: #1fa8f9;
-  font-size: 1.35rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a4ea3;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.hero-search__icon--chev {
+  color: #6f7d94;
+  margin-left: -2px;
+}
+
+.hero-search__icon svg {
+  display: block;
 }
 
 .search-popover {
@@ -8314,5 +8326,873 @@ html[lang="ru"] .logo {
 
   .polaroid--alt {
     margin-left: -26px;
+  }
+}
+
+/* =======================================================================
+   HOME — Mobile Excellence Pass (designer + frontend lead)
+   Targets: 430 (iPhone Pro Max in screenshots), 390, 375. Does not
+   touch desktop. Every rule is scoped to max-width to avoid regression.
+   ======================================================================= */
+
+/* ── 0. Fluid container & section rhythm on phones ── */
+@media (max-width: 768px) {
+  .container {
+    width: min(1340px, 94vw);
+  }
+
+  .section {
+    padding: 1.35rem 0;
+  }
+
+  .section-head {
+    margin-bottom: 0.9rem;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.65rem, 7vw, 2.05rem);
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+
+  .section-subtitle {
+    margin-top: 0.35rem;
+    font-size: 0.98rem;
+    line-height: 1.35;
+  }
+}
+
+/* ── 1. Header — compact, airy, no crowding at 430 ── */
+@media (max-width: 768px) {
+  .site-header {
+    backdrop-filter: saturate(1.1) blur(8px);
+    -webkit-backdrop-filter: saturate(1.1) blur(8px);
+  }
+
+  .header-top {
+    min-height: 56px;
+    padding: 0.45rem 0;
+    gap: 0.5rem;
+  }
+
+  .logo {
+    font-size: 1.9rem;
+    letter-spacing: -0.02em;
+  }
+
+  .mobile-header-actions {
+    gap: 0.55rem;
+  }
+
+  .lang-toggle {
+    gap: 0.15rem;
+    padding: 0.18rem;
+    background: #eef3ff;
+    border: 1px solid #dde8ff;
+  }
+
+  .lang-btn {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    font-size: 0.95rem;
+    padding: 0;
+  }
+
+  .lang-btn.is-active {
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(37, 79, 153, 0.16);
+  }
+
+  .hamburger {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #f1f6ff;
+    border: 1px solid #dde8ff;
+    color: var(--blue-900);
+  }
+
+  /* Drawer — premium sheet, not a bare dropdown */
+  .site-nav-wrapper {
+    top: calc(100% + 1px);
+    background: #fff;
+    padding: 1.1rem 0 1.25rem;
+    border-radius: 0 0 16px 16px;
+    box-shadow:
+      0 18px 40px rgba(15, 35, 80, 0.14),
+      0 2px 10px rgba(15, 35, 80, 0.08);
+    border: 1px solid #e6eefb;
+    border-top: 0;
+    max-height: calc(100dvh - 56px);
+    max-height: calc(100vh - 56px);
+    animation: drawer-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .site-nav-wrapper.is-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(11, 23, 52, 0.36);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: -1;
+  }
+
+  .site-nav-inner {
+    gap: 0.35rem;
+  }
+
+  .mobile-contact {
+    margin-bottom: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid #eef3ff;
+    width: 100%;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--blue-900);
+  }
+
+  .mobile-contact a {
+    color: var(--blue-700);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .main-nav {
+    width: 100%;
+    gap: 0;
+    font-size: 1.22rem;
+    font-weight: 800;
+  }
+
+  .main-nav a {
+    width: 100%;
+    text-align: center;
+    padding: 0.95rem 1rem;
+    border-radius: 12px;
+  }
+
+  .main-nav a:hover,
+  .main-nav a.is-active {
+    background: #f1f6ff;
+    color: var(--blue-900);
+    transform: none;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 390px) {
+  .logo {
+    font-size: 1.7rem;
+  }
+
+  .lang-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .hamburger {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ── 2. Hero — readable, contrast-rich, tighter hierarchy ── */
+@media (max-width: 768px) {
+  .hero {
+    min-height: auto;
+    padding-bottom: 0;
+  }
+
+  .hero__overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 32, 72, 0.55) 0%,
+        rgba(13, 32, 72, 0.18) 42%,
+        rgba(13, 32, 72, 0.42) 100%
+      ),
+      linear-gradient(180deg, transparent 56%, rgba(8, 22, 52, 0.28) 100%);
+  }
+
+  .hero__content {
+    padding-top: 28px;
+    padding-bottom: 18px;
+    text-align: left;
+  }
+
+  .hero__content h1 {
+    font-size: clamp(1.9rem, 8.2vw, 2.35rem);
+    line-height: 0.92;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.22);
+  }
+
+  .hero__content p {
+    margin-top: 0.55rem;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.22);
+    max-width: 32ch;
+  }
+
+  .hero__btn {
+    margin-top: 1rem;
+    font-size: 1.05rem;
+    padding: 0.62rem 1.15rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.98);
+    color: var(--blue-900);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  }
+
+  .hero__btn:hover {
+    background: #fff;
+    filter: none;
+    transform: translateY(-1px);
+  }
+
+  .hero-search-wrap {
+    margin-top: 14px;
+    padding-bottom: 18px;
+  }
+
+  .hero-search {
+    background: #123d8c;
+    border-radius: 18px;
+    padding: 0.52rem;
+    padding-bottom: 0.52rem;
+    box-shadow:
+      0 16px 40px rgba(8, 22, 52, 0.28),
+      0 2px 10px rgba(8, 22, 52, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .hero-search__fields {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .hero-search__fields--three {
+    gap: 0;
+  }
+
+  .hero-search__item {
+    min-height: 72px;
+    padding: 0.68rem 0.85rem 0.72rem;
+    border-right: 0;
+    border-bottom: 1px solid #e7eef8;
+  }
+
+  .hero-search__item:last-child {
+    border-bottom: 0;
+  }
+
+  .hero-search label {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: #123d8c;
+    opacity: 0.95;
+  }
+
+  .hero-search__control {
+    margin-top: 0.22rem;
+    gap: 0.5rem;
+  }
+
+  .hero-search input,
+  .hero-search select {
+    font-size: 16px;
+    min-height: 28px;
+    color: #223147;
+    font-weight: 600;
+  }
+
+  .hero-search input::placeholder {
+    color: #8ea0bf;
+    font-weight: 500;
+  }
+
+  .hero-search select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: none;
+    padding-right: 0;
+  }
+
+  .hero-search__icon {
+    opacity: 0.9;
+  }
+
+  .hero-search__icon--chev {
+    opacity: 0.55;
+  }
+
+  .hero-search__footer {
+    min-height: auto;
+    padding-top: 0.52rem;
+    justify-content: stretch;
+  }
+
+  .hero-search__footer button {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    border-radius: 12px;
+    font-size: 1.18rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  }
+
+  .hero-search__footer button:hover {
+    transform: translateY(-1px);
+    filter: none;
+  }
+
+  .search-popover {
+    left: 0;
+    right: 0;
+    transform: none;
+    width: auto;
+    margin: 0 0.5rem;
+    animation: popover-in-mobile 180ms ease;
+  }
+
+  @keyframes popover-in-mobile {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ── 3. "Vybrali jsme pro vás" — true peek carousel, not a clipped grid ── */
+@media (max-width: 768px) {
+  #vlastni.section {
+    padding-bottom: 0.9rem;
+  }
+
+  .exclusive-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 3vw;
+    padding: 0.15rem 3vw 0.75rem;
+    margin: 0 -3vw;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .exclusive-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .exclusive-row > * {
+    flex: 0 0 78%;
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+
+  .destination-card {
+    height: 240px;
+    border-radius: 16px;
+    box-shadow: 0 10px 22px rgba(18, 44, 94, 0.14);
+  }
+
+  .destination-card__body {
+    inset: auto 0.85rem 0.85rem;
+    width: auto;
+  }
+
+  .destination-card h3 {
+    font-size: 1.45rem;
+    line-height: 1;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
+  }
+
+  .destination-card__meta {
+    margin-top: 0.55rem;
+  }
+
+  .price-pill {
+    padding: 0.38rem 0.7rem;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+  }
+}
+
+@media (max-width: 390px) {
+  .exclusive-row > * {
+    flex-basis: 84%;
+  }
+}
+
+/* ── 4. Last Minute — remove massive outer gutters, fix card rhythm ── */
+@media (max-width: 768px) {
+  .section-soft {
+    background: #eaf0f9;
+  }
+
+  .last-minute-card {
+    padding: 0.9rem 0.75rem 0.85rem;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #174ea9 0%, #123d8c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 14px 30px rgba(18, 44, 94, 0.18);
+  }
+
+  .last-minute-card h3 {
+    font-size: 1.55rem;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.02em;
+  }
+
+  .lm-carousel {
+    margin: 0 -0.25rem;
+  }
+
+  .lm-track {
+    gap: 0.75rem;
+    padding: 0.15rem 0.35rem 0.35rem;
+    scroll-padding-inline: 0.35rem;
+  }
+
+  .lm-slide {
+    gap: 0.75rem;
+  }
+
+  .lm-card {
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(18, 44, 94, 0.12);
+    border: 1px solid #eef3ff;
+  }
+
+  .lm-card__photo {
+    aspect-ratio: 16 / 9.2;
+  }
+
+  .lm-card__body {
+    padding: 0.75rem 0.75rem 0.7rem;
+    gap: 0.15rem;
+  }
+
+  .lm-card__body h3 {
+    font-size: 1.12rem;
+    line-height: 1.15;
+    min-height: 0;
+    -webkit-line-clamp: 2;
+    margin-top: 0.25rem;
+  }
+
+  .hotel-topline {
+    gap: 0.4rem;
+  }
+
+  .hotel-board-badge {
+    font-size: 0.68rem;
+    padding: 0.18rem 0.5rem;
+  }
+
+  .hotel-meta {
+    font-size: 0.88rem;
+    margin-top: 0.15rem;
+  }
+
+  .hotel-info {
+    margin-top: 0.35rem;
+    padding-bottom: 0.5rem;
+    gap: 0.3rem;
+    font-size: 0.88rem;
+  }
+
+  .hotel-price {
+    font-size: 1.45rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 10px;
+  }
+
+  .hotel-price__original {
+    font-size: 0.78rem;
+    margin-left: 0.35rem;
+  }
+}
+
+/* ── 5. All-Inclusive — filter pills + carousel polish ── */
+@media (max-width: 768px) {
+  .section-blue {
+    background: #eaf0f9;
+  }
+
+  .budget-filters {
+    margin-top: 0.75rem;
+    margin-bottom: 0.85rem;
+    padding: 0.32rem;
+    gap: 0.32rem;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e6eefb;
+    box-shadow: 0 6px 16px rgba(18, 44, 94, 0.08);
+    scroll-padding-inline: 0.32rem;
+  }
+
+  .budget-filters button {
+    padding: 0.5rem 0.72rem;
+    font-size: 0.92rem;
+    border-radius: 10px;
+    background: #eef4ff;
+  }
+
+  .budget-indicator {
+    top: 0.32rem;
+    height: calc(100% - 0.64rem);
+    border-radius: 10px;
+  }
+
+  .allinc-carousel {
+    margin: 0 -3vw;
+    padding: 0 3vw;
+  }
+
+  .allinc-carousel__track {
+    gap: 0.75rem;
+    padding: 0.15rem 0 0.6rem;
+    scroll-padding-inline: 3vw;
+  }
+
+  .allinc-carousel__track > .tour-card--grid,
+  .allinc-carousel__skeleton {
+    width: 78%;
+    flex-basis: 78%;
+  }
+
+  /* tour-card polish inside this carousel (mobile only) */
+  .allinc-carousel .tour-card--grid {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #eef3ff;
+    box-shadow: 0 10px 22px rgba(18, 44, 94, 0.12);
+  }
+
+  .allinc-carousel .tour-card__image {
+    aspect-ratio: 16 / 10;
+  }
+
+  .allinc-carousel .tour-card__body {
+    padding: 0.7rem 0.7rem 0.75rem;
+  }
+
+  .allinc-carousel .tour-card__title {
+    font-size: 1.02rem;
+    line-height: 1.2;
+  }
+
+  .allinc-carousel .tour-card__price strong {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .allinc-carousel__track > .tour-card--grid,
+  .allinc-carousel__skeleton {
+    width: 84%;
+    flex-basis: 84%;
+  }
+}
+
+/* ── 6. Oblíbené destinace — 2-col stays but breathing + readability ── */
+@media (max-width: 768px) {
+  #destinace.section {
+    padding-top: 1.2rem;
+  }
+
+  .favorite-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 168px;
+    gap: 0.6rem;
+  }
+
+  .favorite-grid .favorite-card {
+    grid-column: span 1 !important;
+    min-height: 0;
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(18, 44, 94, 0.12);
+  }
+
+  .favorite-card::after {
+    background: linear-gradient(180deg, transparent 28%, rgba(14, 39, 85, 0.72) 72%);
+  }
+
+  .favorite-card__body {
+    inset: auto 0.7rem 0.6rem;
+  }
+
+  .favorite-card h3 {
+    font-size: 1.22rem;
+    line-height: 1;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+  }
+
+  .favorite-card .price-pill {
+    margin-top: 0.4rem;
+    padding: 0.32rem 0.55rem;
+    font-size: 1.02rem;
+    border-radius: 9px;
+  }
+
+  .favorite-card__count {
+    display: block;
+    margin-top: 0.32rem;
+    margin-left: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@media (max-width: 390px) {
+  .favorite-grid {
+    grid-auto-rows: 152px;
+    gap: 0.5rem;
+  }
+
+  .favorite-card h3 {
+    font-size: 1.08rem;
+  }
+}
+
+/* ── 7. Social banner — stack cleanly, polaroids stay in-frame ── */
+@media (max-width: 768px) {
+  .section-social {
+    background: #f6f7f9;
+    padding: 1.1rem 0;
+  }
+
+  .social-banner {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: 16px;
+    min-height: auto;
+    text-align: left;
+  }
+
+  .social-banner h3 {
+    font-size: 1.55rem;
+    line-height: 0.95;
+    text-wrap: balance;
+  }
+
+  .social-banner p {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.96);
+  }
+
+  .social-buttons {
+    margin-top: 0.75rem;
+    gap: 0.45rem;
+  }
+
+  .social-buttons a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    background: #f3d43b;
+    color: #123d8c;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+  }
+
+  .social-cards {
+    justify-content: center;
+    padding: 0.2rem 0 0.35rem;
+    gap: 0;
+  }
+
+  .polaroid {
+    width: 148px;
+    height: 168px;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .polaroid img {
+    height: 112px;
+    border-radius: 7px;
+  }
+
+  .polaroid span {
+    font-size: 0.82rem;
+    padding-top: 0.4rem;
+  }
+}
+
+/* ── 8. Footer — newsletter & kontakt polish (fixes screenshot 6/7 wrapping) ── */
+@media (max-width: 768px) {
+  .footer {
+    padding: 1.1rem 0 max(1rem, env(safe-area-inset-bottom));
+    background: #eef3fa;
+  }
+
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .footer-main h4 {
+    font-size: 1.55rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-main p {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin-bottom: 0.22rem;
+    color: #2f4771;
+  }
+
+  .footer-main p a {
+    color: #123d8c;
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .newsletter--wide {
+    max-width: none;
+  }
+
+  .newsletter input[type="email"] {
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1px solid #d7e0ee;
+    padding: 0 0.9rem;
+    font-size: 16px;
+    box-shadow: 0 2px 10px rgba(18, 44, 94, 0.06);
+  }
+
+  .newsletter label {
+    align-items: flex-start;
+    gap: 0.6rem;
+    min-height: auto;
+    padding: 0.2rem 0 0.15rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    flex-wrap: nowrap;
+  }
+
+  .newsletter label a {
+    color: #123d8c;
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
+    font-weight: 700;
+  }
+
+  .newsletter input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 0.18rem;
+    flex-shrink: 0;
+  }
+
+  .newsletter button {
+    width: auto;
+    min-width: 118px;
+    min-height: 44px;
+    margin-top: 0.7rem;
+    padding: 0.62rem 1rem;
+    border-radius: 12px;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 14px rgba(18, 44, 94, 0.14);
+  }
+
+  .newsletter__error,
+  .newsletter__success {
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .footer-bottom {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    gap: 0.55rem 0.9rem;
+    border-top: 1px solid #d2ddf0;
+    font-size: 0.88rem;
+  }
+
+  .footer-bottom__link {
+    padding: 0.15rem 0;
+    text-underline-offset: 0.18em;
+  }
+
+  .footer-bottom span {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 0.15rem;
+    color: #5a6f90;
+    font-size: 0.84rem;
+    border-top: 1px solid #e6eefb;
+    margin-top: 0.15rem;
+  }
+}
+
+/* ── 9. Back-to-top FAB — safe-area, not overlapping content ── */
+@media (max-width: 768px) {
+  .back-to-top {
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  }
+}
+
+/* ── 10. Reduced motion stays respectful ── */
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .site-nav-wrapper,
+  .hero__btn,
+  .destination-card,
+  .lm-card,
+  .tour-card--grid {
+    transition: none !important;
+    animation: none !important;
   }
 }

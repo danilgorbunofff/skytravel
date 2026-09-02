@@ -1,4 +1,5 @@
 import type { Ref } from "react";
+import { MapPin, CalendarDays, Plane, ChevronDown } from "lucide-react";
 import type { TranslationKey } from "../../hooks/useLanguage";
 import { formatDate } from "../../lib/locale";
 
@@ -73,7 +74,9 @@ export default function SearchHero({
                   type="text"
                   placeholder={t("searchPlaceholder")}
                 />
-                <span className="hero-search__icon">📍</span>
+                <span className="hero-search__icon" aria-hidden="true">
+                  <MapPin size={18} />
+                </span>
               </div>
             </div>
             <div
@@ -90,7 +93,9 @@ export default function SearchHero({
                   readOnly
                   style={{ pointerEvents: "none" }}
                 />
-                <span className="hero-search__icon">📅</span>
+                <span className="hero-search__icon" aria-hidden="true">
+                  <CalendarDays size={18} />
+                </span>
               </div>
               {isDatePickerOpen && (
                 <div className="search-popover" onClick={(e) => e.stopPropagation()}>
@@ -125,7 +130,12 @@ export default function SearchHero({
                   <option value="bus">{t("transportBus")}</option>
                   <option value="car">{t("transportOwn")}</option>
                 </select>
-                <span className="hero-search__icon">✈</span>
+                <span className="hero-search__icon" aria-hidden="true">
+                  <Plane size={18} />
+                </span>
+                <span className="hero-search__icon hero-search__icon--chev" aria-hidden="true">
+                  <ChevronDown size={16} />
+                </span>
               </div>
             </div>
           </div>
