@@ -779,14 +779,18 @@ html[lang="ru"] .logo {
   flex: 0 0 50%;
   min-width: 0;
   overflow: hidden;
+  position: relative;
 }
 
+/* Photo must follow card height, never drive it — otherwise a
+   natural-ratio image in a wide single-card slide inflates the card. */
 .lm-card__photo img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  min-height: 200px;
 }
 
 .lm-card__img-fallback {
@@ -904,8 +908,7 @@ html[lang="ru"] .logo {
   }
 
   .lm-card__photo img {
-    min-height: 0;
-    height: 200px;
+    height: 100%;
   }
 
   .lm-nav {
