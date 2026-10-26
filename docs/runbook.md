@@ -2,16 +2,16 @@
 
 ## Server Details
 
-| Property | Value |
-|---|---|
-| **Host** | `167.233.47.103` |
-| **User** | `root` (default; overridable via `SSH_USER`) |
-| **SSH key** | `ssh-key-new.key` (repo root) |
-| **Remote path** | `/home/ubuntu/skytravel` |
-| **Process manager** | PM2 (`ecosystem.config.cjs`) |
-| **Processes** | `skytravel-api` (port 4000), `skytravel-ui` (port 4173) |
-| **Database** | MySQL 8.4, local |
-| **Memory limit** | API: 450MB, UI: 256MB |
+| Property            | Value                                                   |
+| ------------------- | ------------------------------------------------------- |
+| **Host**            | `167.233.47.103`                                        |
+| **User**            | `root` (default; overridable via `SSH_USER`)            |
+| **SSH key**         | `ssh-key-new.key` (repo root)                           |
+| **Remote path**     | `/home/ubuntu/skytravel`                                |
+| **Process manager** | PM2 (`ecosystem.config.cjs`)                            |
+| **Processes**       | `skytravel-api` (port 4000), `skytravel-ui` (port 4173) |
+| **Database**        | MySQL 8.4, local                                        |
+| **Memory limit**    | API: 450MB, UI: 256MB                                   |
 
 ---
 
@@ -178,6 +178,7 @@ Response (503 — database down):
 ```
 
 The readiness endpoint checks:
+
 1. Database connectivity (`SELECT 1`)
 2. External API reachability (Alexandria, best-effort HEAD request)
 3. Memory usage (warning if > 400MB RSS)
@@ -188,19 +189,19 @@ The readiness endpoint checks:
 
 ## Common Issues
 
-| Symptom | Likely Cause | Fix |
-|---|---|---|
-| API not responding | Process crashed / OOM killed | `pm2 restart skytravel-api` → check logs |
-| UI loads but API errors | Backend process issue | `curl http://localhost:4000/api/health` → check `pm2 logs skytravel-api` |
-| MySQL connection error | Database process down | `systemctl status mysql` → `systemctl restart mysql` |
-| Memory spike (>450MB) | Memory leak or large dataset | `pm2 monit` → identify from logs → restart |
-| Deploy failed on CI | Network issue / build error | Check GitHub Actions log → fix → re-run workflow |
-| Provider sync stuck | API timeout / rate limit | Reset via admin UI or `UPDATE ProviderSync SET status='idle'` |
-| Disk full | Old backups / logs accumulating | `df -h` → clean backups → configure log rotation |
-| "Too many connections" DB error | Connection pool exhausted | Check `pm2 logs skytravel-api` for slow queries → restart API |
-| Search returning empty results | Cache stale / provider not synced | Trigger manual sync from admin UI |
-| Admin login fails | Session secret changed / DB seeded wrong | Verify `SESSION_SECRET` consistency → check AdminUser table |
-| CSRF token errors | Session expired | Re-login to admin panel |
+| Symptom                         | Likely Cause                             | Fix                                                                      |
+| ------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| API not responding              | Process crashed / OOM killed             | `pm2 restart skytravel-api` → check logs                                 |
+| UI loads but API errors         | Backend process issue                    | `curl http://localhost:4000/api/health` → check `pm2 logs skytravel-api` |
+| MySQL connection error          | Database process down                    | `systemctl status mysql` → `systemctl restart mysql`                     |
+| Memory spike (>450MB)           | Memory leak or large dataset             | `pm2 monit` → identify from logs → restart                               |
+| Deploy failed on CI             | Network issue / build error              | Check GitHub Actions log → fix → re-run workflow                         |
+| Provider sync stuck             | API timeout / rate limit                 | Reset via admin UI or `UPDATE ProviderSync SET status='idle'`            |
+| Disk full                       | Old backups / logs accumulating          | `df -h` → clean backups → configure log rotation                         |
+| "Too many connections" DB error | Connection pool exhausted                | Check `pm2 logs skytravel-api` for slow queries → restart API            |
+| Search returning empty results  | Cache stale / provider not synced        | Trigger manual sync from admin UI                                        |
+| Admin login fails               | Session secret changed / DB seeded wrong | Verify `SESSION_SECRET` consistency → check AdminUser table              |
+| CSRF token errors               | Session expired                          | Re-login to admin panel                                                  |
 
 ---
 
@@ -331,13 +332,13 @@ pm2 startup
 
 ## Monitoring
 
-| Tool | Purpose | Access |
-|---|---|---|
-| **PM2** | Process health, restart, logs | `pm2 monit`, `pm2 status` |
-| **Health endpoint** | Liveness + readiness | `GET /api/health`, `GET /api/health/ready` |
-| **GitHub Actions** | CI/CD pipeline status | GitHub repo → Actions tab |
-| **Sentry** (optional) | Error tracking | Requires `SENTRY_DSN` env var |
-| **Log rotation** | Prevent disk full | `pm2 install pm2-logrotate` |
+| Tool                  | Purpose                       | Access                                     |
+| --------------------- | ----------------------------- | ------------------------------------------ |
+| **PM2**               | Process health, restart, logs | `pm2 monit`, `pm2 status`                  |
+| **Health endpoint**   | Liveness + readiness          | `GET /api/health`, `GET /api/health/ready` |
+| **GitHub Actions**    | CI/CD pipeline status         | GitHub repo → Actions tab                  |
+| **Sentry** (optional) | Error tracking                | Requires `SENTRY_DSN` env var              |
+| **Log rotation**      | Prevent disk full             | `pm2 install pm2-logrotate`                |
 
 ### Set Up Log Rotation (one-time)
 
@@ -370,6 +371,7 @@ bash scripts/deploy-remote.sh
 ```
 
 The deploy script (same as CI) performs:
+
 1. `git fetch origin main` + `git reset --hard origin/main`
 2. `npm ci --legacy-peer-deps`
 3. `prisma generate` + `tsc` (server build)

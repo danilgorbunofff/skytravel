@@ -2,46 +2,34 @@
 
 ## System Overview
 
-```
-┌──────────────┐       ┌──────────────────────────────────────┐
-│   Browser    │──────>│           Hetzner VPS                │
-│ (React SPA)  │       │  167.233.47.103                      │
-└──────────────┘       │                                      │
-                       │  ┌─────────────┐  ┌──────────────┐   │
-                       │  │  PM2:       │  │  PM2:        │   │
-                       │  │ skytravel-ui│  │skytravel-api │   │
-                       │  │ :4173       │  │ :4000        │   │
-                       │  │ (Vite       │  │ (Express 4 + │   │
-                        │  │  preview)   │  │  Prisma 7)   │   │
-                       │  └──────┬──────┘  └──────┬───────┘   │
-                       │         │                │           │
-                       │         │                ▼           │
-                       │         │         ┌──────────┐      │
-                       │         │         │  LRU     │      │
-                       │         │         │  Cache   │      │
-                       │         │         │(2000entry)│     │
-                       │         │         └──────────┘      │
-                       │         │                │           │
-                       │         ▼                ▼           │
-                       │  ┌─────────────────────────────┐     │
-                       │  │         MySQL 8.4            │     │
-                       │  │   (local, skytravel DB)      │     │
-                       │  └─────────────────────────────┘     │
-                       │                                      │
-                       │         ┌──────────────────┐         │
-                       │         │ Provider Registry │         │
-                       │         │ (in-process Map)  │         │
-                       │         └────────┬─────────┘         │
-                       │                  │                   │
-                       │     ┌────────────┼────────────┐      │
-                       │     ▼            ▼             │      │
-                       │  Alexandria                │      │
-                       │  (XML feed)                │      │
-                       │     │                      │      │
-                       ▼     ▼                      ▼      │
-                 External External             ───────┘
-                 APIs     APIs
-                 (Alexandria export)
+```mermaid
+flowchart LR
+    subgraph Browser
+        SPA["React SPA"]
+        ADMIN["Admin SPA<br/>(lazy-loaded)"]
+    end
+
+    subgraph VPS["Hetzner VPS · nginx (TLS)"]
+        UI["PM2: skytravel-ui<br/>Vite preview :4173"]
+        API["PM2: skytravel-api<br/>Express :4000"]
+        CACHE["LRU search cache<br/>2000 entries · single-flight"]
+        REG["Provider registry<br/>in-process Map"]
+        DB[("MySQL 8.4<br/>skytravel DB")]
+        BOT["PM2: skytravel-bots<br/>:3005"]
+        BLOG["SSR blog renderer<br/>Markdown → HTML"]
+    end
+
+    UI -->|serves| SPA
+    SPA -->|"/api/*"| API
+    ADMIN -->|"/api/admin/*"| API
+    BOT --> DB
+    API --> CACHE
+    API --> BLOG
+    API --> REG
+    API --> DB
+    BLOG --> DB
+    REG --> ALEX["Alexandria<br/>XML export feed"]
+    SPA -.->|"/blog"| BLOG
 ```
 
 **Production architecture**: Hetzner VPS → nginx reverse proxy (SSL termination) → services on ports 4000 (API) and 4173 (UI) via PM2. Both apps are managed by PM2 with `wait_ready` protocol.

@@ -8,7 +8,6 @@ SkyTravel aggregates tours from external travel providers via their APIs. Each p
 | ------------ | ---------- | --------------- | --------------------- |
 | `alexandria` | Alexandria | XML export feed | API key (query param) |
 
-
 ## Provider Contract
 
 Every provider must implement the `TourProvider` interface from `server/src/providers/types.ts`:
@@ -35,42 +34,8 @@ interface TourProvider {
 
 ## Adding a New Provider
 
-1. **Create the provider file:**
-
-   ```
-   server/src/providers/newProvider.ts
-   ```
-
-2. **Implement the `TourProvider` interface.** Key methods:
-   - `fetchTours()` — main search, must return normalized `UnifiedTour[]`
-   - `getRegions()` — return available destinations/regions
-   - `warmCache()` — pre-load data on startup
-   - `getCacheStatus()` — return current cache info
-
-3. **Register in `server/src/providers/registry.ts`:**
-
-   ```typescript
-   import { NewProvider } from "./newProvider.js";
-   registerProvider(new NewProvider());
-   ```
-
-4. **Add config keys to `server/src/config.ts`:**
-
-   ```typescript
-   newProvider: {
-     url: process.env.NEW_PROVIDER_URL || "",
-     token: process.env.NEW_PROVIDER_TOKEN || "",
-   },
-   ```
-
-5. **Update `.env.example`** with the new variables.
-
-6. **Add destination mappings** via admin UI or migration (link provider regions to canonical Destinations).
-
-7. **Test:**
-   ```bash
-   npm --workspace server run test
-   ```
+See [provider-guide.md](provider-guide.md) for the full walkthrough: interface contract,
+config wiring, destination mapping, and a mock-provider test harness.
 
 ## Alexandria
 

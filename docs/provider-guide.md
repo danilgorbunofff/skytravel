@@ -10,10 +10,10 @@ Every provider must implement the `TourProvider` interface from `server/src/prov
 
 ```typescript
 interface TourProvider {
-  readonly id: string;                  // Unique provider key (e.g., "alexandria")
-  readonly label: string;               // Human-readable name (e.g., "Alexandria")
-  readonly supportsStreaming: boolean;  // SSE streaming support
-  readonly refreshIntervalMs: number;   // Background refresh interval
+  readonly id: string; // Unique provider key (e.g., "alexandria")
+  readonly label: string; // Human-readable name (e.g., "Alexandria")
+  readonly supportsStreaming: boolean; // SSE streaming support
+  readonly refreshIntervalMs: number; // Background refresh interval
 
   getRegions(filters?: UnifiedFilters): Promise<ProviderRegion[]>;
   getProviderFilters(): FilterFieldDescriptor[];
@@ -29,6 +29,7 @@ interface TourProvider {
 ```
 
 You don't need to implement every method from scratch. The `BaseProvider` abstract class (`server/src/providers/BaseProvider.ts`) provides shared implementations for:
+
 - `syncToDb()` — per-instance mutex, delegates to `_syncToDbImpl()`
 - `fetchOfferGroup()` — returns all offers in a group by key
 - `streamTours()` — default paginated batch delivery
@@ -57,7 +58,10 @@ Extend `BaseProvider` and implement the required abstract members:
 // server/src/providers/newProvider.ts
 import { BaseProvider, type TourQuery } from "./BaseProvider.js";
 import type {
-  UnifiedFilters, ToursResult, ProviderRegion, FilterFieldDescriptor,
+  UnifiedFilters,
+  ToursResult,
+  ProviderRegion,
+  FilterFieldDescriptor,
 } from "./types.js";
 
 export class NewProvider extends BaseProvider {
@@ -103,19 +107,26 @@ export class NewProvider extends BaseProvider {
       // Grouped search (dedup by title+destination)
       const query = this.buildQuery(filters);
       return this.fetchGroupedByOffer(
-        query.where, query.sortBy, query.sortDir,
-        query.page, query.limit, query.nightsRange,
+        query.where,
+        query.sortBy,
+        query.sortDir,
+        query.page,
+        query.limit,
+        query.nightsRange,
         filters.omitHeavy,
       );
     }
     // Ungrouped search (individual offers)
     const query = this.buildQuery(filters);
     const [rows, total] = await Promise.all([
-      prisma.providerTour.findMany({ where: query.where, /* ... */ }),
+      prisma.providerTour.findMany({ where: query.where /* ... */ }),
       prisma.providerTour.count({ where: query.where }),
     ]);
     return {
-      total, filtered: total, page: query.page, limit: query.limit,
+      total,
+      filtered: total,
+      page: query.page,
+      limit: query.limit,
       totalPages: Math.ceil(total / query.limit),
       items: rows.map((r) => this.rowToUnified(r)),
     };
@@ -132,8 +143,12 @@ export class NewProvider extends BaseProvider {
     for (const tour of tours) {
       await prisma.providerTour.upsert({
         where: { source_externalId: { source: this.id, externalId: tour.externalId } },
-        create: { /* map tour fields */ },
-        update: { /* map tour fields */ },
+        create: {
+          /* map tour fields */
+        },
+        update: {
+          /* map tour fields */
+        },
       });
     }
 
@@ -163,10 +178,10 @@ Edit `server/src/providers/index.ts`:
 ```typescript
 import { registerProvider } from "./registry.js";
 import { AlexandriaProvider } from "./alexandriaProvider.js";
-import { NewProvider } from "./newProvider.js";           // ← ADD
+import { NewProvider } from "./newProvider.js"; // ← ADD
 
 registerProvider(new AlexandriaProvider());
-registerProvider(new NewProvider());                      // ← ADD
+registerProvider(new NewProvider()); // ← ADD
 
 export * from "./types.js";
 export { registerProvider, getProvider, getAllProviders } from "./registry.js";
@@ -254,14 +269,14 @@ When adding a new provider, add both the `Destination` entry and the `Destinatio
 
 The `offerGrouping.ts` module provides utilities for deduplicating tours:
 
-| Function | Purpose |
-|---|---|
-| `buildOfferGroupKey(row)` | Creates a normalized key from `source + title + destination` |
-| `groupOfferRows(rows)` | Groups rows by key, picks best representative (lowest price, then earliest date) |
-| `countOfferGroupsBy(rows, getBucketKey)` | Counts distinct groups per bucket |
-| `sortOfferGroups(groups, sortBy, sortDir)` | Sorts groups by price or date |
-| `sortOfferRows(rows, sortBy, sortDir)` | Sorts individual rows by price or date |
-| `normalizeOfferText(value)` | Strip diacritics, lowercase, collapse whitespace |
+| Function                                   | Purpose                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| `buildOfferGroupKey(row)`                  | Creates a normalized key from `source + title + destination`                     |
+| `groupOfferRows(rows)`                     | Groups rows by key, picks best representative (lowest price, then earliest date) |
+| `countOfferGroupsBy(rows, getBucketKey)`   | Counts distinct groups per bucket                                                |
+| `sortOfferGroups(groups, sortBy, sortDir)` | Sorts groups by price or date                                                    |
+| `sortOfferRows(rows, sortBy, sortDir)`     | Sorts individual rows by price or date                                           |
+| `normalizeOfferText(value)`                | Strip diacritics, lowercase, collapse whitespace                                 |
 
 Use `this.fetchGroupedByOffer()` from `BaseProvider` if you want standard grouping behavior. Set `filters.groupResults = true` to enable grouping in search.
 
@@ -322,7 +337,10 @@ Minimal implementation for a new provider:
 import { BaseProvider, type TourQuery } from "./BaseProvider.js";
 import prisma from "../prisma.js";
 import type {
-  UnifiedFilters, ToursResult, ProviderRegion, FilterFieldDescriptor,
+  UnifiedFilters,
+  ToursResult,
+  ProviderRegion,
+  FilterFieldDescriptor,
 } from "./types.js";
 
 export class MyProvider extends BaseProvider {
@@ -353,15 +371,31 @@ export class MyProvider extends BaseProvider {
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
     if (filters.groupResults) {
       const q = this.buildQuery(filters);
-      return this.fetchGroupedByOffer(q.where, q.sortBy, q.sortDir, q.page, q.limit, q.nightsRange, filters.omitHeavy);
+      return this.fetchGroupedByOffer(
+        q.where,
+        q.sortBy,
+        q.sortDir,
+        q.page,
+        q.limit,
+        q.nightsRange,
+        filters.omitHeavy,
+      );
     }
     const q = this.buildQuery(filters);
     const [rows, total] = await Promise.all([
-      prisma.providerTour.findMany({ where: q.where, orderBy: { price: "asc" }, skip: (q.page - 1) * q.limit, take: q.limit }),
+      prisma.providerTour.findMany({
+        where: q.where,
+        orderBy: { price: "asc" },
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
       prisma.providerTour.count({ where: q.where }),
     ]);
     return {
-      total, filtered: total, page: q.page, limit: q.limit,
+      total,
+      filtered: total,
+      page: q.page,
+      limit: q.limit,
       totalPages: Math.ceil(total / q.limit),
       items: rows.map((r) => this.rowToUnified(r)),
       uniqueDestinations: 0,
@@ -370,7 +404,13 @@ export class MyProvider extends BaseProvider {
 
   protected async _syncToDbImpl(): Promise<void> {
     // TODO: fetch from external API, parse, upsert into ProviderTour
-    this._cacheStatusSnapshot = { lastRefresh: Date.now(), ttl: this.refreshIntervalMs, itemCount: 0, warm: true, syncing: false };
+    this._cacheStatusSnapshot = {
+      lastRefresh: Date.now(),
+      ttl: this.refreshIntervalMs,
+      itemCount: 0,
+      warm: true,
+      syncing: false,
+    };
   }
 }
 ```
@@ -379,7 +419,8 @@ export class MyProvider extends BaseProvider {
 
 ## Existing Providers Reference
 
-| Provider | ID | Data Format | Auth | Regions | Cache |
-|---|---|---|---|---|---|
+| Provider       | ID           | Data Format     | Auth                  | Regions                  | Cache                  |
+| -------------- | ------------ | --------------- | --------------------- | ------------------------ | ---------------------- |
 | **Alexandria** | `alexandria` | XML export feed | API key (query param) | Single-level (`zeme` ID) | LRU, warmed on startup |
+
 See `server/src/providers/alexandriaProvider.ts` for full implementation.
