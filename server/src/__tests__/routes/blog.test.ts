@@ -6,7 +6,7 @@
  * or Prisma client is needed to serve them.
  */
 
-import { describe, it, before } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import express, { type Express } from "express";
 import request from "supertest";
@@ -15,6 +15,7 @@ import sitemapRouter from "../../routes/sitemap.xml.js";
 import { listIndexableTags, listPublishedPosts } from "../../blog/loader.js";
 import { listDestinationHubs } from "../../blog/loader.js";
 import { AUTHORS } from "../../blog/authors.js";
+import prisma from "../../prisma.js";
 
 let app: Express;
 
@@ -22,6 +23,12 @@ before(() => {
   app = express();
   app.use("/blog", blogRouter);
   app.use(sitemapRouter);
+});
+
+// The sitemap router pulls in the Prisma client, whose pool keeps the event
+// loop alive forever; without this the `node --test` worker never exits.
+after(async () => {
+  await prisma.$disconnect();
 });
 
 const newest = () => {
