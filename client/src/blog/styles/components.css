@@ -180,19 +180,39 @@ a.kicker:hover {
 
 .grid {
   display: grid;
-  gap: 34px 28px;
+  gap: 30px 26px;
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* A card is a sheet: white surface, hairline border, one soft shadow. The
+   resting shadow is barely visible so a 3-up grid does not read as a row of
+   floating boxes; the lift happens on hover/focus instead. */
 .card {
   display: grid;
   align-content: start;
-  gap: 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(15, 29, 46, 0.05),
+    0 14px 26px -20px rgba(15, 29, 46, 0.32);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.card:hover,
+.card:focus-within {
+  transform: translateY(-3px);
+  border-color: #c6d7ec;
+  box-shadow: var(--shadow);
 }
 
 .card__media {
   overflow: hidden;
-  border-radius: var(--radius);
+  border-radius: 0; /* clipped by the card surface */
   background: var(--blue-50);
   aspect-ratio: 3 / 2;
 }
@@ -214,8 +234,9 @@ a.kicker:hover {
 
 .card__body {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   align-content: start;
+  padding: 18px 18px 20px;
 }
 
 .card__title {

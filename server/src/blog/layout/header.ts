@@ -15,7 +15,7 @@ function navLinks(active: NavKey): string {
   ).join("");
 }
 
-const SEARCH_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>`;
+const SEARCH_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>`;
 
 /**
  * Blog chrome. The mobile menu is a native <details> element, so navigation

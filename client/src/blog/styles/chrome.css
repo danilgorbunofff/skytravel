@@ -94,18 +94,15 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--line);
   border-radius: var(--pill);
-  color: var(--muted);
+  color: var(--blue-900);
   transition:
     color 140ms ease,
-    border-color 140ms ease,
     background 140ms ease;
 }
 
 .head-search:hover {
   color: var(--blue-800);
-  border-color: var(--blue-100);
   background: var(--blue-50);
 }
 

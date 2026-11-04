@@ -63,4 +63,9 @@
   .faq__item {
     break-inside: avoid;
   }
+
+  /* The hairline border keeps the card outline on paper; the shadow would mud. */
+  .card {
+    box-shadow: none;
+  }
 }
