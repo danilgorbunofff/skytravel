@@ -1,0 +1,53 @@
+/* SkyTravel blog — design tokens.
+   Mirrors the product tokens in client/src/site.css so the blog reads as the
+   same site, then adds an editorial layer: a wider type scale, hairline rules
+   and one restrained elevation level. */
+
+:root {
+  /* Brand */
+  --blue-900: #123d8c;
+  --blue-800: #1b4da8;
+  --blue-700: #2666cb;
+  --blue-100: #d3e2f5;
+  --blue-50: #eaf1fb;
+  --yellow: #f3d43b;
+  --bg: #eef3fa;
+  --white: #ffffff;
+  --line: #d7e0ee;
+
+  /* Text — every value below is >= 4.5:1 on both --white and --bg. */
+  --text: #223147; /* 13.1:1 on white */
+  --muted: #526173; /*  6.4:1 on white, 5.6:1 on --bg */
+  --faint: #6b778b; /*  4.7:1 on white — decorative only */
+  --ink: #0f1d2e;
+  --line-strong: #b9c7dc;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --pill: 999px;
+
+  /* Elevation — one level, used sparingly */
+  --shadow: 0 18px 34px -22px rgba(15, 29, 46, 0.4);
+
+  /* Type */
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --fs-display: clamp(2.35rem, 1.6rem + 3.2vw, 3.9rem);
+  --fs-h1: clamp(2rem, 1.5rem + 1.9vw, 2.9rem);
+  --fs-h2: clamp(1.45rem, 1.2rem + 0.8vw, 1.8rem);
+  --fs-h3: 1.2rem;
+  --fs-lead: clamp(1.05rem, 1rem + 0.25vw, 1.15rem);
+  --fs-body: 1rem;
+  --fs-prose: 1.1875rem;
+  --fs-sm: 0.875rem;
+  --fs-xs: 0.8125rem;
+
+  /* Rhythm */
+  --gap: 24px;
+  --gap-lg: 40px;
+  --section: clamp(48px, 6vw, 88px);
+  --container: 1160px;
+  --measure: 68ch;
+}

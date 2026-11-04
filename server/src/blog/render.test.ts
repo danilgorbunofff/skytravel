@@ -1,370 +1,319 @@
-import { describe, it } from "node:test";
+import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import {
-  escapeHtml,
-  renderArticlePage,
-  renderListPage,
-  renderHubPage,
-  renderDestinationsIndexPage,
-  renderNotFoundPage,
-  renderRss,
-} from "./render.js";
-import type { BlogPost, BlogPostMeta } from "./types.js";
+  blogStats,
+  getPublishedPost,
+  getTag,
+  listDestinationHubs,
+  listPostsByTag,
+  listPublishedPosts,
+  resetBlogCache,
+} from "./loader.js";
+import { renderArticlePage } from "./pages/article.js";
+import { renderIndexPage } from "./pages/index.js";
+import { renderHubPage } from "./pages/hub.js";
+import { renderDestinationsPage } from "./pages/destinations.js";
+import { renderTagPage } from "./pages/tag.js";
+import { renderAuthorPage } from "./pages/author.js";
+import { renderAboutPage } from "./pages/about.js";
+import { renderSearchPage } from "./pages/search.js";
+import { renderNotFoundPage } from "./pages/notFound.js";
+import { renderRss } from "./pages/feed.js";
+import { escapeHtml, jsonLdScript, plural, readingLabel } from "./html.js";
 
-const meta = (overrides: Partial<BlogPostMeta> = {}): BlogPostMeta => ({
-  slug: "test-clanek",
-  title: "Testovací článek",
-  description: "Krátký popisek článku.",
-  destinationCzechName: "Řecko",
-  tags: ["Řecko"],
-  publishedAt: "2026-03-01",
-  updatedAt: null,
-  draft: false,
-  coverImage: null,
-  readingMinutes: 4,
-  ...overrides,
-});
+/** Strip tags so assertions describe what a reader actually sees. */
+function text(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/<style[\s\S]*?<\/style>/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-const fullPost = (html = "<p>Ahoj světe.</p>"): BlogPost => ({
-  ...meta(),
-  html,
-});
+function jsonLd(html: string): unknown[] {
+  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(
+    (match) => JSON.parse(match[1]),
+  );
+}
 
-describe("escapeHtml", () => {
-  it("escapes HTML-special characters", () => {
+function attribute(html: string, selector: RegExp): string | null {
+  return html.match(selector)?.[1] ?? null;
+}
+
+/** Contracts every page shares. */
+function expectPageBasics(
+  html: string,
+  { canonical, robots }: { canonical: string; robots?: RegExp },
+) {
+  assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1, "exactly one h1 per page");
+  assert.equal(attribute(html, /<html lang="([^"]+)"/), "cs");
+  const robotsValue = attribute(html, /<meta name="robots" content="([^"]+)"/);
+  assert.ok(robotsValue);
+  assert.match(robotsValue, robots ?? /^index, follow/);
+  if ((robots ?? /^index/).source.startsWith("^index")) {
+    assert.equal(attribute(html, /<link rel="canonical" href="([^"]+)"/), canonical);
+  } else {
     assert.equal(
-      escapeHtml(`<script>"x" & '</script>`),
-      "&lt;script&gt;&quot;x&quot; &amp; &#39;&lt;/script&gt;",
+      html.includes('rel="canonical"'),
+      false,
+      "noindex pages must not declare a canonical",
     );
+  }
+  assert.match(
+    attribute(html, /<meta name="viewport" content="([^"]+)"/) ?? "",
+    /width=device-width/,
+  );
+  assert.ok(attribute(html, /<meta name="description" content="([^"]+)"/), "meta description");
+  assert.match(html, /<link rel="alternate" type="application\/rss\+xml"/, "RSS alternate link");
+  assert.match(html, /href="\/blog\/"/, "links back to the blog hub");
+  assert.ok(!html.includes("undefined"), "no undefined leaked into the markup");
+  assert.ok(!html.includes("[object Object]"), "no stringified object leaked into the markup");
+}
+
+let articleSlug: string;
+
+before(() => {
+  resetBlogCache();
+  articleSlug = listPublishedPosts()[0].slug;
+});
+
+describe("blog hub", () => {
+  it("lists the newest articles with pagination metadata", () => {
+    const html = renderIndexPage(1);
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/" });
+    const posts = listPublishedPosts();
+    assert.match(text(html), new RegExp(posts[0].title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(text(html), /člán/);
+    assert.ok(jsonLd(html).length >= 2, "hub should publish blog and breadcrumb JSON-LD");
+  });
+
+  it("numbers pages past the first and keeps them self-canonical", () => {
+    const html = renderIndexPage(2);
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/page/2/" });
+    assert.match(text(html), /Strana 2 z \d+/);
+  });
+
+  it("counts articles and destinations honestly", () => {
+    const stats = blogStats();
+    const html = text(renderIndexPage(1));
+    assert.ok(html.includes(plural(stats.postCount, "článek", "články", "článků")));
   });
 });
 
-describe("renderArticlePage", () => {
-  const page = renderArticlePage({ post: fullPost(), relatedPosts: [] });
-
-  it("renders lang=cs document with title", () => {
-    assert.ok(page.startsWith("<!DOCTYPE html>"));
-    assert.ok(page.includes('<html lang="cs">'));
-    assert.ok(page.includes("Testovací článek"));
-  });
-
-  it("emits canonical URL", () => {
-    assert.ok(
-      page.includes('<link rel="canonical" href="https://sky-travel.tours/blog/test-clanek/"'),
-    );
-  });
-
-  it("escapes title in head and body", () => {
-    const hostile = renderArticlePage({
-      post: { ...fullPost("<p>x</p>"), title: `<img src=x onerror=alert(1)>` },
-      relatedPosts: [],
+describe("article page", () => {
+  it("renders the full editorial layout", () => {
+    resetBlogCache();
+    const post = getPublishedPost(articleSlug);
+    assert.ok(post);
+    const html = renderArticlePage(post);
+    expectPageBasics(html, {
+      canonical: `https://sky-travel.tours/blog/${post.slug}/`,
+      robots: /^index, follow/,
     });
-    assert.ok(!hostile.includes("<img src=x"));
-    assert.ok(hostile.includes("&lt;img"));
+
+    const visible = text(html);
+    assert.ok(visible.includes(post.title));
+    assert.ok(visible.includes(post.description));
+    assert.ok(visible.includes(post.author.name));
+    assert.equal(visible.includes("undefined"), false);
+
+    // Editorial furniture.
+    assert.match(html, /class="facts"/, "key facts block");
+    assert.equal((html.match(/class="facts__row"/g) ?? []).length, post.keyFacts.length);
+    assert.match(html, /faq/, "FAQ section");
+    for (const item of post.faq) assert.ok(visible.includes(item.question));
+    assert.match(html, /class="toc/, "table of contents");
+    assert.match(html, /related/, "related articles");
+    assert.ok(attribute(html, /datetime="(\d{4}-\d{2}-\d{2})"/), "machine-readable date");
+    assert.ok(visible.includes(readingLabel(post.readingMinutes)));
+
+    // Imagery: explicit dimensions prevent layout shift, alt text is mandatory.
+    const images = [...html.matchAll(/<img\b[^>]*>/g)].map((match) => match[0]);
+    assert.ok(images.length >= 1);
+    for (const tag of images) {
+      assert.match(tag, /width="\d+"/, `missing width on ${tag}`);
+      assert.match(tag, /height="\d+"/, `missing height on ${tag}`);
+      assert.match(tag, /alt="[^"]+"/, `missing alt on ${tag}`);
+      assert.match(tag, /decoding="async"/, `missing decoding hint on ${tag}`);
+    }
+    // The lead image is the LCP element: eager + high priority, everything else lazy.
+    assert.match(images[0], /loading="eager"/);
+    assert.match(images[0], /fetchpriority="high"/);
+    for (const tag of images.slice(1)) assert.match(tag, /loading="lazy"/);
+    assert.match(html, /<link rel="preload" as="image"/, "hero should be preloaded");
+
+    // Structured data must parse and describe an Article.
+    const data = jsonLd(html);
+    assert.ok(data.length >= 2);
+    const article = data.find(
+      (entry): entry is Record<string, unknown> =>
+        typeof entry === "object" &&
+        entry !== null &&
+        (entry as { "@type"?: string })["@type"] === "Article",
+    );
+    assert.ok(article, "Article JSON-LD");
+    assert.equal(article.headline, post.title);
+    assert.equal(article.datePublished, post.publishedAt);
+    assert.equal(article.wordCount, post.wordCount);
+    assert.ok(Array.isArray(article.image) && (article.image as string[]).length > 0);
+    assert.ok(data.some((entry) => JSON.stringify(entry).includes("BreadcrumbList")));
+    assert.ok(data.some((entry) => JSON.stringify(entry).includes("FAQPage")));
   });
 
-  it("includes BlogPosting JSON-LD without raw angle brackets in script", () => {
-    assert.ok(page.includes("application/ld+json"));
-    assert.ok(page.includes('"@type":"BlogPosting"'));
-    const ldBlocks = page.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) ?? [];
-    for (const block of ldBlocks) {
-      const body = block.replace(/<[^>]+>/g, "");
-      assert.ok(!/[<>]/.test(body), `raw < or > inside JSON-LD: ${body.slice(0, 80)}`);
+  it("shows an update date only when the article was revised", () => {
+    const updated = listPublishedPosts().find((post) => post.updatedAt);
+    assert.ok(updated);
+    const original = getPublishedPost(updated.slug);
+    assert.ok(original);
+    const withUpdate = renderArticlePage(original);
+    const withoutUpdate = renderArticlePage({ ...original, updatedAt: null });
+    assert.ok(text(withUpdate).includes("Aktualizováno"));
+    assert.ok(!text(withoutUpdate).includes("Aktualizováno"));
+  });
+
+  it("escapes untrusted frontmatter in the markup", () => {
+    const post = getPublishedPost(articleSlug);
+    assert.ok(post);
+    const hostile = renderArticlePage({ ...post, title: '<script>alert("x")</script>' });
+    assert.ok(!hostile.includes('<script>alert("x")</script>'));
+    assert.ok(hostile.includes("&lt;script&gt;"));
+  });
+
+  it("does not leak the raw markdown into the readme-visible text", () => {
+    const post = getPublishedPost(articleSlug);
+    assert.ok(post);
+    const visible = text(renderArticlePage(post));
+    assert.ok(!visible.includes("## "), "unrendered heading marker");
+    assert.ok(!visible.includes("]("), "unrendered markdown link");
+    assert.ok(!visible.includes("**"), "unrendered bold marker");
+  });
+});
+
+describe("destination pages", () => {
+  it("renders the destination index", () => {
+    const html = renderDestinationsPage();
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/destinace/" });
+    const visible = text(html);
+    for (const hub of listDestinationHubs()) {
+      assert.ok(visible.includes(hub.czechName), `${hub.slug} missing from the index`);
+      assert.ok(html.includes(`/blog/destinace/${hub.slug}/`));
     }
   });
 
-  it("marks up article metadata with time elements", () => {
-    assert.ok(page.includes('<time datetime="2026-03-01">'));
+  it("renders one hub per destination with its articles", () => {
+    for (const hub of listDestinationHubs()) {
+      const html = renderHubPage(hub, 1);
+      expectPageBasics(html, { canonical: `https://sky-travel.tours/blog/destinace/${hub.slug}/` });
+      const visible = text(html);
+      assert.ok(visible.includes(hub.czechName));
+      assert.ok(visible.includes(plural(hub.count, "článek", "články", "článků")));
+    }
+  });
+});
+
+describe("tag and author pages", () => {
+  it("renders an indexable tag page", () => {
+    const tag = getTag("plaze");
+    assert.ok(tag);
+    const html = renderTagPage(tag, 1);
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/tema/plaze/" });
+    assert.ok(text(html).includes(tag.name));
+    assert.equal((html.match(/class="card"/g) ?? []).length > 0, true);
+    assert.ok(html.includes(`/blog/${listPostsByTag("plaze")[0].slug}/`));
   });
 
-  it("links the destination hub badge", () => {
-    assert.ok(page.includes("/blog/destinace/recko/"));
+  it("renders the editorial desk page", () => {
+    const html = renderAuthorPage("redakce");
+    assert.ok(html);
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/autor/redakce/" });
+    assert.ok(text(html).includes("Redakce SkyTravel"));
+    assert.equal(renderAuthorPage("nikdo"), null);
+  });
+});
+
+describe("about, search and 404", () => {
+  it("explains the editorial policy and links the byline", () => {
+    const html = renderAboutPage();
+    expectPageBasics(html, { canonical: "https://sky-travel.tours/blog/o-blogu/" });
+    const visible = text(html);
+    assert.ok(visible.includes("Redakce"));
+    assert.ok(html.includes("/blog/autor/redakce/"));
   });
 
-  it("shows search CTA with destination deep-link", () => {
-    assert.ok(page.includes("/search?destinationSlug=recko"));
-  });
-
-  it("renders related posts when provided", () => {
-    const withRelated = renderArticlePage({
-      post: fullPost(),
-      relatedPosts: [meta({ slug: "dalsi-clanek", title: "Další článek" })],
+  it("marks search results as non-indexable", () => {
+    const empty = renderSearchPage("");
+    expectPageBasics(empty, {
+      canonical: "https://sky-travel.tours/blog/hledat/",
+      robots: /^noindex/,
     });
-    assert.ok(withRelated.includes("/blog/dalsi-clanek/"));
-    assert.ok(withRelated.includes("Další článek"));
+    const found = renderSearchPage("chorvatsko");
+    expectPageBasics(found, {
+      canonical: "https://sky-travel.tours/blog/hledat/",
+      robots: /^noindex/,
+    });
+    assert.ok(text(found).includes("Chorvatsko"));
+    assert.match(text(found), /pro „chorvatsko“/);
+    // Empty query is a landing state: suggestions, not an error.
+    assert.ok(text(empty).includes("Zkuste některé z témat"));
+    assert.ok(!text(empty).includes("Nic jsme nenašli"));
+    // A single character is too broad to be useful — say so explicitly.
+    assert.ok(text(renderSearchPage("a")).includes("Zadejte alespoň dva znaky"));
   });
 
-  it("renders prev/next article navigation when provided", () => {
-    const withNav = renderArticlePage({
-      post: fullPost(),
-      relatedPosts: [],
-      prevPost: meta({ slug: "starsi-clanek", title: "Starší článek" }),
-      nextPost: meta({ slug: "novejsi-clanek", title: "Novější článek" }),
-    });
-    assert.ok(withNav.includes("/blog/starsi-clanek/"));
-    assert.ok(withNav.includes("/blog/novejsi-clanek/"));
-    assert.ok(withNav.includes('aria-label="Navigace mezi články"'));
+  it("escapes the search query", () => {
+    const html = renderSearchPage('"><script>alert(1)</script>');
+    assert.ok(!html.includes("<script>alert(1)</script>"));
   });
 
-  it("uses absolute URL for cover image in JSON-LD", () => {
-    const withCover = renderArticlePage({
-      post: fullPost(),
-      relatedPosts: [],
+  it("sends 404 pages back to the blog without indexing them", () => {
+    const html = renderNotFoundPage();
+    expectPageBasics(html, {
+      canonical: "https://sky-travel.tours/blog/",
+      robots: /^noindex/,
     });
-    // default og image (no cover): absolute site URL
-    assert.ok(withCover.includes('"image":"https://sky-travel.tours/images/blog/og-default.jpg"'));
-    const withLocalCover = renderArticlePage({
-      post: { ...fullPost(), coverImage: "/assets/blog/hero-fallback.jpg" },
-      relatedPosts: [],
-    });
-    assert.ok(
-      withLocalCover.includes('"image":"https://sky-travel.tours/assets/blog/hero-fallback.jpg"'),
+    assert.ok(text(html).includes("nenalezen"));
+    assert.ok(html.includes('href="/blog/"'));
+  });
+});
+
+describe("RSS feed", () => {
+  it("stays well-formed and limited", () => {
+    const posts = listPublishedPosts();
+    const xml = renderRss(posts, 5);
+    assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
+    assert.match(xml, /<rss version="2\.0"/);
+    assert.equal((xml.match(/<item>/g) ?? []).length, Math.min(5, posts.length));
+    assert.ok(xml.includes("<link>https://sky-travel.tours/blog/"), "absolute item links");
+    assert.ok(!xml.includes("& "), "raw ampersand would break the XML");
+    for (const match of xml.matchAll(/<link>([^<]+)<\/link>/g)) {
+      assert.match(match[1], /^https:\/\/sky-travel\.tours\//);
+    }
+  });
+});
+
+describe("html helpers", () => {
+  it("escapes markup, quotes and Czech characters safely", () => {
+    assert.equal(
+      escapeHtml('<a href="x">Řecko & Turecko</a>'),
+      "&lt;a href=&quot;x&quot;&gt;Řecko &amp; Turecko&lt;/a&gt;",
     );
   });
 
-  it("adds heading ids and TOC for long articles", () => {
-    const longHtml = [
-      "<h2>První sekce</h2><p>Text.</p>",
-      "<h2>Druhá sekce</h2><p>Text.</p>",
-      "<h2>Třetí sekce</h2><p>Text.</p>",
-    ].join("");
-    const withToc = renderArticlePage({ post: fullPost(longHtml), relatedPosts: [] });
-    assert.ok(withToc.includes('id="prvni-sekce"'));
-    assert.ok(withToc.includes('aria-label="Obsah článku"'));
+  it("picks Czech plural forms", () => {
+    assert.equal(plural(1, "článek", "články", "článků"), "1 článek");
+    assert.equal(plural(3, "článek", "články", "článků"), "3 články");
+    assert.equal(plural(12, "článek", "články", "článků"), "12 článků");
   });
 
-  it("keeps rendered markdown html intact (trusted pipeline)", () => {
-    const p = renderArticlePage({ post: fullPost("<h2>Nadpis</h2><p>Text</p>"), relatedPosts: [] });
-    // heading gets an id injected, but inner text/markup is preserved
-    assert.ok(p.includes('<h2 id="nadpis">Nadpis</h2>'));
-    assert.ok(p.includes("<p>Text</p>"));
+  it("formats reading time", () => {
+    assert.equal(readingLabel(1), "1 min čtení");
+    assert.equal(readingLabel(6), "6 min čtení");
   });
 
-  it("renders article lede and hero destination badge", () => {
-    const p = renderArticlePage({ post: fullPost(), relatedPosts: [] });
-    assert.ok(p.includes("blog-article__lede"));
-    assert.ok(p.includes("Krátký popisek článku."));
-    assert.ok(p.includes("dest-badge--hero"));
-  });
-
-  it("renders author sign-off at the end of the article", () => {
-    const p = renderArticlePage({ post: fullPost(), relatedPosts: [] });
-    assert.ok(p.includes("prose-end"));
-    assert.ok(p.includes("Tým SkyTravel"));
-  });
-});
-
-describe("renderListPage", () => {
-  const page = renderListPage({
-    heading: "SkyTravel Blog",
-    intro: "Intro text.",
-    canonicalPath: "/blog/",
-    posts: [meta()],
-    page: 1,
-    totalPages: 2,
-    hubs: [{ slug: "recko", czechName: "Řecko", count: 3 }],
-  });
-
-  it("renders heading, intro and cards", () => {
-    assert.ok(page.includes("SkyTravel Blog"));
-    assert.ok(page.includes("Intro text."));
-    assert.ok(page.includes("/blog/test-clanek/"));
-  });
-
-  it("lists destination hubs with counts", () => {
-    assert.ok(page.includes("/blog/destinace/recko/"));
-    assert.ok(page.includes("(3)"));
-  });
-
-  it("adds pagination links for multi-page lists", () => {
-    assert.ok(page.includes("/blog/page/2/"));
-    assert.ok(page.includes('rel="next"'));
-  });
-
-  it("no pagination on single page", () => {
-    const single = renderListPage({
-      heading: "X",
-      canonicalPath: "/blog/",
-      posts: [meta()],
-      page: 1,
-      totalPages: 1,
-    });
-    assert.ok(!single.includes("pagination"));
-  });
-
-  it("renders featured strip and stats on home when >=3 posts", () => {
-    const home = renderListPage({
-      heading: "SkyTravel Blog",
-      intro: "Intro.",
-      canonicalPath: "/blog/",
-      posts: [
-        meta({ slug: "prvni", title: "První článek", description: "První popis." }),
-        meta({ slug: "druhy", title: "Druhý článek", description: "Druhý popis." }),
-        meta({ slug: "treti", title: "Třetí článek", description: "Třetí popis." }),
-        meta({ slug: "ctvrty", title: "Čtvrtý článek", description: "Čtvrtý popis." }),
-      ],
-      page: 1,
-      totalPages: 1,
-      hubs: [{ slug: "recko", czechName: "Řecko", count: 3 }],
-    });
-    assert.ok(home.includes("blog-featured"));
-    assert.ok(!home.includes("blog-stats"));
-    assert.ok(home.includes("/blog/prvni/"));
-    assert.ok(home.includes("Hlavní článek") || home.includes("Řecko"));
-  });
-
-  it("does not render featured strip on hub list pages", () => {
-    const hub = renderListPage({
-      heading: "Řecko",
-      canonicalPath: "/blog/destinace/recko/",
-      posts: [meta(), meta({ slug: "druhy" }), meta({ slug: "treti" })],
-      page: 1,
-      totalPages: 1,
-    });
-    assert.ok(!hub.includes("blog-featured"));
-    assert.ok(!hub.includes("blog-stats"));
-  });
-});
-
-describe("renderHubPage", () => {
-  it("uses destination name as heading and canonical", () => {
-    const page = renderHubPage({
-      destinationName: "Černá Hora",
-      intro: "Průvodce.",
-      posts: [meta({ destinationCzechName: "Černá Hora" })],
-      page: 1,
-      totalPages: 1,
-      otherHubs: [{ slug: "recko", czechName: "Řecko", count: 1 }],
-    });
-    assert.ok(page.includes("Černá Hora"));
-    assert.ok(
-      page.includes('canonical" href="https://sky-travel.tours/blog/destinace/cerna-hora/"'),
-    );
-    assert.ok(page.includes("/blog/destinace/recko/"));
-  });
-
-  it("uses paginated canonical on page > 1", () => {
-    const page = renderHubPage({
-      destinationName: "Černá Hora",
-      intro: "Průvodce.",
-      posts: [],
-      page: 2,
-      totalPages: 2,
-      otherHubs: [],
-    });
-    assert.ok(
-      page.includes('canonical" href="https://sky-travel.tours/blog/destinace/cerna-hora/page/2/"'),
-    );
-  });
-
-  it("links the search funnel with destinationSlug", () => {
-    const page = renderHubPage({
-      destinationName: "Řecko",
-      intro: "Průvodce.",
-      posts: [meta()],
-      page: 1,
-      totalPages: 1,
-      otherHubs: [],
-    });
-    assert.ok(page.includes("/search?destinationSlug=recko"));
-  });
-
-  it("renders empty state when hub has no posts", () => {
-    const page = renderHubPage({
-      destinationName: "Albánie",
-      intro: "Průvodce.",
-      posts: [],
-      page: 1,
-      totalPages: 1,
-      otherHubs: [],
-    });
-    assert.ok(page.includes("empty-state"));
-    assert.ok(page.includes("/search"));
-  });
-
-  it("emits hub-bar intro with post count and yellow accent", () => {
-    const page = renderHubPage({
-      destinationName: "Řecko",
-      intro: "Průvodce.",
-      posts: [
-        meta(),
-        meta({ slug: "druhy", title: "Druhý" }),
-        meta({ slug: "treti", title: "Třetí" }),
-      ],
-      page: 1,
-      totalPages: 1,
-      otherHubs: [],
-    });
-    assert.ok(page.includes("hub-bar"));
-    assert.ok(page.includes("hub-bar__title"));
-    assert.ok(page.includes("hub-bar__count"));
-    assert.ok(page.includes("Nejnovější články o Řecku"));
-    assert.ok(page.includes("3 články"));
-  });
-});
-
-describe("renderDestinationsIndexPage", () => {
-  it("lists hubs with latest articles", () => {
-    const page = renderDestinationsIndexPage({
-      hubs: [
-        {
-          slug: "recko",
-          czechName: "Řecko",
-          count: 2,
-          latest: [meta({ slug: "plaze-recko", title: "Pláže v Řecku" })],
-        },
-      ],
-    });
-    assert.ok(page.includes("/blog/destinace/recko/"));
-    assert.ok(page.includes("/blog/plaze-recko/"));
-    assert.ok(page.includes("Všechny destinace"));
-  });
-
-  it("uses editorial hub-index card with overlay and sand latest list", () => {
-    const page = renderDestinationsIndexPage({
-      hubs: [
-        {
-          slug: "bulharsko",
-          czechName: "Bulharsko",
-          count: 1,
-          latest: [meta({ slug: "b1", title: "Článek" })],
-        },
-      ],
-    });
-    assert.ok(page.includes("hub-index__overlay"));
-    assert.ok(page.includes("hub-index__body"));
-    assert.ok(page.includes("hub-index__latest"));
-  });
-});
-
-describe("renderNotFoundPage", () => {
-  it("returns styled 404 shell", () => {
-    const page = renderNotFoundPage();
-    assert.ok(page.includes("nenalezen"));
-    assert.ok(page.includes("/blog/"));
-  });
-
-  it("is noindex with no canonical", () => {
-    const page = renderNotFoundPage();
-    assert.ok(page.includes('<meta name="robots" content="noindex, follow" />'));
-    assert.ok(!page.includes('rel="canonical"'));
-  });
-
-  it("renders illustration and dual CTA group", () => {
-    const page = renderNotFoundPage();
-    assert.ok(page.includes("not-found__art"));
-    assert.ok(page.includes("not-found__ctas"));
-    assert.ok(page.includes("cta-btn--ghost"));
-  });
-});
-
-describe("renderRss", () => {
-  it("produces valid RSS items with escaped entities", () => {
-    const xml = renderRss([meta({ title: "Článek & spol." })]);
-    assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
-    assert.ok(xml.includes('<rss version="2.0"'));
-    assert.ok(xml.includes("Článek &amp; spol."));
-    assert.ok(xml.includes("2026-03-01") === false); // pubDate is RFC822
-    assert.ok(xml.includes("pubDate"));
+  it("writes JSON-LD that cannot break out of its script tag", () => {
+    const script = jsonLdScript({ name: "</script><script>alert(1)</script>" });
+    assert.ok(!script.includes("</script><script>"));
+    assert.equal((script.match(/<\/script>/g) ?? []).length, 1);
   });
 });

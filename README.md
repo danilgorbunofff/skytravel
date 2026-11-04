@@ -81,10 +81,13 @@ minutes, with single-flight so a burst of identical requests only hits the suppl
 once. When the feed is down, country landing pages fall back to the last copy of the
 tours stored in MySQL. Visitors get slightly stale prices instead of an error page.
 
-**The blog is real HTML.** Articles are markdown files rendered on the server, with
-destination hubs, canonical URLs, RSS, sitemap and JSON-LD. Google reads the article
-body without running any JavaScript, which matters when organic traffic is the main
-acquisition channel.
+**The blog is real HTML.** Articles are markdown files with validated frontmatter
+(title, description, key facts, FAQ, hero image, aliases), rendered on the server into
+destination hubs, tag and author pages, search and an about page — with canonical URLs,
+legacy-alias 301s, RSS, sitemap entries and Article/FAQ/Breadcrumb JSON-LD. Google reads
+the article body without running any JavaScript, which matters when organic traffic is
+the main acquisition channel. Responsive WebP variants are generated ahead of time by
+`npm run build:blog-images`, so no request ever resizes an image.
 
 **Admin code never reaches visitors.** The whole back office is a lazy-loaded chunk
 behind session auth, so an anonymous visitor downloads none of it.
@@ -115,12 +118,12 @@ skytravel/
 │       └── stores/         Zustand store (search flow only)
 ├── server/                 Express API
 │   ├── prisma/             Schema, migrations, seed
-│   ├── content/blog/       Markdown articles
+│   ├── content/blog/       Markdown articles + media manifest
 │   └── src/
 │       ├── providers/      TourProvider contract + Alexandria implementation
 │       ├── routes/         Public and admin endpoints
 │       ├── middleware/     Auth, CSRF, rate limits, uploads, errors
-│       ├── blog/           Markdown loader, renderer, sitemap, RSS
+│       ├── blog/           Loader, layout/, page templates, RSS, SEO
 │       └── lib/            Logger, cache, mailer, i18n
 ├── bots/                   Telegram + Instagram worker
 ├── e2e/                    Playwright specs

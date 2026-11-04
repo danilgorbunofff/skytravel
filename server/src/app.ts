@@ -109,18 +109,8 @@ export function createApp() {
   //    Blog pages are pure SSR with no auth, no forms, no cookies, so
   //    involving the MySQL session store on every anonymous visit is
   //    both unnecessary and (in dev) a hard DB dependency.
-  const blogCssCandidates = [
-    path.resolve(process.cwd(), "../client/public/assets/blog.css"),
-    path.resolve(process.cwd(), "../client/public/blog.css"),
-    path.resolve(process.cwd(), "public/assets/blog.css"),
-  ];
-  for (const cssPath of blogCssCandidates) {
-    if (fs.existsSync(cssPath)) {
-      app.get("/assets/blog.css", (_req, res) => res.sendFile(cssPath));
-      app.get("/blog.css", (_req, res) => res.sendFile(cssPath));
-      break;
-    }
-  }
+  //    `/assets/blog.css` needs no special route: it is a hashed-URL static
+  //    file below, served with a long cache lifetime.
   const publicAssetRoot = path.resolve(process.cwd(), "../client/public");
   if (fs.existsSync(publicAssetRoot)) {
     app.use(

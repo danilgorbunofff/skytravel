@@ -1,0 +1,312 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-04T17:53:29.549Z",
+  "images": {
+    "/assets/blog/hero-fallback.jpg": {
+      "width": 1900,
+      "height": 1262,
+      "webp": [
+        {
+          "src": "/assets/blog/hero-fallback-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hero-fallback-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hero-fallback-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hero-fallback-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hero-fallback-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/hero-fallback.jpg"
+    },
+    "/assets/hub/albanie.jpg": {
+      "width": 1200,
+      "height": 777,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/albanie-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/albanie-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/albanie-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/albanie-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/albanie-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/albanie.jpg"
+    },
+    "/assets/hub/bulharsko.jpg": {
+      "width": 1200,
+      "height": 798,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/bulharsko-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/bulharsko-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/bulharsko-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/bulharsko-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/bulharsko-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/bulharsko.jpg"
+    },
+    "/assets/hub/cerna-hora.jpg": {
+      "width": 1200,
+      "height": 800,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/cerna-hora-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/cerna-hora-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/cerna-hora-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/cerna-hora-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/cerna-hora-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/cerna-hora.jpg"
+    },
+    "/assets/hub/chorvatsko.jpg": {
+      "width": 1280,
+      "height": 697,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/chorvatsko-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/chorvatsko-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/chorvatsko-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/chorvatsko-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/chorvatsko-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/chorvatsko.jpg"
+    },
+    "/assets/hub/italie.jpg": {
+      "width": 1280,
+      "height": 726,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/italie-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/italie-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/italie-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/italie-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/italie-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/italie.jpg"
+    },
+    "/assets/hub/recko.jpg": {
+      "width": 1200,
+      "height": 1600,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/recko-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/recko-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/recko-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/recko-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/recko-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/recko.jpg"
+    },
+    "/assets/hub/spanelsko.jpg": {
+      "width": 1200,
+      "height": 800,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/spanelsko-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/spanelsko-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/spanelsko-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/spanelsko-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/spanelsko-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/spanelsko.jpg"
+    },
+    "/assets/hub/turecko.jpg": {
+      "width": 1200,
+      "height": 1753,
+      "webp": [
+        {
+          "src": "/assets/blog/hub/turecko-480.webp",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/turecko-800.webp",
+          "width": 800,
+          "height": 500
+        },
+        {
+          "src": "/assets/blog/hub/turecko-1200.webp",
+          "width": 1200,
+          "height": 750
+        }
+      ],
+      "jpg": [
+        {
+          "src": "/assets/blog/hub/turecko-480.jpg",
+          "width": 480,
+          "height": 300
+        },
+        {
+          "src": "/assets/blog/hub/turecko-800.jpg",
+          "width": 800,
+          "height": 500
+        }
+      ],
+      "og": "/assets/blog/og/turecko.jpg"
+    }
+  }
+}

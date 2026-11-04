@@ -38,6 +38,19 @@ export default tseslint.config(
     },
   },
   {
+    // Node build tooling that runs outside the TypeScript projects.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        URL: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.cjs"],
     languageOptions: {
       sourceType: "commonjs",

@@ -16,7 +16,7 @@ flowchart LR
         REG["Provider registry<br/>in-process Map"]
         DB[("MySQL 8.4<br/>skytravel DB")]
         BOT["PM2: skytravel-bots<br/>:3005"]
-        BLOG["SSR blog renderer<br/>Markdown → HTML"]
+        BLOG["SSR blog renderer<br/>Markdown → HTML<br/>(no DB dependency)"]
     end
 
     UI -->|serves| SPA
@@ -24,13 +24,15 @@ flowchart LR
     ADMIN -->|"/api/admin/*"| API
     BOT --> DB
     API --> CACHE
-    API --> BLOG
     API --> REG
     API --> DB
-    BLOG --> DB
     REG --> ALEX["Alexandria<br/>XML export feed"]
-    SPA -.->|"/blog"| BLOG
+    SPA -.->|"/blog/*"| BLOG
+    API --> BLOG
 ```
+
+Blog content lives on disk (`server/content/blog/*.md`), so the whole `/blog` tree keeps
+serving — including RSS and the sitemap's blog entries — while MySQL is unavailable.
 
 **Production architecture**: Hetzner VPS → nginx reverse proxy (SSL termination) → services on ports 4000 (API) and 4173 (UI) via PM2. Both apps are managed by PM2 with `wait_ready` protocol.
 
