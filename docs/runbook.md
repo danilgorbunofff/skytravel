@@ -4,7 +4,7 @@
 
 | Property            | Value                                                   |
 | ------------------- | ------------------------------------------------------- |
-| **Host**            | `167.233.47.103`                                        |
+| **Host**            | `2.31.142.204` (Hetzner CAX11, ARM64, Ubuntu 26.04)     |
 | **User**            | `root` (default; overridable via `SSH_USER`)            |
 | **SSH key**         | `ssh-key-new.key` (repo root)                           |
 | **Remote path**     | `/home/ubuntu/skytravel`                                |
@@ -242,7 +242,7 @@ Logs are JSON-structured (pino) with auto-rotation via `pm2-logrotate` (50MB max
 
 ```bash
 # 1. SSH into server
-ssh -i ssh-key-new.key -o StrictHostKeyChecking=no root@167.233.47.103
+ssh -i ssh-key-new.key -o StrictHostKeyChecking=no root@2.31.142.204
 
 # 2. Check PM2 status
 pm2 status

@@ -75,7 +75,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           SHA_SHORT: ${{ github.sha }}
         with:
-          host: 167.233.47.103
+          host: 2.31.142.204
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
@@ -107,6 +107,8 @@ jobs:
 
               echo "▸ Preparing bots env …"
               DB_URL=$(grep ^DATABASE_URL server/.env | head -1 | sed 's/^DATABASE_URL=//;s/^"//;s/"$//')
+              # Prisma 7 does not auto-load .env, so the CLI needs this exported.
+              export DATABASE_URL="$DB_URL"
               if [ ! -f bots/.env ]; then
                 cp bots/.env.example bots/.env
                 sed -i "s|DATABASE_URL=.*|DATABASE_URL=\"${DB_URL}\"|" bots/.env
@@ -137,7 +139,8 @@ jobs:
               npm --workspace client run build
 
               echo "▸ Starting PM2 apps …"
-              pm2 start ecosystem.config.cjs --env production
+              # startOrReload is a no-op-safe restart for both first deploy and redeploy.
+              pm2 startOrReload ecosystem.config.cjs --env production
               pm2 save
 
               echo "▸ Refreshing Alexandria feed …"

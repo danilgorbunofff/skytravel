@@ -4,7 +4,7 @@ set -euo pipefail
 # ── Remote deploy script for SkyTravel ────────────────────────────────
 # Required env vars: SSH_HOST, SSH_KEY_PATH
 SSH_USER="${SSH_USER:-root}"
-SSH_HOST="${SSH_HOST:-167.233.47.103}"
+SSH_HOST="${SSH_HOST:-2.31.142.204}"
 SSH_PORT="${SSH_PORT:-22}"
 REMOTE_PATH="${REMOTE_PROJECT_PATH:-/home/ubuntu/skytravel}"
 
@@ -97,7 +97,7 @@ echo "▸ Building client …"
 npm --workspace client run build
 
 echo "▸ Restarting PM2 apps …"
-pm2 start ecosystem.config.cjs
+pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save
 
 echo "▸ Refreshing Alexandria feed …"
