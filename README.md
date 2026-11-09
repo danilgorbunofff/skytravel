@@ -8,7 +8,7 @@ Czech travel aggregation platform — unified tour search from multiple provider
 
 ### Prerequisites
 
-- Node.js ≥ 20
+- Node.js ≥ 20 (CI and production use 20; `nvm use` reads `.nvmrc`)
 - MySQL 8.0
 - npm (comes with Node)
 
@@ -31,7 +31,9 @@ Open http://localhost:5173 (client) / http://localhost:4000 (API).
 | --------------------------------- | ----------------------------------------------- |
 | `npm run dev`                     | Start dev server (client + server concurrently) |
 | `npm run build`                   | Production build (server tsc + client Vite)     |
-| `npm run lint`                    | Lint all workspaces (ESLint 9)                  |
+| `npm run lint` / `lint:fix`       | Lint client, server, bots, e2e (ESLint 9)       |
+| `npm run typecheck`               | `tsc` for client, server and bots               |
+| `npm test`                        | Server + client unit tests                      |
 | `npm run format`                  | Format all files (Prettier)                     |
 | `npm run format:check`            | Check formatting without writing                |
 | `npm --workspace server run test` | Server unit + integration tests                 |
@@ -44,6 +46,7 @@ Open http://localhost:5173 (client) / http://localhost:4000 (API).
 skytravel/
 ├── client/          React 18 SPA (Vite, Tailwind v4, TypeScript)
 ├── server/          Express 4 REST API (TypeScript, Prisma 7, MySQL)
+├── bots/            Telegram bots (grammy)
 ├── scripts/         Deploy & backup scripts
 ├── docs/            Architecture, API, and operations docs
 ├── e2e/             Playwright E2E tests
@@ -84,3 +87,21 @@ See [docs/operations.md](docs/operations.md) for full runbook.
 - **Test:** Node test runner (server), Vitest + Testing Library (client), Playwright (E2E)
 - **CI/CD:** GitHub Actions (lint → test → build → deploy)
 - **Infra:** Hetzner VPS (167.233.47.103), Nginx reverse proxy, PM2, MySQL 8.4
+
+## Testing
+
+Server tests need a MySQL database:
+
+```bash
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS skytravel_test"
+DATABASE_URL=mysql://root:password@localhost:3306/skytravel_test npm --workspace server run test
+```
+
+E2E tests (Playwright) start the dev servers automatically, or reuse ones already running:
+
+```bash
+npx playwright install   # first time only
+npm run test:e2e
+```
+
+Before opening a PR: `npm run lint && npm run typecheck && npm test`.
