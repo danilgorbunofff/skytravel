@@ -8,10 +8,12 @@
     "bots"
   ],
   "scripts": {
-    "dev": "node scripts/build-blog-css.mjs --watch & npm --workspace server run dev & npm --workspace client run dev",
+    "dev": "concurrently -k -n blog,server,client -c magenta,blue,green \"node scripts/build-blog-css.mjs --watch\" \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
     "dev:bots": "npm --workspace bots run dev",
     "build": "npm run build:blog && npm --workspace server run build && npm --workspace client run build && npm --workspace bots run build",
-    "lint": "eslint .",
+    "lint": "eslint client/src server/src bots/src e2e",
+    "lint:fix": "eslint --fix client/src server/src bots/src e2e",
+    "typecheck": "npm --workspace client exec -- tsc -b && npm --workspace server exec -- tsc --noEmit && npm --workspace bots exec -- tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
@@ -29,6 +31,7 @@
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.60.0",
+    "concurrently": "^10.0.7",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
