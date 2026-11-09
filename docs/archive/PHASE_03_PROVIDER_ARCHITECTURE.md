@@ -6,37 +6,37 @@ Refactor `AlexandriaProvider` (798 lines) to use a shared `BaseProvider` abstrac
 
 ## Shared Methods to Extract (with source line ranges)
 
-| # | Method | Alexandria lines | Notes |
-|---|--------|-----------------|-------|
-| 1 | `buildTourSelect(omitHeavy)` | 72–98 | |
-| 2 | `parseNightsRange(nightsRaw)` | 47–52 | |
-| 3 | `nightsFromDates(from, to)` | 54–59 | |
-| 4 | `photosFromJson(photosRaw, image)` | 61–66 | |
-| 5 | `rowToUnified(row)` | 429–459 | Includes nights/adults/children/roomType/currency |
-| 6 | `fetchGroupedByOffer(filters)` | 461–503 | |
-| 7 | `fetchOfferGroup(filters, offerGroupKey)` | 505–530 | |
-| 8 | `importTours(ids, regionCtx)` | 537–612 | |
-| 9 | `loadCacheStatus()` | 636–658 | |
-| 10 | `_syncToDbImpl()` | 670–796 | **Abstract** — region iteration pattern differs per provider |
+| #   | Method                                    | Alexandria lines | Notes                                                        |
+| --- | ----------------------------------------- | ---------------- | ------------------------------------------------------------ |
+| 1   | `buildTourSelect(omitHeavy)`              | 72–98            |                                                              |
+| 2   | `parseNightsRange(nightsRaw)`             | 47–52            |                                                              |
+| 3   | `nightsFromDates(from, to)`               | 54–59            |                                                              |
+| 4   | `photosFromJson(photosRaw, image)`        | 61–66            |                                                              |
+| 5   | `rowToUnified(row)`                       | 429–459          | Includes nights/adults/children/roomType/currency            |
+| 6   | `fetchGroupedByOffer(filters)`            | 461–503          |                                                              |
+| 7   | `fetchOfferGroup(filters, offerGroupKey)` | 505–530          |                                                              |
+| 8   | `importTours(ids, regionCtx)`             | 537–612          |                                                              |
+| 9   | `loadCacheStatus()`                       | 636–658          |                                                              |
+| 10  | `_syncToDbImpl()`                         | 670–796          | **Abstract** — region iteration pattern differs per provider |
 
 ## Files to Create
 
-| File | Description |
-|------|-------------|
-| `server/src/providers/BaseProvider.ts` | Abstract class implementing `TourProvider` interface with shared methods |
-| `server/src/providers/shared/queryUtils.ts` | Extract `firstQueryValue` and other shared query helpers |
+| File                                        | Description                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------ |
+| `server/src/providers/BaseProvider.ts`      | Abstract class implementing `TourProvider` interface with shared methods |
+| `server/src/providers/shared/queryUtils.ts` | Extract `firstQueryValue` and other shared query helpers                 |
 
 ## Files to Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `server/src/providers/BaseProvider.ts` | **create** | Abstract class with shared implementations |
-| `server/src/providers/shared/queryUtils.ts` | **create** | `firstQueryValue()` and optionally `parseOptionalNumber()`, `parseOptionalDate()` |
-| `server/src/providers/alexandriaProvider.ts` | modify | Extend `BaseProvider`, keep only Alexandria-specific logic |
-| `server/src/providers/types.ts` | modify | Update `TourProvider` interface if needed for BaseProvider pattern |
-| `server/src/providers/index.ts` | modify | No change expected (still imports `AlexandriaProvider`) |
-| `server/src/routes/providerSearchPublic.ts` | modify | Import `firstQueryValue` from shared utility instead of local definition |
-| `server/src/lib/validateProviderFilters.ts` | modify | Import `firstQueryValue` from shared utility instead of local definition |
+| File                                         | Action     | Description                                                                       |
+| -------------------------------------------- | ---------- | --------------------------------------------------------------------------------- |
+| `server/src/providers/BaseProvider.ts`       | **create** | Abstract class with shared implementations                                        |
+| `server/src/providers/shared/queryUtils.ts`  | **create** | `firstQueryValue()` and optionally `parseOptionalNumber()`, `parseOptionalDate()` |
+| `server/src/providers/alexandriaProvider.ts` | modify     | Extend `BaseProvider`, keep only Alexandria-specific logic                        |
+| `server/src/providers/types.ts`              | modify     | Update `TourProvider` interface if needed for BaseProvider pattern                |
+| `server/src/providers/index.ts`              | modify     | No change expected (still imports `AlexandriaProvider`)                           |
+| `server/src/routes/providerSearchPublic.ts`  | modify     | Import `firstQueryValue` from shared utility instead of local definition          |
+| `server/src/lib/validateProviderFilters.ts`  | modify     | Import `firstQueryValue` from shared utility instead of local definition          |
 
 ## Implementation Steps
 
@@ -152,12 +152,10 @@ export abstract class BaseProvider implements TourProvider {
       safeNumber(row.nights) ??
       this.nightsFromDates(safeString(row.startDate) || "", safeString(row.endDate) || "") ??
       undefined;
-    const startDateStr = row.startDate instanceof Date
-      ? row.startDate.toISOString()
-      : safeString(row.startDate);
-    const endDateStr = row.endDate instanceof Date
-      ? row.endDate.toISOString()
-      : safeString(row.endDate);
+    const startDateStr =
+      row.startDate instanceof Date ? row.startDate.toISOString() : safeString(row.startDate);
+    const endDateStr =
+      row.endDate instanceof Date ? row.endDate.toISOString() : safeString(row.endDate);
     return {
       externalId: safeString(row.externalId, "unknown"),
       destination: safeString(row.destination, "unknown"),
@@ -195,7 +193,10 @@ export abstract class BaseProvider implements TourProvider {
 
   // ── Shared query building ────────────────────────────────────────
 
-  protected buildWhereClause(filters: UnifiedFilters, providerSpecific?: Prisma.ProviderTourWhereInput): Prisma.ProviderTourWhereInput {
+  protected buildWhereClause(
+    filters: UnifiedFilters,
+    providerSpecific?: Prisma.ProviderTourWhereInput,
+  ): Prisma.ProviderTourWhereInput {
     const where: Prisma.ProviderTourWhereInput = {
       source: this.id,
       price: { gte: MIN_PROVIDER_TOUR_PRICE_CZK },
@@ -203,23 +204,22 @@ export abstract class BaseProvider implements TourProvider {
     };
 
     if (filters.q) {
-      where.OR = [
-        { destination: { startsWith: filters.q } },
-        { title: { contains: filters.q } },
-      ];
+      where.OR = [{ destination: { startsWith: filters.q } }, { title: { contains: filters.q } }];
     }
 
     const pf = filters.providerFilters;
-    const board = typeof filters.board === "string"
-      ? filters.board
-      : typeof pf.board === "string"
-        ? pf.board
-        : "";
-    const stars = typeof filters.stars === "string"
-      ? filters.stars
-      : typeof pf.stars === "string"
-        ? pf.stars
-        : "";
+    const board =
+      typeof filters.board === "string"
+        ? filters.board
+        : typeof pf.board === "string"
+          ? pf.board
+          : "";
+    const stars =
+      typeof filters.stars === "string"
+        ? filters.stars
+        : typeof pf.stars === "string"
+          ? pf.stars
+          : "";
     const transport = typeof pf.transport === "string" ? pf.transport : "";
     const excludeTransport = typeof pf.excludeTransport === "string" ? pf.excludeTransport : "";
 
@@ -236,7 +236,10 @@ export abstract class BaseProvider implements TourProvider {
     }
 
     if (filters.priceMin !== undefined && Number.isFinite(filters.priceMin)) {
-      where.price = { ...(where.price as object), gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK) };
+      where.price = {
+        ...(where.price as object),
+        gte: Math.max(filters.priceMin, MIN_PROVIDER_TOUR_PRICE_CZK),
+      };
     }
     if (filters.priceMax !== undefined && Number.isFinite(filters.priceMax)) {
       where.price = { ...(where.price as object), lte: filters.priceMax };
@@ -409,7 +412,7 @@ export abstract class BaseProvider implements TourProvider {
       }
       if (s.status === "syncing") syncing = true;
     }
-    const ttl = this.syncMutex ? 0 : (this._cacheStatusSnapshot.ttl || 30 * 60 * 1000);
+    const ttl = this.syncMutex ? 0 : this._cacheStatusSnapshot.ttl || 30 * 60 * 1000;
     this._cacheStatusSnapshot = {
       lastRefresh: oldest,
       ttl,
@@ -478,6 +481,7 @@ export function firstQueryValue(value: unknown): string | undefined {
 **After:** `class AlexandriaProvider extends BaseProvider`
 
 **Remove** (now inherited from BaseProvider):
+
 - Lines 45–52: `parseNightsRange` function
 - Lines 54–59: `nightsFromDates` function
 - Lines 61–66: `photosFromJson` function
@@ -494,6 +498,7 @@ export function firstQueryValue(value: unknown): string | undefined {
 Actually, `syncToDb` CAN be shared (the mutex pattern is identical). The `_syncToDbImpl` is what differs.
 
 **Keep** (Alexandria-specific):
+
 - `KNOWN_COUNTRIES` array
 - `feedCacheMap` and `CACHE_TTL`
 - `getCachedFeed` method
@@ -508,11 +513,10 @@ Actually, `syncToDb` CAN be shared (the mutex pattern is identical). The `_syncT
 
 **Target size:** ~400 lines (from 798)
 
-
-
 ### Step 5: Update imports in refactored providers
 
 **AlexandriaProvider imports after refactor:**
+
 ```typescript
 import { config } from "../config.js";
 import { type Prisma } from "@prisma/client";
@@ -522,7 +526,13 @@ import {
   extractToursFromParsed,
   type AlexandriaTourInput,
 } from "../lib/alexandria.js";
-import type { UnifiedTour, ToursResult, CacheStatus, ProviderRegion, FilterFieldDescriptor } from "./types.js";
+import type {
+  UnifiedTour,
+  ToursResult,
+  CacheStatus,
+  ProviderRegion,
+  FilterFieldDescriptor,
+} from "./types.js";
 import { BaseProvider, type NightsRange } from "./BaseProvider.js";
 import { ensureProviderDestinationMapping } from "./destinationStore.js";
 import { isPlausibleProviderPriceCzk } from "../lib/providerPrice.js";
@@ -561,8 +571,8 @@ curl http://localhost:4000/api/search/providers | json
 
 ## Risk Assessment
 
-| Change | Risk | Mitigation |
-|--------|------|------------|
-| Extracting shared methods | **MEDIUM** — behavioral differences between providers | Run full test suite; compare search results before/after |
-| BaseProvider `rowToUnified` | **MEDIUM** — different providers may have extra fields | Design BaseProvider version to include all fields with `undefined` fallbacks |
-| `firstQueryValue` extraction | **LOW** — mechanical move, same function | Verify both call sites still import correctly |
+| Change                       | Risk                                                   | Mitigation                                                                   |
+| ---------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Extracting shared methods    | **MEDIUM** — behavioral differences between providers  | Run full test suite; compare search results before/after                     |
+| BaseProvider `rowToUnified`  | **MEDIUM** — different providers may have extra fields | Design BaseProvider version to include all fields with `undefined` fallbacks |
+| `firstQueryValue` extraction | **LOW** — mechanical move, same function               | Verify both call sites still import correctly                                |

@@ -10,14 +10,15 @@ Decompose 4 monolithic page components into focused, testable sub-components. Ex
 
 ## Current State
 
-| Page | Lines | Target Lines | Status |
-|------|-------|-------------|--------|
-| HomePage.tsx | 796 | ≤150 | Contains hero, tour grid, last-minute, favorites, social, footer, header, modal, cookie consent |
-| AdminSearchPage.tsx | 1074 | ≤250 | Provider selector, region picker, filters, tour table, import/export controls, pagination |
-| AdminEmailPage.tsx | 810 | ≤200 | TipTap editor, lead management, campaign send, preview dialogs |
-| AdminStatisticsPage.tsx | 262 | ≤200 | Mock data (hardcoded values + SVG chart), needs real API |
+| Page                    | Lines | Target Lines | Status                                                                                          |
+| ----------------------- | ----- | ------------ | ----------------------------------------------------------------------------------------------- |
+| HomePage.tsx            | 796   | ≤150         | Contains hero, tour grid, last-minute, favorites, social, footer, header, modal, cookie consent |
+| AdminSearchPage.tsx     | 1074  | ≤250         | Provider selector, region picker, filters, tour table, import/export controls, pagination       |
+| AdminEmailPage.tsx      | 810   | ≤200         | TipTap editor, lead management, campaign send, preview dialogs                                  |
+| AdminStatisticsPage.tsx | 262   | ≤200         | Mock data (hardcoded values + SVG chart), needs real API                                        |
 
 Existing shared components to leverage:
+
 - `Skeleton.tsx` (10 lines) — pulse animation div
 - `EmptyState.tsx` (28 lines) — icon + title + description + action
 - `ErrorBoundary.tsx` (45 lines) — catches errors with retry button
@@ -30,6 +31,7 @@ Existing shared components to leverage:
 ### New Files
 
 #### `client/src/components/home/SearchHero.tsx`
+
 - **Extract:** Lines 401–500 (hero carousel + search form)
 - **Props:** `heroImages`, `heroIndex`, `searchDestinationRef`, `searchTransportRef`, `searchDateStart`, `searchDateEnd`, `isDatePickerOpen`, `t`, `onSearchSubmit`, `onDateToggle`, `onDateChange`
 - **State:** Local `isDatePickerOpen` (moved from parent)
@@ -38,6 +40,7 @@ Existing shared components to leverage:
 - **Target:** ≤120 lines
 
 #### `client/src/components/home/TourGrid.tsx`
+
 - **Extract:** Lines 502–518 (section with own tours grid)
 - **Props:** `ownTours`, `onTourClick`, `t`
 - **Loading state:** Accept `loading` prop; show Skeleton grid when true
@@ -46,6 +49,7 @@ Existing shared components to leverage:
 - **Target:** ≤50 lines
 
 #### `client/src/components/home/LastMinuteDeals.tsx`
+
 - **Extract:** Lines 520–588 (dual-block: stats card + last-minute list)
 - **Props:** `lastMinuteItems`, `loading`, `onItemClick`, `t`
 - **Loading state:** Show skeleton list
@@ -54,6 +58,7 @@ Existing shared components to leverage:
 - **Target:** ≤80 lines
 
 #### `client/src/components/home/FavoriteDestinations.tsx`
+
 - **Extract:** Lines 655–690 (favorite destinations grid)
 - **Props:** `favorites`, `destinationCounts`, `onClick`, `t`
 - **Loading state:** N/A (static favorites fallback)
@@ -61,11 +66,13 @@ Existing shared components to leverage:
 - **Target:** ≤60 lines
 
 #### `client/src/components/home/TrustBar.tsx`
+
 - **Extract:** Lines 501–504 (currently just the section head for all-inclusive)
 - **Note:** TrustBar already exists in search features. Reuse `TrustBar` from `features/search/components`
 - **Target:** Reuse existing, no new file needed
 
 #### `client/src/components/home/LeadPopup.tsx`
+
 - Already exists at `client/src/components/LeadPopup.tsx` — verify it's imported correctly
 - Verify `useLeadPopup` hook is called properly
 
@@ -109,6 +116,7 @@ export default function HomePage() {
 ```
 
 ### Acceptance
+
 - Each new component ≤150 lines
 - HomePage.tsx ≤150 lines
 - Visual output unchanged
@@ -121,11 +129,13 @@ export default function HomePage() {
 ### New Files
 
 #### `client/src/components/admin/ProviderSelector.tsx`
+
 - **Extract:** Lines 567–587 (provider tabs bar)
 - **Props:** `providers`, `selectedProviderId`, `onChange`
 - **Target:** ≤40 lines
 
 #### `client/src/components/admin/RegionPicker.tsx`
+
 - **Extract:** Lines 589–670 (region selector: single-level tabs or two-level dropdowns)
 - **Props:** `regions`, `regionsLoading`, `selectedRegion`, `selectedSubRegion`, `isTwoLevel`, `departureCities`, `destinationCountries`, `onRegionChange`, `onSubRegionChange`
 - **Loading state:** Show `Načítám regiony…` message
@@ -133,11 +143,13 @@ export default function HomePage() {
 - **Target:** ≤100 lines
 
 #### `client/src/components/admin/TourFilterBar.tsx`
+
 - **Extract:** Lines 672–784 (search form + provider-specific filters + filter chips + actions)
 - **Props:** `search`, `priceMin`, `priceMax`, `dateStart`, `dateEnd`, `providerFilters`, `selectedProvider`, `validationErrors`, `loading`, `activeChips`, `onSearch`, `onReset`, `onRefresh`, `onSearchDebounced`, `onPriceMinChange`, `onPriceMaxChange`, `onDateStartChange`, `onDateEndChange`, `onProviderFilterChange`, `onChipClear`
 - **Target:** ≤150 lines
 
 #### `client/src/components/admin/TourDataTable.tsx`
+
 - **Extract:** Lines 830–1062 (table header + rows + pagination + rows-per-page selector)
 - **Props:** `tours`, `loading`, `error`, `selected`, `visibleColumns`, `gridCols`, `sortBy`, `sortDir`, `page`, `totalPages`, `limit`, `filteredCount`, `cacheStatus`, `onToggleSelect`, `onToggleSelectAll`, `onSort`, `onPageChange`, `onLimitChange`, `onRowClick`
 - **Loading state:** Show skeleton rows (4–6)
@@ -146,16 +158,19 @@ export default function HomePage() {
 - **Target:** ≤200 lines
 
 #### `client/src/components/admin/ImportPanel.tsx`
+
 - **Extract:** Lines 787–818 (import controls bar)
 - **Props:** `selected`, `tours`, `page`, `totalPages`, `filteredCount`, `importing`, `importResult`, `onImportSelected`, `onImportAll`
 - **Target:** ≤60 lines
 
 #### `client/src/components/admin/ExportPanel.tsx`
+
 - **Not currently in AdminSearchPage** — may need to create from existing admin export functionality elsewhere.
 - Check if AdminEmailPage's CSV export can be generalized.
 - For now, leave as stub if there's no existing export in AdminSearchPage.
 
 #### `client/src/components/admin/TourDetailDrawer.tsx`
+
 - Already exists at `client/src/components/admin/TourDetailDrawer.tsx` (imported on line 5)
 - Verify it's complete and well-typed
 
@@ -182,6 +197,7 @@ export default function AdminSearchPage() {
 ```
 
 ### Acceptance
+
 - Each component ≤200 lines
 - AdminSearchPage.tsx ≤250 lines
 - All existing features work (provider switch, region filter, search, pagination, import, select-all)
@@ -194,12 +210,14 @@ export default function AdminSearchPage() {
 ### New Files
 
 #### `client/src/components/admin/EmailEditor.tsx`
+
 - **Extract:** Lines 98–132 (editor initialization) + 566–681 (editor + toolbar UI)
 - **Props:** `editor` (TipTap instance), `onUploadImage`, `fileInputRef`, `t`
 - **Static toolbar:** Render toolbar buttons with editor commands
 - **Target:** ≤150 lines
 
 #### `client/src/components/admin/RecipientSelector.tsx`
+
 - **Extract:** Lines 399–508 (leads card: search, tabs, table, CSV export)
 - **Props:** `leads`, `loading`, `error`, `segment`, `searchQuery`, `filtered`, `onSegmentChange`, `onSearchChange`, `onDelete`, `onExportCsv`, `t`
 - **Loading state:** Show `SkeletonRows` (extract from current inline)
@@ -208,17 +226,20 @@ export default function AdminSearchPage() {
 - **Target:** ≤150 lines
 
 #### `client/src/components/admin/SendPreview.tsx`
+
 - **Extract:** Lines 737–787 (sidebar preview + full preview dialog)
 - **Props:** `editorHtml`, `fromEmail`, `subject`, `preheader`, `previewOpen`, `onPreviewOpenChange`, `t`
 - **Target:** ≤80 lines
 
 #### `client/src/components/admin/CampaignHistory.tsx`
+
 - Currently no campaign history display exists in AdminEmailPage
 - Create as a stub/placeholder that can display sent campaigns
 - Fetch from existing campaign API endpoints
 - **Target:** ≤80 lines
 
 #### `client/src/components/admin/LeadsTable.tsx`
+
 - Extract the leads table from lines 444–506
 - **Props:** `leads`, `loading`, `error`, `searchQuery`, `onDelete`
 - **Target:** ≤100 lines
@@ -248,6 +269,7 @@ export default function AdminEmailPage() {
 ```
 
 ### Acceptance
+
 - Each component ≤200 lines
 - AdminEmailPage.tsx ≤200 lines
 - Email compose + send works
@@ -312,11 +334,13 @@ export default router;
 ### New Client Components
 
 #### `client/src/components/admin/StatCard.tsx`
+
 - **Props:** `label`, `value`, `change`, `up` (trend direction)
 - Renders KPI tile with trend indicator
 - **Target:** ≤40 lines
 
 #### `client/src/components/admin/StatChart.tsx`
+
 - **Props:** `type` ("trend" | "channels"), `data`
 - Wrapper for charting library (recharts or lightweight SVG)
 - **Loading state:** Show skeleton placeholder
@@ -333,6 +357,7 @@ export default router;
 6. Add data refresh on period change
 
 ### Acceptance
+
 - Statistics reflect real data from database
 - Loading skeleton shown during fetch
 - Error state with retry works
@@ -343,6 +368,7 @@ export default router;
 ## Step 5: Extract Additional Shared Components
 
 ### `client/src/components/SkeletonRows.tsx`
+
 - Wraps `Skeleton` component to render N rows
 - **Props:** `count` (default 5), `columns` (number), `height` (per row)
 - Used by: AdminEmailPage, AdminSearchPage, AdminStatisticsPage
@@ -372,6 +398,7 @@ export function SkeletonRows({ count = 5, columns = 4, height = "h-4" }: Props) 
 ```
 
 ### Enhance `EmptyState.tsx`
+
 Add variant prop:
 
 ```tsx
@@ -391,6 +418,7 @@ interface Props {
 - `variant="error"`: Show warning icon, auto-include retry
 
 ### Verify `ErrorBoundary.tsx`
+
 - Ensure it's used in all admin section routes
 - Add test that verifies error state renders correctly
 
@@ -399,41 +427,44 @@ interface Props {
 ## Files Summary
 
 ### New Files (Client Components)
-| File | Source Excerpt | Target Size |
-|------|---------------|-------------|
-| `client/src/components/home/SearchHero.tsx` | HomePage lines 401–500 | ≤120 lines |
-| `client/src/components/home/TourGrid.tsx` | HomePage lines 502–518 | ≤50 lines |
-| `client/src/components/home/LastMinuteDeals.tsx` | HomePage lines 520–588 | ≤80 lines |
-| `client/src/components/home/FavoriteDestinations.tsx` | HomePage lines 655–690 | ≤60 lines |
-| `client/src/components/admin/ProviderSelector.tsx` | AdminSearchPage lines 567–587 | ≤40 lines |
-| `client/src/components/admin/RegionPicker.tsx` | AdminSearchPage lines 589–670 | ≤100 lines |
-| `client/src/components/admin/TourFilterBar.tsx` | AdminSearchPage lines 672–784 | ≤150 lines |
-| `client/src/components/admin/TourDataTable.tsx` | AdminSearchPage lines 830–1062 | ≤200 lines |
-| `client/src/components/admin/ImportPanel.tsx` | AdminSearchPage lines 787–818 | ≤60 lines |
-| `client/src/components/admin/ExportPanel.tsx` | New stub | ≤40 lines |
-| `client/src/components/admin/EmailEditor.tsx` | AdminEmailPage lines 98–132 + 566–681 | ≤150 lines |
-| `client/src/components/admin/RecipientSelector.tsx` | AdminEmailPage lines 399–508 | ≤150 lines |
-| `client/src/components/admin/SendPreview.tsx` | AdminEmailPage lines 737–787 | ≤80 lines |
-| `client/src/components/admin/CampaignHistory.tsx` | New stub | ≤80 lines |
-| `client/src/components/admin/LeadsTable.tsx` | AdminEmailPage lines 444–506 | ≤100 lines |
-| `client/src/components/admin/StatCard.tsx` | New (from AdminStatisticsPage) | ≤40 lines |
-| `client/src/components/admin/StatChart.tsx` | New (from AdminStatisticsPage) | ≤80 lines |
-| `client/src/components/SkeletonRows.tsx` | New shared component | ≤30 lines |
+
+| File                                                  | Source Excerpt                        | Target Size |
+| ----------------------------------------------------- | ------------------------------------- | ----------- |
+| `client/src/components/home/SearchHero.tsx`           | HomePage lines 401–500                | ≤120 lines  |
+| `client/src/components/home/TourGrid.tsx`             | HomePage lines 502–518                | ≤50 lines   |
+| `client/src/components/home/LastMinuteDeals.tsx`      | HomePage lines 520–588                | ≤80 lines   |
+| `client/src/components/home/FavoriteDestinations.tsx` | HomePage lines 655–690                | ≤60 lines   |
+| `client/src/components/admin/ProviderSelector.tsx`    | AdminSearchPage lines 567–587         | ≤40 lines   |
+| `client/src/components/admin/RegionPicker.tsx`        | AdminSearchPage lines 589–670         | ≤100 lines  |
+| `client/src/components/admin/TourFilterBar.tsx`       | AdminSearchPage lines 672–784         | ≤150 lines  |
+| `client/src/components/admin/TourDataTable.tsx`       | AdminSearchPage lines 830–1062        | ≤200 lines  |
+| `client/src/components/admin/ImportPanel.tsx`         | AdminSearchPage lines 787–818         | ≤60 lines   |
+| `client/src/components/admin/ExportPanel.tsx`         | New stub                              | ≤40 lines   |
+| `client/src/components/admin/EmailEditor.tsx`         | AdminEmailPage lines 98–132 + 566–681 | ≤150 lines  |
+| `client/src/components/admin/RecipientSelector.tsx`   | AdminEmailPage lines 399–508          | ≤150 lines  |
+| `client/src/components/admin/SendPreview.tsx`         | AdminEmailPage lines 737–787          | ≤80 lines   |
+| `client/src/components/admin/CampaignHistory.tsx`     | New stub                              | ≤80 lines   |
+| `client/src/components/admin/LeadsTable.tsx`          | AdminEmailPage lines 444–506          | ≤100 lines  |
+| `client/src/components/admin/StatCard.tsx`            | New (from AdminStatisticsPage)        | ≤40 lines   |
+| `client/src/components/admin/StatChart.tsx`           | New (from AdminStatisticsPage)        | ≤80 lines   |
+| `client/src/components/SkeletonRows.tsx`              | New shared component                  | ≤30 lines   |
 
 ### New Files (Server)
-| File | Purpose |
-|------|---------|
+
+| File                                    | Purpose                          |
+| --------------------------------------- | -------------------------------- |
 | `server/src/routes/admin/statistics.ts` | `/api/admin/statistics` endpoint |
 
 ### Modified Files
-| File | Action |
-|------|--------|
-| `client/src/pages/HomePage.tsx` | Reduce to composition root (~150 lines) |
-| `client/src/pages/AdminSearchPage.tsx` | Reduce to state hub (~250 lines) |
-| `client/src/pages/AdminEmailPage.tsx` | Reduce to composition (~200 lines) |
+
+| File                                       | Action                                        |
+| ------------------------------------------ | --------------------------------------------- |
+| `client/src/pages/HomePage.tsx`            | Reduce to composition root (~150 lines)       |
+| `client/src/pages/AdminSearchPage.tsx`     | Reduce to state hub (~250 lines)              |
+| `client/src/pages/AdminEmailPage.tsx`      | Reduce to composition (~200 lines)            |
 | `client/src/pages/AdminStatisticsPage.tsx` | Replace mock data with API calls (~200 lines) |
-| `client/src/components/EmptyState.tsx` | Add variant prop |
-| `client/src/components/Skeleton.tsx` | Verify usage |
+| `client/src/components/EmptyState.tsx`     | Add variant prop                              |
+| `client/src/components/Skeleton.tsx`       | Verify usage                                  |
 
 ---
 
@@ -457,6 +488,7 @@ npm --workspace server run test
 ```
 
 ### Manual Visual Verification
+
 1. HomePage: hero carousel rotates, search form submits, own tours render, last-minute loads, favorites grid renders, footer links work
 2. AdminSearchPage: provider switch works, region filter works, search + pagination works, import works
 3. AdminEmailPage: editor loads, lead management works, send flow works
@@ -466,16 +498,17 @@ npm --workspace server run test
 
 ## Risk Assessment
 
-| Risk | Level | Mitigation |
-|------|-------|------------|
-| Broken imports during extraction | LOW | One component at a time, test each extraction |
-| Prop drilling depth | LOW | Max 1 level; use zustand for shared admin state |
-| Regression in visual output | LOW | Visual comparison before/after each extraction |
-| Statistics endpoint not existing | MEDIUM | Must create new server route |
-| Statistics data mismatched | MEDIUM | Validate response shape matches component expectations |
-| Circular dependencies | LOW | Components import from hooks/data, not vice versa |
+| Risk                             | Level  | Mitigation                                             |
+| -------------------------------- | ------ | ------------------------------------------------------ |
+| Broken imports during extraction | LOW    | One component at a time, test each extraction          |
+| Prop drilling depth              | LOW    | Max 1 level; use zustand for shared admin state        |
+| Regression in visual output      | LOW    | Visual comparison before/after each extraction         |
+| Statistics endpoint not existing | MEDIUM | Must create new server route                           |
+| Statistics data mismatched       | MEDIUM | Validate response shape matches component expectations |
+| Circular dependencies            | LOW    | Components import from hooks/data, not vice versa      |
 
 ## Order of Implementation
+
 1. Create `SkeletonRows.tsx` + enhance `EmptyState.tsx`
 2. Extract HomePage sections one by one (test each)
 3. Extract AdminSearchPage sections one by one

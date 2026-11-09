@@ -7,6 +7,7 @@
 ## Step 1: Run axe-core audit on all key pages
 
 ### Files to modify
+
 - `e2e/package.json` — add `@axe-core/playwright` dependency
 - `e2e/tests/accessibility.spec.ts` — new accessibility test file
 
@@ -54,6 +55,7 @@ npm run test:e2e -- --grep "Accessibility"
 Document all violations in a `docs/accessibility-audit.md` log.
 
 ### Acceptance criteria
+
 - axe-core runs on all 5 key pages
 - Test fails on critical and serious violations
 - Violations documented for tracking
@@ -64,18 +66,19 @@ Document all violations in a `docs/accessibility-audit.md` log.
 ## Step 2: Fix color contrast issues
 
 ### Files to examine
+
 - `client/src/app.css` (or `globals.css`) — color palette
 - Tailwind theme values (in `client/vite.config.ts` if overridden)
 
 ### Common issues to fix
 
-| Issue | Current | Target |
-|---|---|---|
+| Issue                                        | Current                               | Target                       |
+| -------------------------------------------- | ------------------------------------- | ---------------------------- |
 | Gray text on white (`text-muted-foreground`) | `#6b7280` (gray-500) → 4.1:1 on white | `#4b5563` (gray-600) → 5.5:1 |
-| Light borders (`border`) | `#e5e7eb` (gray-200) | `#d1d5db` (gray-300) |
-| Disabled button text | `#9ca3af` (gray-400) → 2.5:1 | `#6b7280` (gray-500) → 4.5:1 |
-| Badge success text on green bg | Check contrast | Darken or use darker green |
-| Link color on hover | Ensure meets 3:1 against bg |
+| Light borders (`border`)                     | `#e5e7eb` (gray-200)                  | `#d1d5db` (gray-300)         |
+| Disabled button text                         | `#9ca3af` (gray-400) → 2.5:1          | `#6b7280` (gray-500) → 4.5:1 |
+| Badge success text on green bg               | Check contrast                        | Darken or use darker green   |
+| Link color on hover                          | Ensure meets 3:1 against bg           |
 
 ### Tailwind v4 approach
 
@@ -83,9 +86,9 @@ Tailwind v4 doesn't have a config file. Update CSS custom properties in `client/
 
 ```css
 @theme {
-  --color-muted-foreground: #4b5563;   /* was #6b7280 */
-  --color-border: #d1d5db;              /* was #e5e7eb */
-  --color-destructive: #dc2626;         /* ensure minimum 4.5:1 on white */
+  --color-muted-foreground: #4b5563; /* was #6b7280 */
+  --color-border: #d1d5db; /* was #e5e7eb */
+  --color-destructive: #dc2626; /* ensure minimum 4.5:1 on white */
 }
 ```
 
@@ -94,6 +97,7 @@ Tailwind v4 doesn't have a config file. Update CSS custom properties in `client/
 Use axe-core test from Step 1 to verify all contrast violations are resolved.
 
 ### Acceptance criteria
+
 - All text meets WCAG AA contrast minimum (4.5:1 normal, 3:1 large)
 - All interactive elements meet 3:1 against background
 - axe-core passes color contrast checks
@@ -104,12 +108,14 @@ Use axe-core test from Step 1 to verify all contrast violations are resolved.
 ## Step 3: Ensure skip links work everywhere
 
 ### Current state
+
 - `SkipLinks.tsx` (22 lines) exists in search features
 - Exports `<SkipLinks />` with skip to results and skip to filters
 
 ### Implementation
 
 Add skip links to:
+
 1. **Homepage** — skip to main content
 2. **Admin pages** — "Skip to main content", "Skip to navigation"
 3. **GDPR / Terms** — skip to main content
@@ -133,6 +139,7 @@ export function SkipToContent({ contentId = "main-content" }: { contentId?: stri
 Add `id="main-content"` to `<main>` elements on each page.
 
 ### Acceptance criteria
+
 - Skip link is first focusable element on every page
 - Tab to skip link, press Enter, focus moves to main content
 - Skip link is visually hidden until focused
@@ -144,16 +151,16 @@ Add `id="main-content"` to `<main>` elements on each page.
 
 ### Audit all interactive elements
 
-| Element | Current | Fix |
-|---|---|---|
-| Icon buttons (trash, edit, close) | `title` attribute only | Add `aria-label` matching the title |
-| Search input (admin) | `placeholder` only | Add `aria-label="Hledat zájezdy"` |
-| Language switcher | `aria-label` exists | Verify |
-| Pagination buttons | "← Předchozí" text | Add `aria-label="Předchozí stránka"` |
-| Sort buttons (price, date) | Icon + text | Add `aria-label="Seřadit podle ceny"` |
-| Filter chips (close ×) | `×` character | Add `aria-label="Odstranit filtr"` |
-| Upload image button | Icon only | Add `aria-label="Nahrát obrázek"` |
-| Import buttons | Text | Add `aria-label="Importovat vybrané zájezdy"` |
+| Element                           | Current                | Fix                                           |
+| --------------------------------- | ---------------------- | --------------------------------------------- |
+| Icon buttons (trash, edit, close) | `title` attribute only | Add `aria-label` matching the title           |
+| Search input (admin)              | `placeholder` only     | Add `aria-label="Hledat zájezdy"`             |
+| Language switcher                 | `aria-label` exists    | Verify                                        |
+| Pagination buttons                | "← Předchozí" text     | Add `aria-label="Předchozí stránka"`          |
+| Sort buttons (price, date)        | Icon + text            | Add `aria-label="Seřadit podle ceny"`         |
+| Filter chips (close ×)            | `×` character          | Add `aria-label="Odstranit filtr"`            |
+| Upload image button               | Icon only              | Add `aria-label="Nahrát obrázek"`             |
+| Import buttons                    | Text                   | Add `aria-label="Importovat vybrané zájezdy"` |
 
 ### Pattern
 
@@ -172,16 +179,13 @@ Add `id="main-content"` to `<main>` elements on each page.
 ### Live regions for dynamic content
 
 ```tsx
-<div
-  aria-live="polite"
-  aria-atomic="true"
-  className="sr-only"
->
+<div aria-live="polite" aria-atomic="true" className="sr-only">
   {loading ? "Načítám zájezdy…" : `Nalezeno ${count} zájezdů`}
 </div>
 ```
 
 ### Acceptance criteria
+
 - Every interactive element has an accessible name (via label, aria-label, or aria-labelledby)
 - Screen reader announces dynamic content changes
 - axe-core passes ARIA-related checks
@@ -192,19 +196,20 @@ Add `id="main-content"` to `<main>` elements on each page.
 ## Step 5: Fix focus management in modals/drawers
 
 ### Current state
+
 - `ConfirmDialog.tsx` uses Radix Dialog — focus trapping built in
 - `TourDetailModal.tsx` has `closeButtonRef` and `previouslyFocusedRef`
 - Radix Dialog components handle Esc and focus trap natively
 
 ### Audit checklist
 
-| Component | Focus trap | Esc close | Focus restore |
-|---|---|---|---|
-| ConfirmDialog (Radix) | ✅ Built-in | ✅ Built-in | ❓ Verify |
-| TourDetailModal | ❓ Check | ✅ | ✅ refs exist |
-| MobileFilterDrawer | ❓ Check | ❓ Check | ❓ Check |
-| LeadPopup | ❓ Check | ❓ Check | ❓ Check |
-| CookieConsent | `role="dialog"` | ❓ Check | ❓ Check |
+| Component             | Focus trap      | Esc close   | Focus restore |
+| --------------------- | --------------- | ----------- | ------------- |
+| ConfirmDialog (Radix) | ✅ Built-in     | ✅ Built-in | ❓ Verify     |
+| TourDetailModal       | ❓ Check        | ✅          | ✅ refs exist |
+| MobileFilterDrawer    | ❓ Check        | ❓ Check    | ❓ Check      |
+| LeadPopup             | ❓ Check        | ❓ Check    | ❓ Check      |
+| CookieConsent         | `role="dialog"` | ❓ Check    | ❓ Check      |
 
 ### Implementation
 
@@ -224,7 +229,7 @@ useEffect(() => {
     }
     // Focus trap logic
     const focusable = modalRef.current?.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     if (!focusable || focusable.length === 0) return;
     const first = focusable[0] as HTMLElement;
@@ -243,7 +248,7 @@ useEffect(() => {
   document.addEventListener("keydown", handleKeyDown);
 
   // Focus first element
-  modalRef.current?.querySelector<HTMLElement>('button, [href], input')?.focus();
+  modalRef.current?.querySelector<HTMLElement>("button, [href], input")?.focus();
 
   return () => {
     document.removeEventListener("keydown", handleKeyDown);
@@ -256,6 +261,7 @@ useEffect(() => {
 ```
 
 ### Acceptance criteria
+
 - Tab cycling never leaves an open modal
 - Esc key closes modal
 - Focus returns to trigger element on close
@@ -266,6 +272,7 @@ useEffect(() => {
 ## Step 6: Add prefers-reduced-motion support
 
 ### Files to modify
+
 - `client/src/app.css` — add media query
 - Components with animations: skeleton, carousel, transition effects
 
@@ -274,7 +281,9 @@ useEffect(() => {
 ```css
 /* In app.css or globals.css */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -288,9 +297,7 @@ useEffect(() => {
 For components that use JavaScript animations:
 
 ```typescript
-const prefersReducedMotion = window.matchMedia(
-  "(prefers-reduced-motion: reduce)"
-).matches;
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 if (prefersReducedMotion) {
   // Skip animation, show final state immediately
@@ -302,15 +309,16 @@ if (prefersReducedMotion) {
 
 ### Components to audit
 
-| Component | Animation | Reduced motion behavior |
-|---|---|---|
-| Skeleton loading | Pulse animation | Static placeholder, no pulse |
-| Page transitions | Fade/slide | Instant render |
-| Hover scale effects | `scale(1.05)` | Remove transform |
-| Carousel autoplay | Auto-scroll | Disable autoplay |
-| Toast notifications | Slide in from right | Fade in without slide |
+| Component           | Animation           | Reduced motion behavior      |
+| ------------------- | ------------------- | ---------------------------- |
+| Skeleton loading    | Pulse animation     | Static placeholder, no pulse |
+| Page transitions    | Fade/slide          | Instant render               |
+| Hover scale effects | `scale(1.05)`       | Remove transform             |
+| Carousel autoplay   | Auto-scroll         | Disable autoplay             |
+| Toast notifications | Slide in from right | Fade in without slide        |
 
 ### Acceptance criteria
+
 - All animations disabled when system preference is set
 - No functionality lost — only motion removed
 - Skeleton shows static placeholder without pulse
@@ -322,17 +330,17 @@ if (prefersReducedMotion) {
 
 ### Audit checklist
 
-| Feature | Keyboard requirement | Status |
-|---|---|---|
-| All links and buttons | Reachable via Tab | ✅ All native elements |
-| Filter dropdowns | Arrow key navigation | ❓ Check ProviderFilterRenderer |
-| Date picker inputs | Native date input | ✅ Browser handles |
-| Pagination | Tab through + Enter | ✅ Native buttons |
-| Sort by price/date | Tab to button + Enter | ✅ Native buttons |
-| Checkbox select all | Tab to checkbox + Space | ✅ |
-| Modal close button | Tab to button + Enter | ✅ |
-| Import buttons | Tab to button + Enter | ✅ |
-| Form validation | Focus first error field | ❓ Add this |
+| Feature               | Keyboard requirement    | Status                          |
+| --------------------- | ----------------------- | ------------------------------- |
+| All links and buttons | Reachable via Tab       | ✅ All native elements          |
+| Filter dropdowns      | Arrow key navigation    | ❓ Check ProviderFilterRenderer |
+| Date picker inputs    | Native date input       | ✅ Browser handles              |
+| Pagination            | Tab through + Enter     | ✅ Native buttons               |
+| Sort by price/date    | Tab to button + Enter   | ✅ Native buttons               |
+| Checkbox select all   | Tab to checkbox + Space | ✅                              |
+| Modal close button    | Tab to button + Enter   | ✅                              |
+| Import buttons        | Tab to button + Enter   | ✅                              |
+| Form validation       | Focus first error field | ❓ Add this                     |
 
 ### Focus indicator
 
@@ -357,6 +365,7 @@ useEffect(() => {
 ```
 
 ### Acceptance criteria
+
 - Entire search flow completable with keyboard only (Tab + Enter + Arrow keys)
 - All interactive elements have visible focus ring
 - Focus order follows visual layout
@@ -385,15 +394,15 @@ function ScreenReaderAnnouncement({ message }: { message: string | null }) {
 
 ### Announcements to add
 
-| Event | Message |
-|---|---|
-| Search results loaded | "Načteno 24 zájezdů pro Chorvatsko" |
-| Filter applied | "Filtr aktualizován, zobrazeno 18 výsledků" |
-| Filter removed | "Filtr odstraněn" |
-| Loading started | "Načítám zájezdy…" |
-| Loading error | "Nepodařilo se načíst zájezdy, zkuste to prosím znovu" |
-| Tour imported | "Zájezd #123 importován" |
-| Tour deleted | "Zájezd #123 smazán" |
+| Event                 | Message                                                |
+| --------------------- | ------------------------------------------------------ |
+| Search results loaded | "Načteno 24 zájezdů pro Chorvatsko"                    |
+| Filter applied        | "Filtr aktualizován, zobrazeno 18 výsledků"            |
+| Filter removed        | "Filtr odstraněn"                                      |
+| Loading started       | "Načítám zájezdy…"                                     |
+| Loading error         | "Nepodařilo se načíst zájezdy, zkuste to prosím znovu" |
+| Tour imported         | "Zájezd #123 importován"                               |
+| Tour deleted          | "Zájezd #123 smazán"                                   |
 
 ### Implementation in AdminEmailPage and AdminSearchPage
 
@@ -406,6 +415,7 @@ Add the live region near the results area:
 ```
 
 ### Acceptance criteria
+
 - Screen reader announces search results count after load
 - Filter changes announced
 - Error states announced
@@ -417,24 +427,24 @@ Add the live region near the results area:
 
 ### Audit checklist
 
-| Element | Location | Status |
-|---|---|---|
-| `<header>` | Top of each page | ✅ Search page |
-| `<main>` | Main content area | ✅ |
-| `<footer>` | Page footer | ❓ Verify on all pages |
-| `<nav>` | Navigation | ✅ |
-| `<aside>` | Sidebar | ✅ Filters |
-| `<article>` | Tour cards | ❓ Check if used |
-| `<section>` | Content sections | ✅ Admin pages |
+| Element     | Location          | Status                 |
+| ----------- | ----------------- | ---------------------- |
+| `<header>`  | Top of each page  | ✅ Search page         |
+| `<main>`    | Main content area | ✅                     |
+| `<footer>`  | Page footer       | ❓ Verify on all pages |
+| `<nav>`     | Navigation        | ✅                     |
+| `<aside>`   | Sidebar           | ✅ Filters             |
+| `<article>` | Tour cards        | ❓ Check if used       |
+| `<section>` | Content sections  | ✅ Admin pages         |
 
 ### Heading hierarchy
 
-| Page | h1 | h2 | h3 |
-|---|---|---|---|
-| Homepage | "SkyTravel" | Section titles | Card titles |
-| Search | Page title | "Filtry", "Výsledky" | Tour titles |
-| Admin Statistics | "Statistiky & výkon" | "Statistiky" | KPI labels |
-| Admin Email | "E-maily & marketing" | "Správa kontaktů", "Nová kampaň" | — |
+| Page             | h1                    | h2                               | h3          |
+| ---------------- | --------------------- | -------------------------------- | ----------- |
+| Homepage         | "SkyTravel"           | Section titles                   | Card titles |
+| Search           | Page title            | "Filtry", "Výsledky"             | Tour titles |
+| Admin Statistics | "Statistiky & výkon"  | "Statistiky"                     | KPI labels  |
+| Admin Email      | "E-maily & marketing" | "Správa kontaktů", "Nová kampaň" | —           |
 
 Fix any heading skips (e.g., h1 → h3 without h2).
 
@@ -448,11 +458,13 @@ Admin tables already use `<Table>` component with `<TableHeader>`, `<TableBody>`
 ### Form semantics
 
 Verify all forms use:
+
 - `<form>` element (not just `<div>`)
 - `<label>` associated with inputs via `htmlFor`
 - `<fieldset>` + `<legend>` for grouped controls (radio groups, checkboxes)
 
 ### Acceptance criteria
+
 - W3C HTML validator returns no errors on all pages
 - No heading hierarchy skips
 - Lists use `<ul>`/`<ol>` elements
@@ -463,6 +475,7 @@ Verify all forms use:
 ## Step 10: SEO improvements
 
 ### Files to modify
+
 - `client/index.html` — meta tags (already good, update as needed)
 - `client/src/pages/SearchPage.tsx` — dynamic meta tags
 - `client/src/pages/HomePage.tsx` — meta tags
@@ -544,14 +557,14 @@ const itemListJsonLd = {
 
 ### Dynamic page titles
 
-| Page | Title format |
-|---|---|
-| Homepage | `SkyTravel | Dovolená na míru` |
-| Search (no filter) | `Vyhledávání zájezdů | SkyTravel` |
-| Search (destination) | `Dovolená Chorvatsko 2026 | SkyTravel` |
-| Search (destination + dates) | `Chorvatsko červenec 2026 | SkyTravel` |
-| GDPR | `GDPR | SkyTravel` |
-| Admin | `Admin — {page} | SkyTravel` |
+| Page                         | Title format              |
+| ---------------------------- | ------------------------- | ----------------- |
+| Homepage                     | `SkyTravel                | Dovolená na míru` |
+| Search (no filter)           | `Vyhledávání zájezdů      | SkyTravel`        |
+| Search (destination)         | `Dovolená Chorvatsko 2026 | SkyTravel`        |
+| Search (destination + dates) | `Chorvatsko červenec 2026 | SkyTravel`        |
+| GDPR                         | `GDPR                     | SkyTravel`        |
+| Admin                        | `Admin — {page}           | SkyTravel`        |
 
 ### Robots meta
 
@@ -563,6 +576,7 @@ const itemListJsonLd = {
 ```
 
 Add to:
+
 - `/admin-login`
 - All `/admin/*` pages
 - `/gdpr`
@@ -611,6 +625,7 @@ app.use(sitemapRouter);
 ```
 
 ### Acceptance criteria
+
 - Lighthouse SEO score ≥95
 - Each page has unique, descriptive `<title>`
 - Each page has `<meta name="description">`

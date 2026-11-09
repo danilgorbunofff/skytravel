@@ -11,38 +11,42 @@ Expand the current thin test suite (7 server files, 6 client files, 3 E2E tests)
 ## Current State
 
 ### Server Tests (Node native runner)
-| File | Status | Notes |
-|------|--------|-------|
-| `server/src/__tests__/app.integration.test.ts` | ✅ | Express app creation, 404, security headers |
-| `server/src/middleware/asyncHandler.test.ts` | ✅ | Basic |
-| `server/src/lib/ApiError.test.ts` | ✅ | Good |
-| `server/src/lib/i18n.test.ts` | ✅ | Good |
-| `server/src/lib/providerPrice.test.ts` | ❌ | Uses deprecated `assert.equal()` |
-| `server/src/lib/price-normalization.test.ts` | ✅ | |
-| `server/src/providers/offerGrouping.test.ts` | ✅ | Basic |
+
+| File                                           | Status | Notes                                       |
+| ---------------------------------------------- | ------ | ------------------------------------------- |
+| `server/src/__tests__/app.integration.test.ts` | ✅     | Express app creation, 404, security headers |
+| `server/src/middleware/asyncHandler.test.ts`   | ✅     | Basic                                       |
+| `server/src/lib/ApiError.test.ts`              | ✅     | Good                                        |
+| `server/src/lib/i18n.test.ts`                  | ✅     | Good                                        |
+| `server/src/lib/providerPrice.test.ts`         | ❌     | Uses deprecated `assert.equal()`            |
+| `server/src/lib/price-normalization.test.ts`   | ✅     |                                             |
+| `server/src/providers/offerGrouping.test.ts`   | ✅     | Basic                                       |
 
 ### Client Tests (vitest)
-| File | Status |
-|------|--------|
-| `client/src/lib/prices.test.ts` | ✅ |
-| `client/src/lib/formatters.test.ts` | ✅ |
-| `client/src/lib/images.test.ts` | ✅ |
-| `client/src/hooks/useCookieConsent.test.ts` | ✅ |
-| `client/src/hooks/useFavorites.test.ts` | ✅ |
-| `client/src/utils.test.ts` | ✅ |
+
+| File                                        | Status |
+| ------------------------------------------- | ------ |
+| `client/src/lib/prices.test.ts`             | ✅     |
+| `client/src/lib/formatters.test.ts`         | ✅     |
+| `client/src/lib/images.test.ts`             | ✅     |
+| `client/src/hooks/useCookieConsent.test.ts` | ✅     |
+| `client/src/hooks/useFavorites.test.ts`     | ✅     |
+| `client/src/utils.test.ts`                  | ✅     |
 
 ### E2E Tests (Playwright)
-| File | Status |
-|------|--------|
-| `e2e/homepage.spec.ts` | ✅ |
-| `e2e/search.spec.ts` | ✅ |
-| `e2e/admin-login.spec.ts` | ✅ |
+
+| File                      | Status |
+| ------------------------- | ------ |
+| `e2e/homepage.spec.ts`    | ✅     |
+| `e2e/search.spec.ts`      | ✅     |
+| `e2e/admin-login.spec.ts` | ✅     |
 
 ---
 
 ## Step 1: Fix Existing Test Issues
 
 ### File: `server/src/lib/providerPrice.test.ts`
+
 - Replace all `assert.equal()` with `assert.strictEqual()`
 - Verify type assertions match strict equality
 
@@ -55,6 +59,7 @@ assert.strictEqual(isPlausibleProviderPriceCzk(5000), true);
 ```
 
 ### Verification
+
 ```bash
 npm --workspace server run test
 # Output: all 7 test files pass, no deprecated API warnings
@@ -65,6 +70,7 @@ npm --workspace server run test
 ## Step 2: Create Server Route Integration Tests
 
 ### Infrastructure
+
 - Use `createApp()` from `server/src/app.ts` to create a test app instance
 - Use `node:test` with `supertest` (or use `node:test` with `http.request`)
 - For mocking external APIs: use `nock` (HTTP mocking) or `msw` (more modern)
@@ -73,6 +79,7 @@ npm --workspace server run test
 ### New Test Files
 
 #### `server/src/__tests__/routes/search.test.ts`
+
 ```typescript
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -90,6 +97,7 @@ describe("GET /api/search/all/tours", () => {
 ```
 
 **Test scenarios:**
+
 - Happy path: valid query returns tours
 - Validation: invalid date (end before start) → 400
 - Pagination: page=1, limit=10 returns correct slice
@@ -98,6 +106,7 @@ describe("GET /api/search/all/tours", () => {
 - Cache: subsequent identical request returns cached data
 
 #### `server/src/__tests__/routes/auth.test.ts`
+
 ```typescript
 describe("POST /api/auth/login", () => {
   it("returns token with valid credentials");
@@ -116,6 +125,7 @@ describe("GET /api/auth/session", () => {
 ```
 
 #### `server/src/__tests__/routes/alerts.test.ts`
+
 ```typescript
 describe("Price alerts", () => {
   it("creates price alert with valid data");
@@ -126,6 +136,7 @@ describe("Price alerts", () => {
 ```
 
 #### `server/src/__tests__/routes/erasure.test.ts`
+
 ```typescript
 describe("GDPR erasure", () => {
   it("deletes lead data given valid token");
@@ -135,6 +146,7 @@ describe("GDPR erasure", () => {
 ```
 
 #### `server/src/__tests__/routes/admin/tours.test.ts`
+
 ```typescript
 describe("Admin tour CRUD", () => {
   it("creates a tour with valid data");
@@ -147,6 +159,7 @@ describe("Admin tour CRUD", () => {
 ```
 
 #### `server/src/__tests__/routes/admin/campaigns.test.ts`
+
 ```typescript
 describe("Campaign management", () => {
   it("creates a campaign with valid data");
@@ -157,6 +170,7 @@ describe("Campaign management", () => {
 ```
 
 #### `server/src/__tests__/routes/admin/uploads.test.ts`
+
 ```typescript
 describe("File uploads", () => {
   it("accepts valid image upload");
@@ -166,6 +180,7 @@ describe("File uploads", () => {
 ```
 
 #### `server/src/__tests__/routes/admin/import.test.ts`
+
 ```typescript
 describe("Provider import", () => {
   it("imports selected tours from provider");
@@ -176,6 +191,7 @@ describe("Provider import", () => {
 ```
 
 ### Acceptance
+
 - All new tests pass with test database
 - Mocked external APIs don't reach real endpoints
 - Test database is cleaned between test runs
@@ -187,6 +203,7 @@ describe("Provider import", () => {
 ### New Test Files
 
 #### `server/src/providers/alexandriaProvider.test.ts`
+
 - Parse mock XML fixture files
 - Handle malformed XML gracefully
 - Handle missing fields gracefully
@@ -197,6 +214,7 @@ describe("Provider import", () => {
 Create fixture file: `server/src/providers/__fixtures__/alexandria-sample.xml`
 
 #### `server/src/providers/publicSearchCache.test.ts`
+
 ```typescript
 describe("PublicSearchCache", () => {
   it("stores and retrieves values");
@@ -211,6 +229,7 @@ describe("PublicSearchCache", () => {
 ```
 
 #### `server/src/providers/offerGrouping.test.ts`
+
 - Expand existing test with edge cases:
   - Tours with same destination but different hotels
   - Tours with missing offerGroupKey
@@ -220,6 +239,7 @@ describe("PublicSearchCache", () => {
   - Loading state for specific groups
 
 ### Acceptance
+
 - Provider XML/JSON parsing well-covered
 - Cache single-flight deduplication tested
 - Offer edge cases covered
@@ -229,11 +249,13 @@ describe("PublicSearchCache", () => {
 ## Step 4: Create Client Component Tests
 
 ### Infrastructure
+
 - Vitest + @testing-library/react
 - Mock API calls with vi.fn() or mock service worker
 - Test patterns: render → find element → interact → assert
 
 **Ensure dependencies:**
+
 ```bash
 npm --workspace client add -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
 ```
@@ -241,6 +263,7 @@ npm --workspace client add -D @testing-library/react @testing-library/jest-dom @
 ### New Test Files
 
 #### `client/src/pages/__tests__/SearchPage.test.tsx`
+
 ```typescript
 import { render, screen } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
@@ -269,6 +292,7 @@ describe("SearchPage", () => {
 ```
 
 #### `client/src/pages/__tests__/HomePage.test.tsx`
+
 ```typescript
 describe("HomePage", () => {
   it("renders hero section with carousel", () => {});
@@ -284,6 +308,7 @@ describe("HomePage", () => {
 ```
 
 #### `client/src/components/__tests__/TourCard.test.tsx`
+
 ```typescript
 describe("TourCard", () => {
   it("renders tour destination and price", () => {});
@@ -295,6 +320,7 @@ describe("TourCard", () => {
 ```
 
 #### `client/src/features/search/components/__tests__/TourDetailModal.test.tsx`
+
 ```typescript
 describe("TourDetailModal", () => {
   it("renders tour info", () => {});
@@ -310,6 +336,7 @@ describe("TourDetailModal", () => {
 ```
 
 #### `client/src/features/search/components/__tests__/CompareTray.test.tsx`
+
 ```typescript
 describe("CompareTray", () => {
   it("renders nothing when empty", () => {});
@@ -322,6 +349,7 @@ describe("CompareTray", () => {
 ```
 
 ### Acceptance
+
 - Key components have smoke tests
 - Loading, error, empty states tested
 - User interactions covered (click, keyboard)
@@ -334,104 +362,107 @@ describe("CompareTray", () => {
 ### New Test Files
 
 #### `e2e/search-full-flow.spec.ts`
+
 ```typescript
 import { test, expect } from "@playwright/test";
 
 test("complete search flow", async ({ page }) => {
   // 1. Navigate to homepage
   await page.goto("/");
-  
+
   // 2. Enter destination in hero search
   await page.fill("#searchDestination", "Egypt");
-  
+
   // 3. Submit search
   await page.click("button[type='submit']");
-  
+
   // 4. Wait for results to load
   await page.waitForSelector(".tour-grid");
-  
+
   // 5. Verify results contain Egypt tours
   await expect(page.locator(".tour-grid")).toContainText("Egypt");
-  
+
   // 6. Apply price filter
   await page.click("text=Cena");
   // ...
-  
+
   // 7. Open tour detail
   await page.click(".tour-card:first-child");
-  
+
   // 8. Verify detail modal
   await expect(page.locator(".tour-detail-modal")).toBeVisible();
-  
+
   // 9. Submit inquiry
   await page.fill("input[type='email']", "test@example.com");
   await page.click("text=Odeslat poptávku");
-  
+
   // 10. Verify success message
   await expect(page.locator("text=Děkujeme")).toBeVisible();
 });
 ```
 
 #### `e2e/admin-import-flow.spec.ts`
+
 ```typescript
 test("admin import flow", async ({ page }) => {
   // 1. Navigate to admin login
   await page.goto("/admin-login");
-  
+
   // 2. Login with credentials
   await page.fill("#password", process.env.ADMIN_PASSWORD || "admin123");
   await page.click("button[type='submit']");
-  
+
   // 3. Wait for admin page
   await page.waitForURL("**/admin/**");
-  
+
   // 4. Select provider
   await page.click("text=Alexandria");
-  
+
   // 5. Select region
   await page.click("text=Egypt");
-  
+
   // 6. Wait for tours to load
   await page.waitForSelector(".alex-table-row");
-  
+
   // 7. Select all tours
   await page.click("input[type='checkbox']");
-  
+
   // 8. Import selected
   await page.click("text=Importovat");
-  
+
   // 9. Wait for import result
   await expect(page.locator("text=Import dokončen")).toBeVisible({ timeout: 30000 });
 });
 ```
 
 #### `e2e/mobile-search.spec.ts`
+
 ```typescript
 test("mobile search flow", async ({ page }) => {
   // Set mobile viewport
   await page.setViewportSize({ width: 375, height: 812 }); // iPhone X
-  
+
   // 1. Navigate to search page
   await page.goto("/search");
-  
+
   // 2. Verify mobile filter FAB is visible
   await expect(page.locator(".mobile-filter-fab")).toBeVisible();
-  
+
   // 3. Open mobile filters
   await page.click(".mobile-filter-fab");
-  
+
   // 4. Verify drawer opens
   await expect(page.locator(".mobile-filter-drawer")).toBeVisible();
-  
+
   // 5. Apply filter
   await page.click("text=All Inclusive");
-  
+
   // 6. Apply filter
   await page.click("text=Zobrazit");
-  
+
   // 7. Verify filter applied
   await expect(page.locator(".active-chip")).toContainText("All Inclusive");
-  
+
   // 8. Load more tours
   await page.click("text=Načíst další");
 });
@@ -452,6 +483,7 @@ await page.waitForResponse("**/api/search/**");
 ```
 
 Add accessibility checks:
+
 ```typescript
 import AxeBuilder from "@axe-core/playwright";
 
@@ -463,11 +495,13 @@ test("search page passes aXe audit", async ({ page }) => {
 ```
 
 **Add dependency:**
+
 ```bash
 npm add -D @axe-core/playwright
 ```
 
 ### Acceptance
+
 - No `waitForTimeout` in any E2E test
 - All critical user flows covered
 - Mobile viewport tests pass
@@ -480,17 +514,17 @@ npm add -D @axe-core/playwright
 
 ### New Test Files
 
-| File | Type | Coverage |
-|------|------|----------|
-| `server/src/__tests__/routes/search.test.ts` | Integration | Public search endpoint |
-| `server/src/__tests__/routes/auth.test.ts` | Integration | Login/logout/session |
-| `server/src/__tests__/routes/alerts.test.ts` | Integration | Price alerts |
-| `server/src/__tests__/routes/erasure.test.ts` | Integration | GDPR erasure |
-| `server/src/__tests__/routes/admin/tours.test.ts` | Integration | Tour CRUD |
-| `server/src/__tests__/routes/admin/campaigns.test.ts` | Integration | Campaign management |
-| `server/src/__tests__/routes/admin/uploads.test.ts` | Integration | File uploads |
-| `server/src/__tests__/routes/admin/import.test.ts` | Integration | Provider import |
-| `server/src/providers/alexandriaProvider.test.ts` | Unit | XML parsing, edge cases |
+| File                                                  | Type        | Coverage                |
+| ----------------------------------------------------- | ----------- | ----------------------- |
+| `server/src/__tests__/routes/search.test.ts`          | Integration | Public search endpoint  |
+| `server/src/__tests__/routes/auth.test.ts`            | Integration | Login/logout/session    |
+| `server/src/__tests__/routes/alerts.test.ts`          | Integration | Price alerts            |
+| `server/src/__tests__/routes/erasure.test.ts`         | Integration | GDPR erasure            |
+| `server/src/__tests__/routes/admin/tours.test.ts`     | Integration | Tour CRUD               |
+| `server/src/__tests__/routes/admin/campaigns.test.ts` | Integration | Campaign management     |
+| `server/src/__tests__/routes/admin/uploads.test.ts`   | Integration | File uploads            |
+| `server/src/__tests__/routes/admin/import.test.ts`    | Integration | Provider import         |
+| `server/src/providers/alexandriaProvider.test.ts`     | Unit        | XML parsing, edge cases |
 
 | `server/src/providers/publicSearchCache.test.ts` | Unit | LRU, TTL, single-flight, SWR |
 | `server/src/providers/offerGrouping.test.ts` | Unit | Edge cases (expand existing) |
@@ -504,15 +538,14 @@ npm add -D @axe-core/playwright
 | `e2e/mobile-search.spec.ts` | E2E | Mobile viewport |
 | `server/src/providers/__fixtures__/alexandria-sample.xml` | Fixture | Sample XML for provider test |
 
-
 ### Modified Files
 
-| File | Change |
-|------|--------|
+| File                                   | Change                                               |
+| -------------------------------------- | ---------------------------------------------------- |
 | `server/src/lib/providerPrice.test.ts` | Fix deprecated `assert.equal` → `assert.strictEqual` |
-| `e2e/homepage.spec.ts` | Replace `waitForTimeout` with proper selectors |
-| `e2e/search.spec.ts` | Replace `waitForTimeout` with proper selectors |
-| `e2e/admin-login.spec.ts` | Replace `waitForTimeout` with proper selectors |
+| `e2e/homepage.spec.ts`                 | Replace `waitForTimeout` with proper selectors       |
+| `e2e/search.spec.ts`                   | Replace `waitForTimeout` with proper selectors       |
+| `e2e/admin-login.spec.ts`              | Replace `waitForTimeout` with proper selectors       |
 
 ---
 
@@ -537,47 +570,51 @@ npm run lint
 ```
 
 ### Target Coverage Metrics
-| Layer | Current | Target |
-|-------|---------|--------|
-| Server routes | ~0% | >80% |
-| Server providers | ~30% | >80% |
-| Server lib | ~50% | >80% |
-| Client pages | ~0% | >60% |
-| Client components | ~30% | >60% |
-| Client hooks | ~50% | >80% |
-| Client lib | ~70% | >80% |
-| E2E flow coverage | ~30% | >80% of critical paths |
+
+| Layer             | Current | Target                 |
+| ----------------- | ------- | ---------------------- |
+| Server routes     | ~0%     | >80%                   |
+| Server providers  | ~30%    | >80%                   |
+| Server lib        | ~50%    | >80%                   |
+| Client pages      | ~0%     | >60%                   |
+| Client components | ~30%    | >60%                   |
+| Client hooks      | ~50%    | >80%                   |
+| Client lib        | ~70%    | >80%                   |
+| E2E flow coverage | ~30%    | >80% of critical paths |
 
 ---
 
 ## Risk Assessment
 
-| Risk | Level | Mitigation |
-|------|-------|------------|
-| Integration tests require test DB | MEDIUM | Script to create/reset DB before tests |
-| Tests fail due to async timing | LOW | Use `waitFor` rather than arbitrary timeouts |
-| Component tests hard due to many deps | MEDIUM | Mock hooks at module level; use provider pattern |
-| E2E tests flaky | MEDIUM | Replace all `waitForTimeout`; use `waitForSelector`/`waitForResponse` |
-| Test data pollution | LOW | Clean DB between test runs; use transactions for integration tests |
+| Risk                                  | Level  | Mitigation                                                            |
+| ------------------------------------- | ------ | --------------------------------------------------------------------- |
+| Integration tests require test DB     | MEDIUM | Script to create/reset DB before tests                                |
+| Tests fail due to async timing        | LOW    | Use `waitFor` rather than arbitrary timeouts                          |
+| Component tests hard due to many deps | MEDIUM | Mock hooks at module level; use provider pattern                      |
+| E2E tests flaky                       | MEDIUM | Replace all `waitForTimeout`; use `waitForSelector`/`waitForResponse` |
+| Test data pollution                   | LOW    | Clean DB between test runs; use transactions for integration tests    |
 
 ---
 
 ## Test Data Strategy
 
 ### Database Tests
+
 - Use a separate test database (`skytravel_test`)
 - Run migrations before tests
 - Wrap each test suite in a transaction that rolls back
 - Or use a `before`/`after` pattern to clean tables
 
 ### Mocking Strategy
+
 - **Server route tests:** Mock external HTTP calls with `nock`
 - **Server provider tests:** Use fixture files for XML/JSON parsing tests
 - **Client component tests:** Mock hooks with `vi.mock()`, mock API calls with `vi.fn()`
 - **E2E tests:** Use real dev server, no mocking
 
 ### Fixture Files
+
 Create `server/src/providers/__fixtures__/` directory:
+
 - `alexandria-sample.xml` — realistic Alexandria XML response
 - `alexandria-last-minute.xml` — last-minute subset
-

@@ -16,6 +16,7 @@ Systematic dependency upgrades across the monorepo. Prisma 5→6→7 (two-step),
 ```
 
 **Breaking changes in Prisma 6:**
+
 1. **`NotFoundError` removed** — use `PrismaClientKnownRequestError` with code `P2025` instead
    - Grep for `NotFoundError` across the server workspace
    - Replace `import { NotFoundError }` with `import { PrismaClientKnownRequestError }`
@@ -25,6 +26,7 @@ Systematic dependency upgrades across the monorepo. Prisma 5→6→7 (two-step),
 4. **`prisma generate` output path changes** — may require explicit `output` in schema generator block
 
 **Commands:**
+
 ```bash
 npm install --workspace server @prisma/client@^6.6.0 prisma@^6.6.0
 npx prisma generate
@@ -32,12 +34,14 @@ npx tsc --noEmit
 ```
 
 **Potential file changes:**
+
 - Search for `NotFoundError` imports: `grep -r "NotFoundError" server/src/`
 - Search for `err.code === "P2025"` or `err instanceof PrismaClientKnownRequestError`
 
 ### Prisma 6→7 (Step 2 — MAJOR ARCHITECTURAL CHANGE)
 
 **Prisma 7 fundamentally changes the client architecture:**
+
 1. Provider changes from `prisma-client-js` to `prisma-client`
 2. Datasource URL moves from `schema.prisma` to `prisma.config.ts`
 3. Requires `@prisma/adapter-mariadb` for MySQL compatibility
@@ -47,6 +51,7 @@ npx tsc --noEmit
 **Step-by-step:**
 
 #### A. Install Prisma 7 and adapter
+
 ```bash
 npm install --workspace server @prisma/client@^7.0.0 prisma@^7.0.0 @prisma/adapter-mariadb@^7.0.0
 ```
@@ -54,6 +59,7 @@ npm install --workspace server @prisma/client@^7.0.0 prisma@^7.0.0 @prisma/adapt
 #### B. Update `schema.prisma`
 
 Change the generator provider:
+
 ```prisma
 generator client {
   provider = "prisma-client"
@@ -62,6 +68,7 @@ generator client {
 ```
 
 Remove the `datasource` block's `url` — it moves to config:
+
 ```prisma
 datasource db {
   provider = "mysql"
@@ -70,6 +77,7 @@ datasource db {
 ```
 
 **Final `schema.prisma` `datasource` block:**
+
 ```prisma
 datasource db {
   provider = "mysql"
@@ -108,12 +116,14 @@ import { PrismaClient } from "./generated/prisma/client/index.js";
 #### E. Update all imports across the server
 
 Search for all `from "@prisma/client"` imports and replace them. This affects:
+
 - `server/src/prisma.ts`
 - `server/src/providers/alexandriaProvider.ts` (line 6: `import { type Prisma } from "@prisma/client"`)
 
 - Any other files importing from `@prisma/client`
 
 **New import pattern:**
+
 ```typescript
 import { PrismaClient, type Prisma } from "../prisma/generated/prisma/client/index.js";
 ```
@@ -121,6 +131,7 @@ import { PrismaClient, type Prisma } from "../prisma/generated/prisma/client/ind
 Or better, create a re-export barrel:
 
 Create `server/src/prisma/client.ts`:
+
 ```typescript
 export * from "../../prisma/generated/prisma/client/index.js";
 ```
@@ -128,24 +139,29 @@ export * from "../../prisma/generated/prisma/client/index.js";
 Then import from `../prisma/client.js` instead.
 
 #### F. Generate client explicitly
+
 ```bash
 npx prisma generate
 ```
+
 Note: `prisma generate` no longer runs automatically on install — it must be called explicitly.
 
 #### G. Update build scripts
 
 In `server/package.json`, the build script already calls `prisma generate`:
+
 ```json
 "build": "prisma generate && tsc -p tsconfig.json",
 ```
 
 This is still correct, but ensure the generated output path is in `.gitignore`:
+
 ```gitignore
 server/prisma/generated/
 ```
 
 **Acceptance criteria:**
+
 - `npx prisma generate` produces the client in `server/prisma/generated/prisma/client/`
 - `npx tsc --noEmit` passes
 - All Prisma queries work (test suite passes)
@@ -155,16 +171,17 @@ server/prisma/generated/
 
 ### Breaking defaults in TS 6.0
 
-| Setting | TS 5.x default | TS 6.0 default | Impact |
-|---------|---------------|----------------|--------|
-| `strict` | `false` | `true` | Our tsconfig already sets `strict: true` — no change |
-| `module` | varies | `esnext` | Our server uses `ES2022`, client uses `ESNext` — both fine |
-| `types` | `["node"]` inferred | `[]` | **Server needs explicit `"types": ["node"]`** — already set |
-| `rootDir` | inferred from `include` | `"."` | **Server explicitly sets `"rootDir": "src"` — fine**; client has `noEmit: true` so no issue |
+| Setting   | TS 5.x default          | TS 6.0 default | Impact                                                                                      |
+| --------- | ----------------------- | -------------- | ------------------------------------------------------------------------------------------- |
+| `strict`  | `false`                 | `true`         | Our tsconfig already sets `strict: true` — no change                                        |
+| `module`  | varies                  | `esnext`       | Our server uses `ES2022`, client uses `ESNext` — both fine                                  |
+| `types`   | `["node"]` inferred     | `[]`           | **Server needs explicit `"types": ["node"]`** — already set                                 |
+| `rootDir` | inferred from `include` | `"."`          | **Server explicitly sets `"rootDir": "src"` — fine**; client has `noEmit: true` so no issue |
 
 ### Server `tsconfig.json` check
 
 Current (`server/tsconfig.json`):
+
 ```json
 {
   "compilerOptions": {
@@ -183,6 +200,7 @@ Current (`server/tsconfig.json`):
 ```
 
 TS 6.0 compatibility:
+
 - `"types": ["node"]` — ✅ already explicit
 - `"rootDir": "src"` — ✅ already explicit
 - `"moduleResolution": "Bundler"` — not deprecated, fine
@@ -194,6 +212,7 @@ TS 6.0 compatibility:
 ### Client `tsconfig.json` check
 
 Current (`client/tsconfig.json`):
+
 ```json
 {
   "compilerOptions": {
@@ -209,6 +228,7 @@ Current (`client/tsconfig.json`):
 ```
 
 TS 6.0 compatibility:
+
 - `noEmit: true` — fine
 - `jsx: "react-jsx"` — fine (not deprecated)
 - Missing `"types": []` — now default in TS 6, so the `@types/react` etc. won't be auto-included. Need to add `"types": []` explicitly or use triple-slash directives.
@@ -217,6 +237,7 @@ TS 6.0 compatibility:
 ### Upgrade steps
 
 1. Update TypeScript across all workspaces:
+
 ```bash
 npm install --save-dev --workspace root typescript@^6.0.3
 npm install --save-dev --workspace server typescript@^6.0.3
@@ -224,32 +245,37 @@ npm install --save-dev --workspace client typescript@^6.0.3
 ```
 
 2. Update `@types/node` for TS 6 compatibility:
+
 ```bash
 npm install --save-dev --workspace server @types/node@^22.0.0
 ```
 
 3. Update client tsconfig:
+
 ```json
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "types": [],
+    "types": []
     // ... rest unchanged
   }
 }
 ```
 
 4. Run typecheck:
+
 ```bash
 npx tsc --noEmit --workspace server
 npx tsc --noEmit --workspace client
 ```
 
 **If there are TS 6 errors:**
+
 - `ignoreDeprecations` is not needed in TS 6 (was a TS 5.x migration aid)
 - Fix any new errors related to `useDefineForClassFields`, `verbatimModuleSyntax`, or `isolatedModules`
 
 ### Commands
+
 ```bash
 npm install --save-dev --workspace server typescript@^6.0.3 @types/node@^22.0.0
 npm install --save-dev --workspace client typescript@^6.0.3
@@ -258,12 +284,14 @@ npx tsc --noEmit --workspace client
 ```
 
 **Acceptance criteria:**
+
 - `npx tsc --noEmit` passes for both server and client workspaces
 - No new TypeScript errors
 
 ## Minor Bumps
 
 ### bcryptjs 2.4.3 → 3.0.3
+
 ```bash
 npm install --workspace server bcryptjs@^3.0.3
 npm uninstall --workspace server @types/bcryptjs
@@ -274,63 +302,80 @@ bcryptjs 3.x includes its own types — remove `@types/bcryptjs` devDependency.
 Verify `hash()` and `compare()` APIs are unchanged (they are — bcryptjs has maintained the same API for years).
 
 ### helmet → 8.2.0
+
 ```bash
 npm install --workspace server helmet@^8.2.0
 ```
+
 Drop-in, zero dependencies changed. Verify CSP headers still work.
 
 ### zustand → 5.0.14
+
 ```bash
 npm install --workspace client zustand@^5.0.14
 ```
+
 Same major, safe minor/patch bump. Verify store behavior unchanged.
 
 ### express-rate-limit → latest
+
 ```bash
 npm install --workspace server express-rate-limit@^8.5.0
 ```
+
 Already at 8.x — safe minor bump. Verify ESM import `{ rateLimit }` still works.
 
 ### tsx → 4.22.4
+
 ```bash
 npm install --save-dev --workspace server tsx@^4.22.4
 ```
+
 Uses esbuild, not tsc — compatible with TS 6. Verify `npm run dev` still works.
 
 ### lucide-react → latest patches
+
 ```bash
 npm install --workspace client lucide-react@^1.15.0
 ```
 
-### @radix-ui/* → latest patches
+### @radix-ui/\* → latest patches
+
 ```bash
 npm install --workspace client @radix-ui/react-dialog@latest @radix-ui/react-label@latest @radix-ui/react-select@latest @radix-ui/react-separator@latest @radix-ui/react-slot@latest @radix-ui/react-switch@latest @radix-ui/react-tabs@latest
 ```
+
 Individual package bumps — verify no breaking changes in changelogs.
 
-### @tiptap/* → latest patches
+### @tiptap/\* → latest patches
+
 ```bash
 npm install --workspace client @tiptap/extension-image@latest @tiptap/extension-link@latest @tiptap/extension-placeholder@latest @tiptap/pm@latest @tiptap/react@latest @tiptap/starter-kit@latest
 ```
 
 ### Vite 8.x (already using) → latest patch
+
 ```bash
 npm install --save-dev --workspace root vite@^8.1.0
 npm install --save-dev --workspace client vite@^8.1.0
 ```
 
 ### vitest 4.x (already using) → latest patch
+
 ```bash
 npm install --save-dev --workspace client vitest@^4.2.0
 ```
 
 ### rollup-plugin-visualizer
+
 ```bash
 npm install --save-dev --workspace client rollup-plugin-visualizer@^7.2.0
 ```
 
 ### Overall minor bump command
+
 Run after TypeScript 6 migration:
+
 ```bash
 npm update --workspace server
 npm update --workspace client
@@ -339,6 +384,7 @@ npm update --workspace client
 ## React 19 Research (DO NOT EXECUTE — document findings)
 
 ### Key changes
+
 1. **`forwardRef` deprecated** — `ref` is available as a regular prop now
    - Current usage: `client/src/` components using `forwardRef` need migration
    - Migration: remove `forwardRef` wrapper, access `ref` from props
@@ -364,6 +410,7 @@ npm update --workspace client
 6. **Zustand v5** is compatible with React 19 — no changes needed
 
 ### Migration plan for future phase
+
 1. `npm install react@^19.0.0 react-dom@^19.0.0`
 2. `npm install @types/react@^19.0.0 @types/react-dom@^19.0.0`
 3. Search for `forwardRef` usage — update to prop-based refs
@@ -402,11 +449,13 @@ npm update --workspace client
    - Keep it for Express 4 compatibility; remove after migration
 
 ### Codemod available
+
 ```bash
 npx codemod@latest @expressjs/v5-migration-recipe
 ```
 
 ### Migration plan for future phase
+
 1. Run the codemod
 2. `npm install express@^5.0.0`
 3. Fix route path syntax changes
@@ -437,11 +486,11 @@ npm run build
 
 ## Risk Assessment
 
-| Change | Risk | Mitigation |
-|--------|------|------------|
-| Prisma 5→6 | **MEDIUM** — `NotFoundError` removal, generator output changes | Grep for `NotFoundError`; run tests after each step |
-| Prisma 6→7 | **HIGH** — architectural change, new adapter, import path changes | Research exact Prisma 7 API before implementing; test thoroughly |
-| TypeScript 6 | **MEDIUM** — new defaults may expose latent issues | Already have `strict: true`; add explicit `types` config |
-| Minor bumps | **LOW** — same major versions | Run tests, verify typecheck |
-| React 19 | **RESEARCH ONLY** — not executing | Document findings for future phase |
-| Express 5 | **RESEARCH ONLY** — not executing | Document findings for future phase |
+| Change       | Risk                                                              | Mitigation                                                       |
+| ------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Prisma 5→6   | **MEDIUM** — `NotFoundError` removal, generator output changes    | Grep for `NotFoundError`; run tests after each step              |
+| Prisma 6→7   | **HIGH** — architectural change, new adapter, import path changes | Research exact Prisma 7 API before implementing; test thoroughly |
+| TypeScript 6 | **MEDIUM** — new defaults may expose latent issues                | Already have `strict: true`; add explicit `types` config         |
+| Minor bumps  | **LOW** — same major versions                                     | Run tests, verify typecheck                                      |
+| React 19     | **RESEARCH ONLY** — not executing                                 | Document findings for future phase                               |
+| Express 5    | **RESEARCH ONLY** — not executing                                 | Document findings for future phase                               |

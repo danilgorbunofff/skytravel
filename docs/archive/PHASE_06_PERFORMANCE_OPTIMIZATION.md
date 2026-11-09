@@ -11,17 +11,20 @@ Systematic performance improvements targeting bundle size, image loading, DOM vi
 ## Step 1: Split Translations by Language (Dynamic Import)
 
 ### Current State
+
 `client/src/data.ts` contains a single `translations` object with 4 languages (cs, en, uk, ru) totaling ~1200 lines (~50KB). All languages are bundled regardless of user selection.
 
 ### Files to Create
-| File | Contents |
-|------|----------|
+
+| File                                 | Contents                              |
+| ------------------------------------ | ------------------------------------- |
 | `client/src/data/translations/cs.ts` | Czech translations (key-value object) |
-| `client/src/data/translations/en.ts` | English translations |
-| `client/src/data/translations/uk.ts` | Ukrainian translations |
-| `client/src/data/translations/ru.ts` | Russian translations |
+| `client/src/data/translations/en.ts` | English translations                  |
+| `client/src/data/translations/uk.ts` | Ukrainian translations                |
+| `client/src/data/translations/ru.ts` | Russian translations                  |
 
 Each file exports a single object:
+
 ```typescript
 // client/src/data/translations/cs.ts
 const translations = {
@@ -34,11 +37,13 @@ export default translations;
 ### Files to Modify
 
 **`client/src/data.ts`:**
+
 - Remove the `translations` object
 - Keep all types and data arrays (`OwnTour`, `PartnerTour`, `Favorite`, `heroImages`, etc.)
 - Optionally export a re-export barrel: `export { default as cs } from "./translations/cs"` — but better to just remove entirely
 
 **`client/src/hooks/useLanguage.ts`:**
+
 ```typescript
 import { useEffect, useMemo, useState } from "react";
 
@@ -81,7 +86,9 @@ export function useLanguage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   function t(key: string): string {
@@ -95,6 +102,7 @@ export function useLanguage() {
 **Note:** Need to ensure all consumers handle the transient `loading` state. Add a minimal base bundle with critical strings (nav, hero, footer) or use a `<Suspense>` boundary around translated content.
 
 ### Critical Strings (keep in main bundle or preload)
+
 To avoid flash of missing translations, keep the 20 most-used strings inline or in a small base file:
 
 ```typescript
@@ -113,6 +121,7 @@ export const baseTranslations = {
 ```
 
 ### Acceptance
+
 - Initial JS bundle reduced by ~50KB
 - Translations lazy-load on language switch
 - No flash of missing text (base bundle covers critical strings)
@@ -125,6 +134,7 @@ export const baseTranslations = {
 ### Files to Modify
 
 **`client/src/components/TourCard.tsx`:**
+
 ```typescript
 import { memo, useEffect, useRef, useState } from "react";
 
@@ -173,11 +183,13 @@ export default memo(function TourCard({ tour, onClick }: Props) {
 ```
 
 **`client/src/features/search/components/PublicTourCard.tsx`:**
+
 - Same pattern: replace `loading="lazy"` with IntersectionObserver
 - Use `rootMargin: "200px"` for earlier loading
 - Show skeleton placeholder before image loads
 
 ### Acceptance
+
 - Images load only when near viewport
 - No layout shift (fixed aspect ratio containers)
 - Lighthouse performance score improves (target >85)
@@ -188,6 +200,7 @@ export default memo(function TourCard({ tour, onClick }: Props) {
 ## Step 3: Virtualize Admin Tour Table
 
 ### Add Dependency
+
 ```bash
 npm --workspace client add @tanstack/react-virtual
 ```
@@ -195,6 +208,7 @@ npm --workspace client add @tanstack/react-virtual
 ### Files to Modify
 
 **`client/src/components/admin/TourDataTable.tsx`** (or `client/src/pages/AdminSearchPage.tsx`):
+
 - Wrap the table rows in a virtual container when `tours.length > 100`
 - Use `@tanstack/react-virtual` for row virtualization
 
@@ -242,6 +256,7 @@ const virtualizer = useVirtualizer({
 - Keep header row fixed (not virtualized)
 
 ### Acceptance
+
 - Smooth scrolling with 10,000+ rows
 - No DOM overload (only ~20 rows in DOM at any time)
 - All interaction works: checkbox, click, sort
@@ -283,6 +298,7 @@ DATABASE_URL=mysql://user:pass@host:3306/db?connection_limit=5
 ```
 
 ### Acceptance
+
 - DB connections never exceed 5 in production
 - No connection timeout errors under load
 - No increase in query latency (pool of 5 is sufficient for single-server app)
@@ -306,8 +322,7 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
   }
 
   // Only activate timing on debug requests
-  const wantsTiming =
-    req.query.timing === "1" || req.headers["x-debug"] === "timing";
+  const wantsTiming = req.query.timing === "1" || req.headers["x-debug"] === "timing";
 
   const start = process.hrtime.bigint();
   let bytes = 0;
@@ -326,7 +341,7 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
     // Full instrumentation with Server-Timing header
     const originalWrite = res.write.bind(res);
     const originalEnd = res.end.bind(res);
-    
+
     res.write = function patchedWrite(chunk: any, ...rest: any[]) {
       if (chunk) bytes += Buffer.byteLength(typeof chunk === "string" ? chunk : chunk);
       return originalWrite(chunk, ...rest);
@@ -347,7 +362,9 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
     if (closed) return;
     closed = true;
     const durMs = Number(process.hrtime.bigint() - start) / 1_000_000;
-    logger.info(`[search] ${req.method} ${req.originalUrl} ${res.statusCode} ${durMs.toFixed(1)}ms`);
+    logger.info(
+      `[search] ${req.method} ${req.originalUrl} ${res.statusCode} ${durMs.toFixed(1)}ms`,
+    );
   });
 
   next();
@@ -355,6 +372,7 @@ export function searchTimingMiddleware(req: Request, res: Response, next: NextFu
 ```
 
 ### Acceptance
+
 - No performance overhead on non-debug requests
 - Full timing instrumentation still available with `?timing=1`
 - Log output format remains consistent
@@ -406,11 +424,13 @@ async _syncToDbImpl(): Promise<void> {
 ```
 
 Add `p-limit` dependency to server:
+
 ```bash
 npm --workspace server add p-limit
 ```
 
 ### Acceptance
+
 - Sync time reduced ~60% (8 countries × 3 concurrent = ~3x faster)
 - One country failure doesn't block others
 - Errors are logged but don't crash the sync
@@ -476,13 +496,15 @@ The `compression` middleware should be configured. Ensure it's present:
 ```typescript
 import compression from "compression";
 // ...
-app.use(compression({
-  // compression package supports Brotli if available (Node >= 11.7)
-  // It auto-negotiates between gzip, deflate, and brotli based on
-  // the request's Accept-Encoding header
-  threshold: 1024, // minimum size to compress (1KB)
-  level: 6, // default compression level (1-9)
-}));
+app.use(
+  compression({
+    // compression package supports Brotli if available (Node >= 11.7)
+    // It auto-negotiates between gzip, deflate, and brotli based on
+    // the request's Accept-Encoding header
+    threshold: 1024, // minimum size to compress (1KB)
+    level: 6, // default compression level (1-9)
+  }),
+);
 ```
 
 The `compression` npm package supports Brotli via the `zlib` native module (Node.js). No additional configuration needed.
@@ -500,6 +522,7 @@ Add to `client/package.json`:
 ```
 
 ### Acceptance
+
 - Build warns on any chunk >200KB
 - Brotli compression active (verify via `Content-Encoding: br` in response headers)
 - Initial JS load reduced by ~40% with Brotli vs gzip
@@ -512,35 +535,37 @@ Add to `client/package.json`:
 1. **Step 4** — Prisma connection limit (quick, high impact)
 2. **Step 5** — searchTimingMiddleware optimization (quick, reduces overhead)
 
-4. **Step 7** — Alexandria parallel sync (faster syncs)
-5. **Step 8** — Bundle budget + Brotli (build config, no runtime risk)
-6. **Step 1** — Translation splitting (major bundle reduction, test carefully)
-7. **Step 2** — Image preloading (intersection observer)
-8. **Step 3** — Virtualize admin table (most complex, last)
+3. **Step 7** — Alexandria parallel sync (faster syncs)
+4. **Step 8** — Bundle budget + Brotli (build config, no runtime risk)
+5. **Step 1** — Translation splitting (major bundle reduction, test carefully)
+6. **Step 2** — Image preloading (intersection observer)
+7. **Step 3** — Virtualize admin table (most complex, last)
 
 ---
 
 ## Files Summary
 
 ### New Files
-| File | Contents |
-|------|----------|
-| `client/src/data/translations/cs.ts` | Czech translations |
-| `client/src/data/translations/en.ts` | English translations |
-| `client/src/data/translations/uk.ts` | Ukrainian translations |
-| `client/src/data/translations/ru.ts` | Russian translations |
+
+| File                                   | Contents                                    |
+| -------------------------------------- | ------------------------------------------- |
+| `client/src/data/translations/cs.ts`   | Czech translations                          |
+| `client/src/data/translations/en.ts`   | English translations                        |
+| `client/src/data/translations/uk.ts`   | Ukrainian translations                      |
+| `client/src/data/translations/ru.ts`   | Russian translations                        |
 | `client/src/data/translations/base.ts` | Base critical strings (~20 keys, all langs) |
 
 ### Modified Files
-| File | Change |
-|------|--------|
-| `client/src/data.ts` | Remove `translations` object |
-| `client/src/hooks/useLanguage.ts` | Dynamic import, loading state |
-| `client/src/components/TourCard.tsx` | IntersectionObserver for image |
-| `client/src/features/search/components/PublicTourCard.tsx` | IntersectionObserver for image |
-| `client/src/components/admin/TourDataTable.tsx` | Virtualization with @tanstack/react-virtual |
-| `server/src/prisma.ts` | connection_limit=5 |
-| `server/src/middleware/searchTiming.ts` | Conditional patching |
+
+| File                                                       | Change                                      |
+| ---------------------------------------------------------- | ------------------------------------------- |
+| `client/src/data.ts`                                       | Remove `translations` object                |
+| `client/src/hooks/useLanguage.ts`                          | Dynamic import, loading state               |
+| `client/src/components/TourCard.tsx`                       | IntersectionObserver for image              |
+| `client/src/features/search/components/PublicTourCard.tsx` | IntersectionObserver for image              |
+| `client/src/components/admin/TourDataTable.tsx`            | Virtualization with @tanstack/react-virtual |
+| `server/src/prisma.ts`                                     | connection_limit=5                          |
+| `server/src/middleware/searchTiming.ts`                    | Conditional patching                        |
 
 | `server/src/providers/alexandriaProvider.ts` | Parallel sync with p-limit |
 | `client/vite.config.ts` | Bundle budget, manualChunks |
@@ -575,24 +600,25 @@ curl -H "Accept-Encoding: br" -I http://localhost:5173/assets/index-*.js | grep 
 ```
 
 ### Target Metrics
-| Metric | Current | Target |
-|--------|---------|--------|
-| Initial JS bundle | ~250KB | ≤200KB |
-| Lighthouse Performance | ~70 | >85 |
-| Lighthouse Accessibility | ~85 | >90 |
-| Server RSS under load | ~400MB | ≤350MB |
-| Alexandria sync time | ~60s | ≤25s |
-| DB connections under load | ~20 | ≤5 |
+
+| Metric                    | Current | Target |
+| ------------------------- | ------- | ------ |
+| Initial JS bundle         | ~250KB  | ≤200KB |
+| Lighthouse Performance    | ~70     | >85    |
+| Lighthouse Accessibility  | ~85     | >90    |
+| Server RSS under load     | ~400MB  | ≤350MB |
+| Alexandria sync time      | ~60s    | ≤25s   |
+| DB connections under load | ~20     | ≤5     |
 
 ---
 
 ## Risk Assessment
 
-| Risk | Level | Mitigation |
-|------|-------|------------|
-| Dynamic import race conditions | MEDIUM | Use cancelled flag; fallback to cs; add Suspense boundary |
-| Virtualization breaks table UX | MEDIUM | Only enable for >100 rows; maintain row height; test sort/select |
-| Parallel sync memory spike | LOW | Concurrency limit of 3 with p-limit |
-| Translation loading flash | MEDIUM | Base bundle with critical strings |
-| Brotli not supported on Node | LOW | Falls back to gzip; verify with curl |
-| LRU eviction causes cache miss spike | LOW | TTL of 30min is generous; cold start warmup |
+| Risk                                 | Level  | Mitigation                                                       |
+| ------------------------------------ | ------ | ---------------------------------------------------------------- |
+| Dynamic import race conditions       | MEDIUM | Use cancelled flag; fallback to cs; add Suspense boundary        |
+| Virtualization breaks table UX       | MEDIUM | Only enable for >100 rows; maintain row height; test sort/select |
+| Parallel sync memory spike           | LOW    | Concurrency limit of 3 with p-limit                              |
+| Translation loading flash            | MEDIUM | Base bundle with critical strings                                |
+| Brotli not supported on Node         | LOW    | Falls back to gzip; verify with curl                             |
+| LRU eviction causes cache miss spike | LOW    | TTL of 30min is generous; cold start warmup                      |
