@@ -1,15 +1,8 @@
 import type { Lead } from "../../features/admin/types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Mail, Trash2 } from "lucide-react";
+import { Mail, RotateCcw, Trash2, XCircle } from "lucide-react";
 
 type Props = {
   leads: Lead[];
@@ -17,6 +10,7 @@ type Props = {
   error: string | null;
   searchQuery: string;
   onDelete: (id: number) => void;
+  onRetry: () => void;
 };
 
 // ── Skeleton rows ──
@@ -47,7 +41,14 @@ function SkeletonRows() {
   );
 }
 
-export default function LeadsTable({ leads, loading, error: _error, searchQuery, onDelete }: Props) {
+export default function LeadsTable({
+  leads,
+  loading,
+  error,
+  searchQuery,
+  onDelete,
+  onRetry,
+}: Props) {
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
@@ -62,21 +63,34 @@ export default function LeadsTable({ leads, loading, error: _error, searchQuery,
         </TableHeader>
         <TableBody>
           {loading && <SkeletonRows />}
-          {!loading && leads.length === 0 && (
+          {!loading && error && (
+            <TableRow>
+              <TableCell colSpan={5} className="py-10 text-center">
+                <div role="alert" className="mx-auto max-w-sm space-y-3">
+                  <XCircle className="mx-auto h-8 w-8 text-destructive" />
+                  <p className="text-sm font-medium text-destructive">{error}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                    Zkusit znovu
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+          {!loading && !error && leads.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="py-12 text-center">
                 <div className="mx-auto max-w-xs space-y-2">
                   <Mail className="mx-auto h-10 w-10 text-muted-foreground/40" />
                   <p className="text-sm font-medium text-muted-foreground">
-                    {searchQuery
-                      ? "Žádné výsledky pro tento dotaz."
-                      : "Zatím žádné kontakty."}
+                    {searchQuery ? "Žádné výsledky pro tento dotaz." : "Zatím žádné kontakty."}
                   </p>
                 </div>
               </TableCell>
             </TableRow>
           )}
           {!loading &&
+            !error &&
             leads.map((lead) => (
               <TableRow key={lead.id} className="group">
                 <TableCell>
@@ -100,9 +114,10 @@ export default function LeadsTable({ leads, loading, error: _error, searchQuery,
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                    className="transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                     onClick={() => onDelete(lead.id)}
                     title="Smazat kontakt"
+                    aria-label={`Smazat kontakt ${lead.email}`}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

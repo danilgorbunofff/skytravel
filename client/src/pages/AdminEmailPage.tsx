@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -9,13 +9,18 @@ import AdminLayout from "../components/AdminLayout";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { SkipToContent } from "../components/SkipToContent";
+import AdminToastViewport from "../components/admin/AdminToastViewport";
 import {
   deleteLead,
+  fetchLeadCount,
   fetchLeads,
   sendCampaign,
   sendTestCampaign,
   uploadAdminImages,
 } from "../features/admin/services/adminApi";
+import { useAdminToast } from "../features/admin/hooks/useAdminToast";
+import { EMAIL_RE, getSendBlockedReason } from "../features/admin/campaign";
+import { useDebounce } from "../features/search/hooks/useDebounce";
 import type { Lead } from "../features/admin/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -23,48 +28,44 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
-import {
-  Users,
-  ShieldCheck,
-  ShieldOff,
-  Mail,
-  SendHorizonal,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, ListFilter, SendHorizonal, Loader2 } from "lucide-react";
 import EmailEditor from "../components/admin/EmailEditor";
-import RecipientSelector from "../components/admin/RecipientSelector";
+import RecipientSelector, { type LeadCounts } from "../components/admin/RecipientSelector";
 import SendPreview from "../components/admin/SendPreview";
-import CampaignHistory from "../components/admin/CampaignHistory";
 
-type Toast = {
-  id: number;
-  type: "success" | "error" | "info";
-  message: string;
-};
+type Segment = "all" | "consented" | "pending";
 
-const TOAST_DURATION = 5000;
+const LIST_LIMIT = 500;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function AdminEmailPage() {
-  const [segment, setSegment] = useState<"all" | "consented" | "pending">("consented");
+  // ── Table filter (does NOT affect who receives a campaign) ──
+  const [segment, setSegment] = useState<Segment>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const searchQuery = useDebounce(searchInput.trim(), SEARCH_DEBOUNCE_MS);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [listTotal, setListTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [subject, setSubject] = useState("Exkluzivní nabídky SkyTravel");
-  const [preheader, setPreheader] = useState("Bonus travel guide + nové termíny");
+  const listRequestRef = useRef(0);
+
+  // ── Server-side segment counts (campaign recipients = counts.consented) ──
+  const [counts, setCounts] = useState<LeadCounts | null>(null);
+  const [countsError, setCountsError] = useState(false);
+
+  // ── Draft (starts empty so nothing sendable ships pre-filled) ──
+  const [subject, setSubject] = useState("");
+  const [subjectTouched, setSubjectTouched] = useState(false);
+  const [preheader, setPreheader] = useState("");
   const [fromEmail, setFromEmail] = useState("info@skytravel.cz");
-  const [testEmail, setTestEmail] = useState("test@skytravel.cz");
+  const [testEmail, setTestEmail] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const toastIdRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { toasts, showToast, dismissToast } = useAdminToast();
 
   // ── TipTap editor ──
   const editor = useEditor({
@@ -74,8 +75,7 @@ export default function AdminEmailPage() {
       Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: "Začněte psát obsah e-mailu…" }),
     ],
-    content:
-      "<h2>Nové termíny pro vaše vysněné destinace</h2><p>Vybrali jsme pro vás nejlepší nabídky týdne. Podívejte se na nová data odletů a stáhněte si bonusový travel guide.</p><p><strong>Tip:</strong> odpovězte nám na tento e-mail a připravíme nabídku na míru.</p>",
+    content: "",
     editorProps: {
       attributes: { class: "min-h-[240px] p-4 text-sm outline-none focus:outline-none" },
       handleDrop: (view, event, _slice, moved) => {
@@ -94,9 +94,14 @@ export default function AdminEmailPage() {
                 ),
               );
             });
-            addToast("success", "Obrázek nahrán.");
+            showToast("Obrázek nahrán.");
           })
-          .catch(() => addToast("error", "Nahrání obrázku se nepodařilo."));
+          .catch((err) =>
+            showToast(
+              err instanceof Error ? err.message : "Nahrání obrázku se nepodařilo.",
+              "error",
+            ),
+          );
         return true;
       },
     },
@@ -104,42 +109,60 @@ export default function AdminEmailPage() {
 
   const editorHtml = editor?.getHTML() ?? "";
 
-  const addToast = useCallback((type: Toast["type"], message: string) => {
-    const id = ++toastIdRef.current;
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), TOAST_DURATION);
-  }, []);
-
   const refreshLeads = useCallback(() => {
+    const requestId = ++listRequestRef.current;
     setLoading(true);
-    fetchLeads({ segment, q: searchQuery.trim() || undefined, limit: 500, offset: 0 })
+    fetchLeads({ segment, q: searchQuery || undefined, limit: LIST_LIMIT, offset: 0 })
       .then((res) => {
-        const body = res as unknown as { data: { items: Lead[] } };
-        setLeads((body.data.items ?? []) as Lead[]);
+        if (requestId !== listRequestRef.current) return;
+        const items = (res.data.items ?? []) as Lead[];
+        const total = "total" in res.data ? res.data.total : items.length;
+        setLeads(items);
+        setListTotal(total);
         setError("");
       })
-      .catch(() => setError("Nepodařilo se načíst e-maily."))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (requestId !== listRequestRef.current) return;
+        setLeads([]);
+        setListTotal(0);
+        setError(err instanceof Error ? err.message : "Nepodařilo se načíst kontakty.");
+      })
+      .finally(() => {
+        if (requestId === listRequestRef.current) setLoading(false);
+      });
   }, [segment, searchQuery]);
+
+  const refreshCounts = useCallback(() => {
+    Promise.all([fetchLeadCount("all"), fetchLeadCount("consented")])
+      .then(([all, consented]) => {
+        setCounts({ all, consented, pending: Math.max(0, all - consented) });
+        setCountsError(false);
+      })
+      .catch(() => setCountsError(true));
+  }, []);
 
   useEffect(() => {
     refreshLeads();
   }, [refreshLeads]);
 
-  const consentedCount = useMemo(() => {
-    if (segment === "consented") return leads.length;
-    return leads.filter((lead) => lead.marketingConsent).length;
-  }, [leads, segment]);
+  useEffect(() => {
+    refreshCounts();
+  }, [refreshCounts]);
 
-  // Server already filters by segment+q; keep for CSV/export scope
-  const filtered = useMemo(() => leads, [leads]);
+  const recipientCount = countsError ? null : (counts?.consented ?? null);
 
   // ── Validation ──
   const subjectValid = subject.trim().length > 0;
-  const fromEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail);
-  const testEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail);
+  const fromEmailValid = EMAIL_RE.test(fromEmail);
+  const testEmailValid = EMAIL_RE.test(testEmail);
   const editorEmpty = !editor || editor.isEmpty;
-  const canSend = subjectValid && fromEmailValid && !editorEmpty && consentedCount > 0;
+  const sendBlockedReason = getSendBlockedReason({
+    subject,
+    fromEmail,
+    editorEmpty,
+    recipientCount,
+    recipientCountError: countsError,
+  });
   const canSendTest = subjectValid && fromEmailValid && testEmailValid && !editorEmpty;
 
   async function handleUploadImage(event: React.ChangeEvent<HTMLInputElement>) {
@@ -149,52 +172,46 @@ export default function AdminEmailPage() {
     try {
       const data = await uploadAdminImages(files);
       data.urls.forEach((url) => editor.chain().focus().setImage({ src: url }).run());
-      addToast("success", "Obrázek nahrán.");
-    } catch {
-      addToast("error", "Nahrání obrázku se nepodařilo.");
+      showToast("Obrázek nahrán.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Nahrání obrázku se nepodařilo.", "error");
     } finally {
       event.target.value = "";
     }
   }
 
-  function handleDelete(id: number) {
-    setConfirmDeleteId(id);
-  }
-
   async function performDelete() {
-    if (!confirmDeleteId) return;
+    if (confirmDeleteId === null) return;
+    const id = confirmDeleteId;
     try {
-      await deleteLead(confirmDeleteId);
-      setLeads((prev) => prev.filter((lead) => lead.id !== confirmDeleteId));
-      setConfirmDeleteId(null);
-      addToast("success", "Kontakt smazán.");
-    } catch {
-      addToast("error", "Nepodařilo se smazat kontakt.");
+      await deleteLead(id);
+      setLeads((prev) => prev.filter((lead) => lead.id !== id));
+      setListTotal((prev) => Math.max(0, prev - 1));
+      refreshCounts();
+      showToast("Kontakt smazán.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Nepodařilo se smazat kontakt.", "error");
+    } finally {
       setConfirmDeleteId(null);
     }
   }
 
   async function handleSendCampaign() {
-    if (segment !== "consented") {
-      addToast(
-        "error",
-        "Kampaně lze posílat pouze na segment se souhlasem. Přepněte na „Souhlas“.",
-      );
-      setConfirmSendOpen(false);
-      return;
-    }
     setSending(true);
     try {
-      const result = await sendCampaign({
+      const result = (await sendCampaign({
         subject,
         preheader,
         fromEmail,
         html: editor?.getHTML() ?? "",
-        segment,
-      });
-      addToast("success", `Kampaň odeslána (${result.recipients} příjemců).`);
+        segment: "consented",
+      })) as { data?: { recipients?: number } };
+      const sent = result.data?.recipients;
+      showToast(
+        typeof sent === "number" ? `Kampaň odeslána (${sent} příjemců).` : "Kampaň odeslána.",
+      );
     } catch (err) {
-      addToast("error", err instanceof Error ? err.message : "Odeslání se nepodařilo.");
+      showToast(err instanceof Error ? err.message : "Odeslání se nepodařilo.", "error");
     } finally {
       setSending(false);
       setConfirmSendOpen(false);
@@ -211,9 +228,9 @@ export default function AdminEmailPage() {
         html: editor?.getHTML() ?? "",
         testEmail,
       });
-      addToast("success", `Testovací e-mail odeslán na ${testEmail}.`);
+      showToast(`Testovací e-mail odeslán na ${testEmail}.`);
     } catch (err) {
-      addToast("error", err instanceof Error ? err.message : "Test se nepodařilo odeslat.");
+      showToast(err instanceof Error ? err.message : "Test se nepodařilo odeslat.", "error");
     } finally {
       setSendingTest(false);
     }
@@ -221,7 +238,7 @@ export default function AdminEmailPage() {
 
   function exportCsv() {
     const header = ["email", "destination", "marketingConsent", "gdprConsent", "createdAt"];
-    const rows = filtered.map((lead) => [
+    const rows = leads.map((lead) => [
       lead.email,
       lead.destination || "",
       lead.marketingConsent ? "yes" : "no",
@@ -242,49 +259,39 @@ export default function AdminEmailPage() {
     URL.revokeObjectURL(url);
   }
 
+  const countLabel = (value: number | undefined) =>
+    countsError ? "?" : value === undefined ? "—" : value;
+
   return (
     <AdminLayout title="E-maily & marketing">
       <SkipToContent />
-      {/* ── Toast notifications ── */}
-      <div className="pointer-events-none fixed right-6 top-20 z-50 flex flex-col gap-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={cn(
-              "pointer-events-auto flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg backdrop-blur-sm animate-in slide-in-from-right-5 fade-in duration-300",
-              toast.type === "success" && "border-success/30 bg-success/10 text-success",
-              toast.type === "error" && "border-destructive/30 bg-destructive/10 text-destructive",
-              toast.type === "info" && "border-primary/30 bg-primary/10 text-primary",
-            )}
-          >
-            {toast.type === "success" && <CheckCircle2 className="h-4 w-4 shrink-0" />}
-            {toast.type === "error" && <XCircle className="h-4 w-4 shrink-0" />}
-            {toast.type === "info" && <AlertTriangle className="h-4 w-4 shrink-0" />}
-            {toast.message}
-          </div>
-        ))}
-      </div>
+      <AdminToastViewport toasts={toasts} onDismiss={dismissToast} />
 
       {/* ── Summary stats bar ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: "Celkem kontaktů", value: leads.length, icon: Users, color: "text-primary" },
+          {
+            label: "Celkem kontaktů",
+            value: countLabel(counts?.all),
+            icon: Users,
+            color: "text-primary",
+          },
           {
             label: "Marketing souhlas",
-            value: consentedCount,
+            value: countLabel(counts?.consented),
             icon: ShieldCheck,
             color: "text-success",
           },
           {
             label: "Bez souhlasu",
-            value: leads.length - consentedCount,
+            value: countLabel(counts?.pending),
             icon: ShieldOff,
             color: "text-warning",
           },
           {
-            label: "Aktuální segment",
-            value: filtered.length,
-            icon: Mail,
+            label: "Odpovídá filtru tabulky",
+            value: loading ? "—" : listTotal,
+            icon: ListFilter,
             color: "text-primary",
           },
         ].map((stat) => (
@@ -294,7 +301,7 @@ export default function AdminEmailPage() {
                 <stat.icon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tabular-nums">{loading ? "—" : stat.value}</p>
+                <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
                 <p className="text-xs text-muted-foreground">{stat.label}</p>
               </div>
             </CardContent>
@@ -306,15 +313,17 @@ export default function AdminEmailPage() {
       <ErrorBoundary key="leads-section" onReset={() => window.location.reload()}>
         <RecipientSelector
           leads={leads}
+          listTotal={listTotal}
+          counts={counts}
           loading={loading}
           error={error}
           segment={segment}
-          searchQuery={searchQuery}
-          filtered={filtered}
-          onSegmentChange={(v) => setSegment(v as typeof segment)}
-          onSearchChange={setSearchQuery}
-          onDelete={handleDelete}
+          searchQuery={searchInput}
+          onSegmentChange={(v) => setSegment(v as Segment)}
+          onSearchChange={setSearchInput}
+          onDelete={setConfirmDeleteId}
           onExportCsv={exportCsv}
+          onRetry={refreshLeads}
         />
       </ErrorBoundary>
 
@@ -324,8 +333,9 @@ export default function AdminEmailPage() {
           <CardHeader>
             <CardTitle>Nová kampaň</CardTitle>
             <CardDescription>
-              Vytvořte a odešlete marketingový e-mail kontaktům se souhlasem ({consentedCount}{" "}
-              příjemců).
+              Kampaň obdrží všechny kontakty s marketingovým souhlasem
+              {recipientCount !== null ? ` (${recipientCount})` : ""}. Filtr a vyhledávání v tabulce
+              výše výběr příjemců neovlivňují.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -339,6 +349,7 @@ export default function AdminEmailPage() {
                       id="from-email"
                       value={fromEmail}
                       onChange={(e) => setFromEmail(e.target.value)}
+                      aria-invalid={!fromEmailValid && !!fromEmail}
                       className={cn(
                         !fromEmailValid &&
                           fromEmail &&
@@ -355,11 +366,16 @@ export default function AdminEmailPage() {
                       id="subject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
+                      onBlur={() => setSubjectTouched(true)}
+                      placeholder="např. Nové termíny na jaro"
+                      aria-invalid={subjectTouched && !subjectValid}
                       className={cn(
-                        !subjectValid && "border-destructive focus-visible:ring-destructive",
+                        subjectTouched &&
+                          !subjectValid &&
+                          "border-destructive focus-visible:ring-destructive",
                       )}
                     />
-                    {!subjectValid && (
+                    {subjectTouched && !subjectValid && (
                       <p className="text-xs text-destructive">Předmět je povinný.</p>
                     )}
                   </div>
@@ -394,9 +410,11 @@ export default function AdminEmailPage() {
                     <div className="flex gap-2">
                       <Input
                         id="test-email"
+                        type="email"
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
-                        placeholder="test@skytravel.cz"
+                        placeholder="vas@email.cz"
+                        aria-invalid={!testEmailValid && !!testEmail}
                         className={cn(
                           "w-60",
                           !testEmailValid &&
@@ -423,23 +441,24 @@ export default function AdminEmailPage() {
                     )}
                   </div>
                   {/* Campaign send */}
-                  <div className="space-y-1">
+                  <div className="space-y-1 sm:text-right">
                     <Button
                       type="button"
                       size="lg"
                       onClick={() => setConfirmSendOpen(true)}
-                      disabled={!canSend || sending || segment !== "consented"}
+                      disabled={sendBlockedReason !== null || sending}
+                      aria-describedby={sendBlockedReason ? "send-blocked-reason" : undefined}
                     >
                       {sending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <SendHorizonal className="mr-2 h-4 w-4" />
                       )}
-                      Odeslat kampaň ({consentedCount})
+                      Odeslat kampaň{recipientCount !== null ? ` (${recipientCount})` : ""}
                     </Button>
-                    {segment !== "consented" && (
-                      <p className="text-xs text-amber-600">
-                        Přepněte na segment „Souhlas“ pro odeslání kampaně.
+                    {sendBlockedReason && (
+                      <p id="send-blocked-reason" className="text-xs text-muted-foreground">
+                        {sendBlockedReason}
                       </p>
                     )}
                   </div>
@@ -460,15 +479,14 @@ export default function AdminEmailPage() {
         </Card>
       </ErrorBoundary>
 
-      {/* ── Campaign history ── */}
-      <CampaignHistory />
-
       {/* ── Send confirmation dialog ── */}
       <ConfirmDialog
         isOpen={confirmSendOpen}
         title="Odeslat kampaň?"
-        message={`Opravdu chcete odeslat kampaň „${subject}" na ${consentedCount} příjemců se souhlasem? Tuto akci nelze vzít zpět.`}
+        message={`Kampaň „${subject}" bude odeslána ${recipientCount ?? 0} kontaktům s marketingovým souhlasem. Tuto akci nelze vzít zpět.`}
         confirmLabel={sending ? "Odesílám…" : "Odeslat"}
+        tone="default"
+        loading={sending}
         onConfirm={handleSendCampaign}
         onCancel={() => setConfirmSendOpen(false)}
       />
