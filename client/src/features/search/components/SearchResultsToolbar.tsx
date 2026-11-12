@@ -52,7 +52,7 @@ export function SearchResultsToolbar({
     <div className="search-results-toolbar">
       <div aria-live="polite" aria-atomic="true">
         <h2>{totalText}</h2>
-        <p>{toolbarDescription}</p>
+        {toolbarDescription && <p>{toolbarDescription}</p>}
         {filteredCount !== null && totalCount !== null && filteredCount !== totalCount && (
           <p className="results-sub">
             {t("sStateShown")} {displayedCount.toLocaleString(localeForText())} {t("sStateOf")}{" "}

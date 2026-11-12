@@ -122,6 +122,8 @@ interface Props {
   onShowAll: () => void;
   /** True once mobile switched to normal pagination. */
   mobileShowAll: boolean;
+  /** Where the inquiry form lives (home page #poptavka in the visitor's language). */
+  inquiryHref: string;
 }
 
 /**
@@ -172,8 +174,10 @@ export function SearchResultsSection({
   mobileCapped,
   onShowAll,
   mobileShowAll,
+  inquiryHref,
 }: Props) {
   const busy = loading || pendingPage;
+  const isEmpty = toursToRender.length === 0;
   return (
     <section className="search-results-main">
       {/* Announce only the result count. A live region wrapping the whole grid
@@ -209,39 +213,47 @@ export function SearchResultsSection({
 
       {loading && !result && <TourCardSkeleton count={6} viewMode={viewMode} />}
 
-      {!loading && !error && toursToRender.length === 0 && (
+      {!loading && !error && isEmpty && (
         <div className="search-empty search-empty--results">
-          <div className="search-empty__icon" aria-hidden="true">
-            🔍
-          </div>
           {showFavoritesOnly ? (
             <>
               <h3>{t("sNoFavoritesTitle")}</h3>
               <p>{t("sNoFavoritesBody")}</p>
             </>
+          ) : !hasUserFilters ? (
+            // Nothing filtered and still nothing to show: the catalog itself is
+            // empty (feed outage / refresh). Don't send people to "clear filters".
+            <>
+              <h3>{t("sCatalogEmptyTitle")}</h3>
+              <p>{t("sCatalogEmptyBody")}</p>
+              <a className="search-empty__cta" href={inquiryHref}>
+                {t("sInquiryCta")}
+              </a>
+            </>
           ) : (
             <>
               <h3>{t("sNoResultsTitle")}</h3>
               <p>{t("sNoResultsBody")}</p>
+              <ul className="search-empty__tips">
+                <li>
+                  <button type="button" onClick={onResetFilters}>
+                    {t("sNoResultsTipReset")}
+                  </button>
+                </li>
+                <li>{t("sNoResultsTipDates")}</li>
+                <li>
+                  <a href={inquiryHref}>{t("sNoResultsTipInquiry")}</a>
+                </li>
+              </ul>
             </>
           )}
-          <ul className="search-empty__tips">
-            {!showFavoritesOnly && (
-              <li>
-                <button type="button" onClick={onResetFilters}>
-                  {t("sNoResultsTipReset")}
-                </button>
-              </li>
-            )}
-            <li>{t("sNoResultsTipDates")}</li>
-            <li>{t("sNoResultsTipRegion")}</li>
-          </ul>
         </div>
       )}
 
       <ActiveFilterChips chips={chips} onResetAll={onResetFilters} />
 
-      {!hasUserFilters && (
+      {/* Presets only make sense when there is something to narrow down. */}
+      {!hasUserFilters && !(isEmpty && !loading) && (
         <div className="preset-pills">
           {presets.map((preset) => (
             <button

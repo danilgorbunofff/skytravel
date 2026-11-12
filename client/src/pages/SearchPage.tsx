@@ -53,9 +53,10 @@ import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
 import { localeForText } from "../lib/locale";
+import { DEFAULT_LOCALE, isPublicLocale, localePath } from "../i18n/locales";
 
 export default function SearchPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   usePageTitle("Vyhledávání zájezdů");
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -458,19 +459,26 @@ export default function SearchPage() {
   const visibleTo = results.result
     ? Math.min(results.result.page * results.result.limit, results.result.filtered)
     : 0;
+  const noResults = !showFavoritesOnly && results.result != null && results.result.filtered === 0;
   const totalText = showFavoritesOnly
     ? `${results.displayedTours.length.toLocaleString(localeForText())} ${t("sStateSavedHotels")}`
     : results.result
-      ? !filters.hasUserFilters
-        ? t("sBestDealsTitle")
-        : `${t("sStateShown")} ${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())} ${t("sStateOf")} ${results.result.filtered.toLocaleString(localeForText())} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString(localeForText())} ${t("sStateTerms")})` : ""}`
+      ? noResults
+        ? t("sStateNoOffers")
+        : !filters.hasUserFilters
+          ? t("sBestDealsTitle")
+          : `${t("sStateShown")} ${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())} ${t("sStateOf")} ${results.result.filtered.toLocaleString(localeForText())} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString(localeForText())} ${t("sStateTerms")})` : ""}`
       : results.resultsLoading
         ? t("sStateLoading")
         : filters.hasUserFilters
           ? t("sStateNoOffers")
           : t("sBestDealsTitle");
 
-  const toolbarDescription = !filters.hasUserFilters ? t("sBestDealsBody") : t("sAllPartners");
+  const toolbarDescription = noResults
+    ? ""
+    : !filters.hasUserFilters
+      ? t("sBestDealsBody")
+      : t("sAllPartners");
 
   const mobileFilterCount = [
     filters.activeDestinationSlug,
@@ -700,6 +708,7 @@ export default function SearchPage() {
               mobileCapped={mobileCapped}
               onShowAll={() => setMobileShowAll(true)}
               mobileShowAll={mobileShowAll}
+              inquiryHref={`${localePath(isPublicLocale(lang) ? lang : DEFAULT_LOCALE)}#poptavka`}
             />
           </div>
         </section>

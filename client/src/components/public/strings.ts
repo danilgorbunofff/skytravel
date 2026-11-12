@@ -58,6 +58,10 @@ const STRINGS = {
     leadGdprRequired: "Pro odeslání je potřeba souhlas se zpracováním údajů.",
 
     dealsTitle: "Aktuální nabídky",
+    catalogEmptyTitle: "Nabídky právě aktualizujeme",
+    catalogEmptyText:
+      "Napište nám, kam a kdy chcete jet — pošleme vám aktuální ceny všech českých CK.",
+    catalogEmptyCta: "Poslat poptávku",
     dealsEmpty:
       "Právě teď zde nemáme živé nabídky pro tuto destinaci. Napište nám — pošleme vám aktuální ceny všech CK.",
     dealsAll: "Zobrazit všechny zájezdy",
@@ -130,6 +134,10 @@ const STRINGS = {
     leadGdprRequired: "Для отправки нужно согласие на обработку данных.",
 
     dealsTitle: "Актуальные предложения",
+    catalogEmptyTitle: "Мы как раз обновляем предложения",
+    catalogEmptyText:
+      "Напишите нам, куда и когда хотите поехать — пришлём актуальные цены всех чешских туроператоров.",
+    catalogEmptyCta: "Отправить заявку",
     dealsEmpty:
       "Сейчас здесь нет онлайн-предложений по этому направлению. Напишите нам — пришлём актуальные цены всех чешских CK.",
     dealsAll: "Смотреть все туры",

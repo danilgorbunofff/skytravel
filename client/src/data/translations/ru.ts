@@ -13,6 +13,7 @@ const t: Record<string, string> = {
   searchWhere: "Куда поедем",
   searchPlaceholder: "Место или отель",
   searchDate: "Выезд / Возврат",
+  searchDateAny: "В любое время",
   searchTransport: "Транспорт",
   searchPeople: "Состав туристов",
   searchBtn: "ПОИСК",
@@ -74,6 +75,7 @@ const t: Record<string, string> = {
   sectionTodayNote: "SkyTravel растет - собственное портфолио в приоритете.",
   sectionLastMinute: "LAST MINUTE ОТДЫХ",
   sectionAllIncTitle: "ТУРЫ С ALL INCLUSIVE",
+  allIncBudgetAll: "Любая цена",
   budget1: "до 10 000 Kč",
   budget2: "10 000 - 15 000 Kč",
   budget3: "15 000 - 20 000 Kč",
@@ -225,7 +227,11 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Снять все фильтры",
   sNoResultsTipDates: "Расширить дату выезда на ±1–2 недели",
-  sNoResultsTipRegion: "Выбрать другой регион в разделе Область",
+  sCatalogEmptyTitle: "Мы как раз обновляем предложения",
+  sCatalogEmptyBody:
+    "Напишите нам, куда и когда хотите поехать — пришлём актуальные цены всех чешских туроператоров.",
+  sInquiryCta: "Отправить заявку",
+  sNoResultsTipInquiry: "Или напишите нам — подберём тур за вас.",
   sPagePrev: "Назад",
   sPageNext: "Далее",
   sPageLabel: "Страница",

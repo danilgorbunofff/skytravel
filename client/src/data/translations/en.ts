@@ -13,6 +13,7 @@ const t: Record<string, string> = {
   searchWhere: "Where to",
   searchPlaceholder: "Destination or hotel",
   searchDate: "Departure / Return",
+  searchDateAny: "Any time",
   searchTransport: "Transport",
   searchPeople: "Travelers",
   searchBtn: "SEARCH",
@@ -73,6 +74,7 @@ const t: Record<string, string> = {
   sectionTodayNote: "SkyTravel is growing - our own portfolio is a priority.",
   sectionLastMinute: "LAST MINUTE HOLIDAYS",
   sectionAllIncTitle: "HOLIDAYS WITH ALL INCLUSIVE",
+  allIncBudgetAll: "Any price",
   budget1: "up to 10 000 CZK",
   budget2: "10 000 - 15 000 CZK",
   budget3: "15 000 - 20 000 CZK",
@@ -222,7 +224,11 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Clear all filters",
   sNoResultsTipDates: "Extending the departure date by ±1–2 weeks",
-  sNoResultsTipRegion: "Picking a different region under Area",
+  sCatalogEmptyTitle: "We are updating our offers right now",
+  sCatalogEmptyBody:
+    "Tell us where and when you would like to go — we will send you current prices from all Czech tour operators.",
+  sInquiryCta: "Send an inquiry",
+  sNoResultsTipInquiry: "Or tell us what you want — we will find it for you.",
   sPagePrev: "Previous",
   sPageNext: "Next",
   sPageLabel: "Page",

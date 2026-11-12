@@ -15,6 +15,7 @@ import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
 import { useTours } from "../hooks/useTours";
 import { useCookieConsent } from "../hooks/useCookieConsent";
+import { useFavorites } from "../hooks/useFavorites";
 import { SkipToContent } from "../components/SkipToContent";
 import CookieConsent from "../components/CookieConsent";
 import { AppFooter } from "../components/AppFooter";
@@ -36,6 +37,9 @@ import { track } from "../lib/analytics";
 import "../site.css";
 import "../public.css";
 
+/** All-inclusive budget tab with no price bounds. */
+const ALL_BUDGETS = -1;
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { lang, t } = useLanguage();
@@ -50,8 +54,10 @@ export default function HomePage() {
   const ownTours = useTours(ssrHome?.ownTours);
   // No lead popup on home: the page already has the inline inquiry form (#poptavka).
   const cookies = useCookieConsent();
+  const favoriteStore = useFavorites();
 
   const budgetOptions = [
+    { value: ALL_BUDGETS, label: t("allIncBudgetAll") },
     { value: 0, label: "Do 20 000 Kč" },
     { value: 20000, label: "20 000 – 25 000 Kč" },
     { value: 25000, label: "25 000 – 30 000 Kč" },
@@ -59,7 +65,7 @@ export default function HomePage() {
     { value: 35000, label: "35 000+ Kč" },
   ];
 
-  const [activeBudget, setActiveBudget] = useState(20000);
+  const [activeBudget, setActiveBudget] = useState(ALL_BUDGETS);
   const [heroIndex, setHeroIndex] = useState(0);
   const [exclusiveTour, setExclusiveTour] = useState<OwnTour | null>(null);
   const [lastMinuteDetail, setLastMinuteDetail] = useState<UnifiedTour | null>(null);
@@ -70,10 +76,8 @@ export default function HomePage() {
   const [carouselRightDisabled, setCarouselRightDisabled] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const twoWeeksStr = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
-  const [searchDateStart, setSearchDateStart] = useState(todayStr);
-  const [searchDateEnd, setSearchDateEnd] = useState(twoWeeksStr);
+  const [searchDateStart, setSearchDateStart] = useState("");
+  const [searchDateEnd, setSearchDateEnd] = useState("");
   const [destinationCounts, setDestinationCounts] = useState<
     Record<string, PublicDestinationSummary>
   >({});
@@ -224,7 +228,9 @@ export default function HomePage() {
       setAllIncLoading(true);
       try {
         const filters: Record<string, string | number> = { board: "AI,UAI" };
-        if (activeBudget === 0) {
+        if (activeBudget === ALL_BUDGETS) {
+          // no price bounds
+        } else if (activeBudget === 0) {
           filters.priceMax = 20000;
         } else if (activeBudget === 20000) {
           filters.priceMin = 20000;
@@ -314,6 +320,13 @@ export default function HomePage() {
     params.set("destinationSlug", slug);
     navigate(`/search?${params}`);
   }
+
+  // Hide sections whose data came back empty instead of showing a big
+  // "no offers for this filter" block where the visitor never set a filter.
+  const lastMinuteEmpty = !lastMinuteLoading && lastMinuteItems.length === 0;
+  const allIncCatalogEmpty =
+    activeBudget === ALL_BUDGETS && !allIncLoading && allIncTours.length === 0;
+  const catalogEmpty = lastMinuteEmpty && allIncCatalogEmpty;
 
   const allIncRelated = useMemo(() => {
     if (!allIncDetail) return [];
@@ -409,87 +422,105 @@ export default function HomePage() {
 
         <TourGrid ownTours={ownTours} onTourClick={openOwnTourModal} t={t} />
 
-        <LastMinuteDeals
-          lastMinuteItems={lastMinuteItems}
-          loading={lastMinuteLoading}
-          onItemClick={openLastMinuteModal}
-          t={t}
-        />
+        {!lastMinuteEmpty && (
+          <LastMinuteDeals
+            lastMinuteItems={lastMinuteItems}
+            loading={lastMinuteLoading}
+            onItemClick={openLastMinuteModal}
+            t={t}
+          />
+        )}
 
-        <section id="allinclusive" className="section section-blue">
-          <div className="container">
-            <header className="section-head section-head--white">
-              <h2>{t("sectionAllIncTitle")}</h2>
-            </header>
-            <div id="budgetFilters" className="budget-filters" ref={budgetRef}>
-              <span ref={indicatorRef} className="budget-indicator" />
-              {budgetOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={activeBudget === option.value ? "is-active" : ""}
-                  data-budget={option.value}
-                  type="button"
-                  onClick={() => handleBudgetClick(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
+        {catalogEmpty && (
+          <section className="pub-section home-catalog-empty" aria-labelledby="catalog-empty-title">
+            <div className="container">
+              <div className="home-catalog-empty__card">
+                <h2 id="catalog-empty-title" className="pub-h2">
+                  {ps.catalogEmptyTitle}
+                </h2>
+                <p>{ps.catalogEmptyText}</p>
+                <a className="search-empty__cta" href="#poptavka">
+                  {ps.catalogEmptyCta}
+                </a>
+              </div>
             </div>
+          </section>
+        )}
 
-            {allIncLoading ? (
-              <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
-                <div className="allinc-carousel__track">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="tour-card-skeleton allinc-carousel__skeleton" />
-                  ))}
-                </div>
+        {!allIncCatalogEmpty && (
+          <section id="allinclusive" className="section section-blue">
+            <div className="container">
+              <header className="section-head section-head--white">
+                <h2>{t("sectionAllIncTitle")}</h2>
+              </header>
+              <div id="budgetFilters" className="budget-filters" ref={budgetRef}>
+                <span ref={indicatorRef} className="budget-indicator" />
+                {budgetOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    className={activeBudget === option.value ? "is-active" : ""}
+                    data-budget={option.value}
+                    type="button"
+                    onClick={() => handleBudgetClick(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-            ) : allIncTours.length > 0 ? (
-              <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
-                <button
-                  type="button"
-                  className={`allinc-carousel__arrow allinc-carousel__arrow--left${carouselLeftDisabled ? " is-disabled" : ""}`}
-                  onClick={() => scrollCarousel("left")}
-                  disabled={carouselLeftDisabled}
-                  aria-label={t("sAriaPrev")}
-                >
-                  ‹
-                </button>
-                <div
-                  ref={carouselRef}
-                  className="allinc-carousel__track"
-                  onScroll={handleCarouselScroll}
-                >
-                  {allIncTours.map((tour) => (
-                    <PublicTourCard
-                      key={`${tour.source}-${tour.externalId}`}
-                      t={t}
-                      tour={tour}
-                      viewMode="grid"
-                      isFavorite={false}
-                      onToggleFavorite={() => {}}
-                      onOpenDetail={() => openAllIncDetail(tour)}
-                      providerLabel="Alexandria"
-                    />
-                  ))}
+
+              {allIncLoading ? (
+                <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
+                  <div className="allinc-carousel__track">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="tour-card-skeleton allinc-carousel__skeleton" />
+                    ))}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className={`allinc-carousel__arrow allinc-carousel__arrow--right${carouselRightDisabled ? " is-disabled" : ""}`}
-                  onClick={() => scrollCarousel("right")}
-                  disabled={carouselRightDisabled}
-                  aria-label={t("sAriaNext")}
-                >
-                  ›
-                </button>
-              </div>
-            ) : (
-              <p style={{ marginTop: "1rem", color: "#4e5f79", fontWeight: 700 }}>
-                {t("emptyState")}
-              </p>
-            )}
-          </div>
-        </section>
+              ) : allIncTours.length > 0 ? (
+                <div className="allinc-carousel" style={{ marginTop: "1rem" }}>
+                  <button
+                    type="button"
+                    className={`allinc-carousel__arrow allinc-carousel__arrow--left${carouselLeftDisabled ? " is-disabled" : ""}`}
+                    onClick={() => scrollCarousel("left")}
+                    disabled={carouselLeftDisabled}
+                    aria-label={t("sAriaPrev")}
+                  >
+                    ‹
+                  </button>
+                  <div
+                    ref={carouselRef}
+                    className="allinc-carousel__track"
+                    onScroll={handleCarouselScroll}
+                  >
+                    {allIncTours.map((tour) => (
+                      <PublicTourCard
+                        key={`${tour.source}-${tour.externalId}`}
+                        t={t}
+                        tour={tour}
+                        viewMode="grid"
+                        isFavorite={favoriteStore.isFavorite(`${tour.source}-${tour.externalId}`)}
+                        onToggleFavorite={favoriteStore.toggle}
+                        onOpenDetail={() => openAllIncDetail(tour)}
+                        providerLabel="Alexandria"
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className={`allinc-carousel__arrow allinc-carousel__arrow--right${carouselRightDisabled ? " is-disabled" : ""}`}
+                    onClick={() => scrollCarousel("right")}
+                    disabled={carouselRightDisabled}
+                    aria-label={t("sAriaNext")}
+                  >
+                    ›
+                  </button>
+                </div>
+              ) : (
+                <p className="allinc-empty">{t("emptyState")}</p>
+              )}
+            </div>
+          </section>
+        )}
 
         <FavoriteDestinations
           favorites={favorites}

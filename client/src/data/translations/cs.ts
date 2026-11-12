@@ -13,6 +13,7 @@ const t: Record<string, string> = {
   searchWhere: "Kam pojedeme",
   searchPlaceholder: "Místo nebo hotel",
   searchDate: "Odjezd od / návrat do",
+  searchDateAny: "Kdykoli",
   searchTransport: "Doprava",
   searchPeople: "Skladba osob",
   searchBtn: "VYHLEDAT",
@@ -73,6 +74,7 @@ const t: Record<string, string> = {
   sectionTodayNote: "SkyTravel roste - vlastní portfolio je priorita.",
   sectionLastMinute: "LAST MINUTE DOVOLENÁ",
   sectionAllIncTitle: "DOVOLENÁ S ALL INCLUSIVE",
+  allIncBudgetAll: "Všechny ceny",
   budget1: "do 10 000 Kč",
   budget2: "10 000 - 15 000 Kč",
   budget3: "15 000 - 20 000 Kč",
@@ -223,7 +225,11 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Zrušit všechny filtry",
   sNoResultsTipDates: "Rozšířit datum odjezdu o ±1–2 týdny",
-  sNoResultsTipRegion: "Vybrat jiný cílový region v záložce Oblast",
+  sCatalogEmptyTitle: "Nabídky právě aktualizujeme",
+  sCatalogEmptyBody:
+    "Napište nám, kam a kdy chcete jet — pošleme vám aktuální ceny všech českých CK.",
+  sInquiryCta: "Poslat poptávku",
+  sNoResultsTipInquiry: "Nebo nám napište — najdeme zájezd za vás.",
   sPagePrev: "Předchozí",
   sPageNext: "Další",
   sPageLabel: "Strana",

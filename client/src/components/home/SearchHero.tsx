@@ -36,7 +36,11 @@ export default function SearchHero({
   onNavClick,
   h1,
 }: Props) {
-  const displayDate = `${formatDate(searchDateStart)} – ${formatDate(searchDateEnd)}`;
+  // Dates are opt-in: an untouched field means "any time", not a hidden 14-day filter.
+  const displayDate =
+    searchDateStart || searchDateEnd
+      ? `${searchDateStart ? formatDate(searchDateStart) : "…"} – ${searchDateEnd ? formatDate(searchDateEnd) : "…"}`
+      : "";
 
   return (
     <section id="home" className="hero">
@@ -98,7 +102,16 @@ export default function SearchHero({
                   id="searchDate"
                   type="text"
                   value={displayDate}
+                  placeholder={t("searchDateAny")}
                   readOnly
+                  aria-haspopup="dialog"
+                  aria-expanded={isDatePickerOpen}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onDateToggle();
+                    }
+                  }}
                   style={{ pointerEvents: "none" }}
                 />
                 <span className="hero-search__icon" aria-hidden="true">

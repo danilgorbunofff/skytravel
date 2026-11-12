@@ -2912,9 +2912,27 @@ html[lang="ru"] .logo {
   padding: 32px;
   font-weight: 400;
 }
-.search-empty__icon {
-  font-size: 2.5rem;
-  margin-bottom: 12px;
+.search-empty--results p {
+  max-width: 52ch;
+}
+.search-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 0 1.4rem;
+  border-radius: 10px;
+  background: var(--yellow);
+  color: var(--blue-900);
+  font-weight: 800;
+  text-decoration: none;
+}
+.search-empty__cta:hover {
+  filter: brightness(0.96);
+}
+.search-empty__cta:focus-visible {
+  outline: 2px solid var(--blue-900);
+  outline-offset: 2px;
 }
 .search-empty__tips {
   margin-top: 12px;
@@ -9205,4 +9223,10 @@ html[lang="ru"] .logo {
   max-width: 34ch;
   font-size: 0.85rem;
   opacity: 0.85;
+}
+
+.allinc-empty {
+  margin-top: 1rem;
+  color: #4e5f79;
+  font-weight: 700;
 }
