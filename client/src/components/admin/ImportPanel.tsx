@@ -40,7 +40,11 @@ export default function ImportPanel({
               ? `Vybráno ${selected.size} z ${tours.length}`
               : `Stránka ${page} z ${totalPages} (${filteredCount.toLocaleString("cs")} výsledků)`}
           </span>
-          {importMessage && <p className="note">{importMessage}</p>}
+          <div role="status" aria-live="polite">
+            {importMessage && (
+              <p className={`note ${importResult?.ok ? "success" : "error"}`}>{importMessage}</p>
+            )}
+          </div>
         </div>
         <div className="alex-import-actions">
           {selected.size > 0 && (
@@ -54,7 +58,7 @@ export default function ImportPanel({
             onClick={onImportAll}
             disabled={importing || tours.length === 0}
           >
-            {importing ? "Importuji…" : "Importovat vše"}
+            {importing ? "Importuji…" : `Importovat vše (tato stránka, ${tours.length})`}
           </button>
           <button
             type="button"

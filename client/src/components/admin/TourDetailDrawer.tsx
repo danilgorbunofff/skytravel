@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UnifiedTour } from "../../types/providers";
 import { formatPrice } from "../../utils";
 import { fmtDate, starsDisplay } from "../../lib/formatters";
@@ -30,33 +30,47 @@ const SOURCE_COLORS: Record<string, string> = {
 type Props = {
   tour: UnifiedTour | null;
   onClose: () => void;
-  onImport?: (externalId: string) => void;
+  onImport?: (externalId: string) => unknown;
   importing?: boolean;
 };
 
 export default function TourDetailDrawer({ tour, onClose, onImport, importing }: Props) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [confirmImportOpen, setConfirmImportOpen] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Esc
+  // Close on Esc (the confirm dialog handles its own Esc)
   useEffect(() => {
     if (!tour && !lightboxSrc) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (lightboxSrc) setLightboxSrc(null);
-        else onClose();
-      }
+      if (e.key !== "Escape" || confirmImportOpen) return;
+      if (lightboxSrc) setLightboxSrc(null);
+      else onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tour, lightboxSrc, onClose]);
+  }, [tour, lightboxSrc, onClose, confirmImportOpen]);
+
+  // Move focus into the drawer when it opens, and back to where it was on close
+  const tourId = tour?.externalId;
+  useEffect(() => {
+    if (!tourId) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, [tourId]);
 
   if (!tour) return null;
 
   return (
     <>
       <div className="alex-drawer-backdrop" onClick={onClose} />
-      <aside className="alex-drawer">
+      <aside
+        className="alex-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alex-drawer-title"
+      >
         <div className="alex-drawer-header">
           <div>
             <span
@@ -73,11 +87,17 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
             >
               {tour.source}
             </span>
-            <h2>{tour.destination}</h2>
+            <h2 id="alex-drawer-title">{tour.destination}</h2>
             <p>{tour.title}</p>
           </div>
-          <button type="button" className="alex-drawer-close" onClick={onClose}>
-            ×
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="alex-drawer-close"
+            onClick={onClose}
+            aria-label="Zavřít detail"
+          >
+            <span aria-hidden="true">×</span>
           </button>
         </div>
 
@@ -109,21 +129,27 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
             </h3>
             <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", padding: "0 1rem" }}>
               {tour.photos.map((src, i) => (
-                <img
+                <button
                   key={i}
-                  src={src}
-                  alt={`${tour.title} foto ${i + 1}`}
-                  loading="lazy"
+                  type="button"
                   onClick={() => setLightboxSrc(src)}
-                  style={{
-                    width: "100px",
-                    height: "75px",
-                    objectFit: "cover",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                />
+                  aria-label={`Zvětšit foto ${i + 1}`}
+                  style={{ padding: 0, border: 0, background: "none", flexShrink: 0 }}
+                >
+                  <img
+                    src={src}
+                    alt={`${tour.title} foto ${i + 1}`}
+                    loading="lazy"
+                    style={{
+                      width: "100px",
+                      height: "75px",
+                      objectFit: "cover",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      display: "block",
+                    }}
+                  />
+                </button>
               ))}
             </div>
           </div>
@@ -224,9 +250,9 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
       {/* Lightbox */}
       {lightboxSrc && (
         <div className="alex-lightbox" onClick={() => setLightboxSrc(null)}>
-          <img src={lightboxSrc} alt="Full size" />
-          <button type="button" className="alex-lightbox-close">
-            ×
+          <img src={lightboxSrc} alt={`${tour.title} – zvětšená fotografie`} />
+          <button type="button" className="alex-lightbox-close" aria-label="Zavřít fotografii">
+            <span aria-hidden="true">×</span>
           </button>
         </div>
       )}
@@ -237,8 +263,10 @@ export default function TourDetailDrawer({ tour, onClose, onImport, importing }:
         title="Importovat zájezd?"
         message="Opravdu chcete importovat tento zájezd do databáze SkyTravel? Zájezd bude dostupný na hlavním webu."
         confirmLabel="Importovat"
-        onConfirm={() => {
-          onImport?.(tour.externalId);
+        tone="default"
+        loading={importing}
+        onConfirm={async () => {
+          await onImport?.(tour.externalId);
           setConfirmImportOpen(false);
         }}
         onCancel={() => setConfirmImportOpen(false)}

@@ -10,6 +10,8 @@ import ImportPanel from "../components/admin/ImportPanel";
 import TourDetailDrawer from "../components/admin/TourDetailDrawer";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { SkipToContent } from "../components/SkipToContent";
+import AdminToastViewport from "../components/admin/AdminToastViewport";
+import { useAdminToast } from "../features/admin/hooks/useAdminToast";
 import {
   fetchProviderCacheStatus,
   refreshProviderCache,
@@ -32,6 +34,66 @@ import "../admin.css";
 /** Check if a provider has two-level region selection (e.g. departure→destination) */
 function hasTwoLevelRegions(provider: ProviderMeta): boolean {
   return provider.filterFields.some((f) => f.dependsOn != null);
+}
+
+/**
+ * Builds API filters from the admin search store *at call time*. Zustand
+ * setters are synchronous, so calling this right after e.g. `setSearch("")`
+ * sees the new value. (Building filters from render-time values caused stale
+ * closures: removing a chip or the debounced search re-sent the old filter.)
+ */
+function buildFiltersFromStore(pageOverride?: number): UnifiedFilters {
+  const s = useAdminSearchStore.getState();
+  const selectedProvider = s.providers.find((p) => p.id === s.selectedProviderId) ?? null;
+  const isTwoLevel = selectedProvider ? hasTwoLevelRegions(selectedProvider) : false;
+  const { selectedRegion, selectedSubRegion } = s;
+
+  const f: UnifiedFilters = {};
+  if (s.search) f.q = s.search;
+  if (s.priceMin) f.priceMin = Number(s.priceMin);
+  if (s.priceMax) f.priceMax = Number(s.priceMax);
+  if (s.dateStart) f.dateStart = s.dateStart;
+  if (s.dateEnd) f.dateEnd = s.dateEnd;
+  f.page = pageOverride ?? s.page;
+  f.limit = s.limit;
+  f.sortBy = s.sortBy;
+  f.sortDir = s.sortDir;
+
+  // Spread provider-specific filter values
+  for (const [key, val] of Object.entries(s.providerFilters)) {
+    if (val !== undefined && val !== null && val !== "") {
+      f[key] = val;
+    }
+  }
+
+  // Region context
+  if (selectedProvider && !isTwoLevel && selectedRegion) {
+    const regionField = selectedProvider.filterFields.find(
+      (ff) => ff.key === "zeme" || ff.key === "regionId",
+    );
+    if (regionField) {
+      f[regionField.key] = selectedRegion.id;
+    } else {
+      f.zeme = selectedRegion.id;
+    }
+  } else if (isTwoLevel) {
+    if (selectedRegion) {
+      const depField = selectedProvider?.filterFields.find(
+        (ff) =>
+          !ff.dependsOn &&
+          (ff.key === "townFrom" || ff.key.includes("town") || ff.key.includes("departure")),
+      );
+      if (depField) f[depField.key] = selectedRegion.id;
+      else f.townFrom = selectedRegion.id;
+    }
+    if (selectedSubRegion) {
+      const destField = selectedProvider?.filterFields.find((ff) => ff.dependsOn != null);
+      if (destField) f[destField.key] = selectedSubRegion.id;
+      else f.stateId = selectedSubRegion.id;
+    }
+  }
+
+  return f;
 }
 
 export default function AdminSearchPage() {
@@ -98,6 +160,8 @@ export default function AdminSearchPage() {
   const [detailTour, setDetailTour] = useState<UnifiedTour | null>(null);
   const [confirmImportOpen, setConfirmImportOpen] = useState(false);
   const [importMode, setImportMode] = useState<"selected" | "all" | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const { toasts, showToast, dismissToast } = useAdminToast();
 
   // ── Debounce ref ──
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -132,83 +196,23 @@ export default function AdminSearchPage() {
       .sort((a, b) => a.name.localeCompare(b.name, "cs"));
   }, [regions, isTwoLevel, selectedRegion]);
 
-  // ── Build filters ──
-  const buildFilters = useCallback(
-    (pageOverride?: number): UnifiedFilters => {
-      const f: UnifiedFilters = {};
-      if (search) f.q = search;
-      if (priceMin) f.priceMin = Number(priceMin);
-      if (priceMax) f.priceMax = Number(priceMax);
-      if (dateStart) f.dateStart = dateStart;
-      if (dateEnd) f.dateEnd = dateEnd;
-      f.page = pageOverride ?? page;
-      f.limit = limit;
-      f.sortBy = sortBy;
-      f.sortDir = sortDir;
-
-      // Spread provider-specific filter values
-      for (const [key, val] of Object.entries(providerFilters)) {
-        if (val !== undefined && val !== null && val !== "") {
-          f[key] = val;
-        }
-      }
-
-      // Region context
-      if (selectedProvider && !isTwoLevel && selectedRegion) {
-        const regionField = selectedProvider.filterFields.find(
-          (ff) => ff.key === "zeme" || ff.key === "regionId",
-        );
-        if (regionField) {
-          f[regionField.key] = selectedRegion.id;
-        } else {
-          f.zeme = selectedRegion.id;
-        }
-      } else if (isTwoLevel) {
-        if (selectedRegion) {
-          const depField = selectedProvider?.filterFields.find(
-            (ff) =>
-              !ff.dependsOn &&
-              (ff.key === "townFrom" || ff.key.includes("town") || ff.key.includes("departure")),
-          );
-          if (depField) f[depField.key] = selectedRegion.id;
-          else f.townFrom = selectedRegion.id;
-        }
-        if (selectedSubRegion) {
-          const destField = selectedProvider?.filterFields.find((ff) => ff.dependsOn != null);
-          if (destField) f[destField.key] = selectedSubRegion.id;
-          else f.stateId = selectedSubRegion.id;
-        }
-      }
-
-      return f;
-    },
-    [
-      search,
-      priceMin,
-      priceMax,
-      dateStart,
-      dateEnd,
-      page,
-      limit,
-      sortBy,
-      sortDir,
-      providerFilters,
-      selectedProvider,
-      selectedRegion,
-      selectedSubRegion,
-      isTwoLevel,
-    ],
-  );
-
-  // ── Load tours helper ──
+  // ── Load tours helper (reads the latest store state, never a stale closure) ──
   const doLoadTours = useCallback(
     (pageOverride?: number) => {
-      if (!selectedProviderId) return;
-      const filters = buildFilters(pageOverride);
-      loadTours(selectedProviderId, filters);
+      const providerId = useAdminSearchStore.getState().selectedProviderId;
+      if (!providerId) return;
+      loadTours(providerId, buildFiltersFromStore(pageOverride));
     },
-    [selectedProviderId, buildFilters, loadTours],
+    [loadTours],
   );
+
+  /** Cancels a pending debounced search so it cannot fire after another reload. */
+  const cancelPendingSearch = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = undefined;
+  }, []);
+
+  useEffect(() => cancelPendingSearch, [cancelPendingSearch]);
 
   // ── Provider change handler ──
   const handleProviderChange = useCallback(
@@ -288,6 +292,7 @@ export default function AdminSearchPage() {
       return;
     }
     setValidationErrors({});
+    cancelPendingSearch();
     doLoadTours(1);
   }
 
@@ -301,41 +306,37 @@ export default function AdminSearchPage() {
     setSelected(new Set());
     setImportResult(null);
     setValidationErrors({});
-    // Build filters manually with cleared values so the API call does not
-    // use stale state (React batches the setX calls above into the next render).
-    if (!selectedProviderId) return;
-    const filters = buildFilters(1);
-    const providerKeys = (selectedProvider?.filterFields ?? []).map((ff) => ff.key);
-    const keysToRemove = new Set<string>([
-      "q",
-      "priceMin",
-      "priceMax",
-      "dateStart",
-      "dateEnd",
-      ...providerKeys,
-    ]);
-    const cleaned = Object.fromEntries(
-      Object.entries(filters).filter(([k]) => !keysToRemove.has(k)),
-    ) as UnifiedFilters;
-    loadTours(selectedProviderId, cleaned);
+    cancelPendingSearch();
+    // The store setters above are synchronous, so this already sees cleared filters.
+    doLoadTours(1);
   }
 
   async function handleRefresh() {
-    if (!selectedProviderId) return;
-    await refreshProviderCache(selectedProviderId);
+    if (!selectedProviderId || refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshProviderCache(selectedProviderId);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Obnovení feedu se nezdařilo.", "error");
+      setRefreshing(false);
+      return;
+    }
     try {
       const cache = await fetchProviderCacheStatus(selectedProviderId);
       storeSetCacheStatus(cache);
     } catch {
-      // ignore
+      // Cache status is informational only; the reload below still runs.
     }
+    setRefreshing(false);
+    showToast("Feed byl obnoven.");
     doLoadTours(1);
   }
 
   function handleSearchDebounced(value: string) {
     storeSetSearch(value);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    cancelPendingSearch();
     searchDebounceRef.current = setTimeout(() => {
+      searchDebounceRef.current = undefined;
       doLoadTours(1);
     }, 300);
   }
@@ -379,21 +380,14 @@ export default function AdminSearchPage() {
 
   function handleLimitChange(newLimit: number) {
     storeSetLimit(newLimit);
-    if (!selectedProviderId) return;
-    const filters = buildFilters(1);
-    filters.limit = newLimit;
-    loadTours(selectedProviderId, filters);
+    doLoadTours(1);
   }
 
   function handleSortToggle(field: "price" | "date") {
     const newDir = sortBy === field ? (sortDir === "asc" ? "desc" : "asc") : "asc";
     storeSetSortBy(field);
     storeSetSortDir(newDir);
-    if (!selectedProviderId) return;
-    const filters = buildFilters(1);
-    filters.sortBy = field;
-    filters.sortDir = newDir;
-    loadTours(selectedProviderId, filters);
+    doLoadTours(1);
   }
 
   async function handleImport(ids?: string[]) {
@@ -421,15 +415,16 @@ export default function AdminSearchPage() {
       }
       const result = await importProviderTours(selectedProviderId, ids ?? [...selected], regionCtx);
       setImportResult(result);
-      if (result.ok) setSelected(new Set());
+      if (result.ok) {
+        setSelected(new Set());
+        showToast(`Import dokončen: ${result.created} nových, ${result.updated} aktualizovaných.`);
+      } else {
+        showToast(result.message ?? "Import se nezdařil.", "error");
+      }
     } catch (err) {
-      setImportResult({
-        ok: false,
-        created: 0,
-        updated: 0,
-        total: 0,
-        message: err instanceof Error ? err.message : "Chyba při importu.",
-      });
+      const message = err instanceof Error ? err.message : "Chyba při importu.";
+      setImportResult({ ok: false, created: 0, updated: 0, total: 0, message });
+      showToast(message, "error");
     } finally {
       setImporting(false);
     }
@@ -445,11 +440,11 @@ export default function AdminSearchPage() {
     setConfirmImportOpen(true);
   }
 
-  function handleConfirmImport() {
+  async function handleConfirmImport() {
     if (importMode === "selected") {
-      handleImport([...selected]);
+      await handleImport([...selected]);
     } else if (importMode === "all") {
-      handleImport(tours.map((t) => t.externalId));
+      await handleImport(tours.map((t) => t.externalId));
     }
     setConfirmImportOpen(false);
     setImportMode(null);
@@ -499,6 +494,7 @@ export default function AdminSearchPage() {
         label: `Hledám: „${search}"`,
         clear: () => {
           storeSetSearch("");
+          cancelPendingSearch();
           doLoadTours(1);
         },
       },
@@ -507,6 +503,7 @@ export default function AdminSearchPage() {
         label: `Cena od: ${formatPrice(Number(priceMin))}`,
         clear: () => {
           storeSetPriceMin("");
+          cancelPendingSearch();
           doLoadTours(1);
         },
       },
@@ -515,6 +512,7 @@ export default function AdminSearchPage() {
         label: `Cena do: ${formatPrice(Number(priceMax))}`,
         clear: () => {
           storeSetPriceMax("");
+          cancelPendingSearch();
           doLoadTours(1);
         },
       },
@@ -523,6 +521,7 @@ export default function AdminSearchPage() {
         label: `Od: ${fmtDate(dateStart)}`,
         clear: () => {
           storeSetDateStart("");
+          cancelPendingSearch();
           doLoadTours(1);
         },
       },
@@ -531,6 +530,7 @@ export default function AdminSearchPage() {
         label: `Do: ${fmtDate(dateEnd)}`,
         clear: () => {
           storeSetDateEnd("");
+          cancelPendingSearch();
           doLoadTours(1);
         },
       },
@@ -540,6 +540,7 @@ export default function AdminSearchPage() {
   return (
     <AdminLayout title="Vyhledávání zájezdů">
       <SkipToContent />
+      <AdminToastViewport toasts={toasts} onDismiss={dismissToast} />
       <ProviderSelector
         providers={providers}
         selectedProviderId={selectedProviderId}
@@ -569,6 +570,7 @@ export default function AdminSearchPage() {
           selectedProvider={selectedProvider}
           validationErrors={validationErrors}
           loading={loading}
+          refreshing={refreshing}
           activeChips={activeChips}
           onSearchChange={handleSearchDebounced}
           onPriceMinChange={storeSetPriceMin}
@@ -631,9 +633,11 @@ export default function AdminSearchPage() {
         message={
           importMode === "selected"
             ? `Opravdu chcete importovat ${selected.size} vybraných zájezdů?`
-            : `Opravdu chcete importovat všech ${tours.length} zájezdů z aktuálního vyhledávání?`
+            : `Opravdu chcete importovat všech ${tours.length} zájezdů na této stránce (stránka ${page} z ${totalPages})?`
         }
         confirmLabel="Importovat"
+        tone="default"
+        loading={importing}
         onConfirm={handleConfirmImport}
         onCancel={() => {
           setConfirmImportOpen(false);

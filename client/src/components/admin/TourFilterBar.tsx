@@ -17,6 +17,7 @@ type Props = {
   selectedProvider: ProviderMeta | null;
   validationErrors: Record<string, string>;
   loading: boolean;
+  refreshing: boolean;
   activeChips: FilterChip[];
   onSearchChange: (value: string) => void;
   onPriceMinChange: (value: string) => void;
@@ -39,6 +40,7 @@ export default function TourFilterBar({
   selectedProvider,
   validationErrors,
   loading,
+  refreshing,
   activeChips,
   onSearchChange,
   onPriceMinChange,
@@ -146,9 +148,10 @@ export default function TourFilterBar({
             type="button"
             className="ghost refresh"
             onClick={onRefresh}
-            disabled={loading}
+            disabled={loading || refreshing}
+            aria-busy={refreshing}
           >
-            ↻ Obnovit feed
+            {refreshing ? "Obnovuji feed…" : "↻ Obnovit feed"}
           </button>
         </div>
       </form>
@@ -157,8 +160,14 @@ export default function TourFilterBar({
         <div className="alex-filter-chips">
           <span className="alex-chips-label">Aktivní filtry:</span>
           {activeChips.map((chip) => (
-            <button key={chip.key} type="button" className="alex-chip" onClick={chip.clear}>
-              {chip.label} <span>×</span>
+            <button
+              key={chip.key}
+              type="button"
+              className="alex-chip"
+              onClick={chip.clear}
+              aria-label={`Odebrat filtr ${chip.label}`}
+            >
+              {chip.label} <span aria-hidden="true">×</span>
             </button>
           ))}
         </div>
