@@ -23,7 +23,6 @@ const STRINGS = {
     trust3Text:
       "Vybereme zájezd podle vašeho rozpočtu a odpovíme na Telegramu, telefonu nebo e-mailu.",
     reviewsTitle: "Recenze klientů",
-    reviewsPlaceholder: "Zde budou recenze našich klientů.",
 
     channelTitle: "Nejlepší last minute nabídky na Telegramu",
     channelText:
@@ -96,7 +95,6 @@ const STRINGS = {
     trust3Title: "Говорим по-русски и по-чешски",
     trust3Text: "Подберём тур под ваш бюджет и ответим в Telegram, по телефону или e-mail.",
     reviewsTitle: "Отзывы клиентов",
-    reviewsPlaceholder: "Здесь будут отзывы наших клиентов.",
 
     channelTitle: "Лучшие горящие туры — в нашем Telegram-канале",
     channelText:

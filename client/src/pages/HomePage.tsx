@@ -14,10 +14,8 @@ import { needsHydration } from "../features/search/hooks/useOfferGroups";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
 import { useTours } from "../hooks/useTours";
-import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
 import { SkipToContent } from "../components/SkipToContent";
-import LeadPopup from "../components/LeadPopup";
 import CookieConsent from "../components/CookieConsent";
 import { AppFooter } from "../components/AppFooter";
 import SearchHero from "../components/home/SearchHero";
@@ -50,7 +48,7 @@ export default function HomePage() {
     document.title = HOME_META[pageLang].title;
   }, [pageLang]);
   const ownTours = useTours(ssrHome?.ownTours);
-  const leadPopup = useLeadPopup();
+  // No lead popup on home: the page already has the inline inquiry form (#poptavka).
   const cookies = useCookieConsent();
 
   const budgetOptions = [
@@ -581,7 +579,7 @@ export default function HomePage() {
               <div className="polaroid">
                 <img
                   src="https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=900&q=80"
-                  alt="SkyTravel trip"
+                  alt=""
                   loading="lazy"
                   decoding="async"
                   width={900}
@@ -592,7 +590,7 @@ export default function HomePage() {
               <div className="polaroid polaroid--alt">
                 <img
                   src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=900&q=80"
-                  alt="Vlastní zážitky"
+                  alt=""
                   loading="lazy"
                   decoding="async"
                   width={900}
@@ -659,8 +657,6 @@ export default function HomePage() {
         setCookiePrefs={cookies.setCookiePrefs}
         applyCookiePrefs={cookies.applyCookiePrefs}
       />
-
-      <LeadPopup {...leadPopup} />
 
       <StickyTelegram lang={pageLang} />
 

@@ -35,10 +35,12 @@ function AppFooterComponent({ t }: Props) {
           <h2 className="footer-heading">{t("footerCity")}</h2>
           <p>SkyTravel</p>
           <p>Křižíkova 6, Praha</p>
+          <p>IČO: 23973099</p>
           <p>
             <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
           </p>
           <p>{t("footerHours")}</p>
+          <p className="footer-note">{t("footerInsured")}</p>
         </div>
         <form className="newsletter newsletter--wide" onSubmit={handleSubmit}>
           <h2 className="footer-heading">{t("footerNewsTitle")}</h2>

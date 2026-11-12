@@ -21,8 +21,10 @@ export default function FavoriteDestinations({ favorites, destinationCounts, onC
         <div id="favoriteGrid" className="favorite-grid">
           {favorites.map((item) => {
             const liveDestination = destinationCounts[item.destination];
-            const livePrice = liveDestination?.minPrice ?? item.price;
+            // Only show prices backed by live offers — a static "od" price with no
+            // tours behind it is a promise we can't keep.
             const liveCount = liveDestination?.count ?? 0;
+            const livePrice = liveCount > 0 ? (liveDestination?.minPrice ?? null) : null;
             return (
               <article
                 key={item.destination}
@@ -32,9 +34,11 @@ export default function FavoriteDestinations({ favorites, destinationCounts, onC
               >
                 <div className="favorite-card__body">
                   <h3>{item.destination}</h3>
-                  <span className="price-pill">
-                    {t("from")} {formatPrice(livePrice)}
-                  </span>
+                  {livePrice != null && (
+                    <span className="price-pill">
+                      {t("from")} {formatPrice(livePrice)}
+                    </span>
+                  )}
                   {liveCount > 0 && (
                     <span className="favorite-card__count">
                       {liveCount.toLocaleString(localeForText())}{" "}

@@ -379,6 +379,7 @@
   border-radius: 999px;
   border: 1px solid var(--line);
   cursor: pointer;
+  position: relative;
 }
 
 .pub-segmented label.is-active {
@@ -389,6 +390,10 @@
 
 .pub-segmented input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }

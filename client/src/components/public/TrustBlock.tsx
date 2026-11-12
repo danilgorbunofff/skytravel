@@ -1,9 +1,22 @@
 import type { PublicLocale } from "../../i18n/locales";
 import { publicStrings } from "./strings";
 
-/** Trust points + reviews placeholder. TODO: replace placeholder reviews with real ones. */
+interface ClientReview {
+  name: string;
+  text: string;
+  destination?: string;
+}
+
+/**
+ * Real client reviews only. The section stays hidden while this is empty —
+ * placeholder testimonials damage trust more than having none.
+ */
+const REVIEWS: Record<PublicLocale, ClientReview[]> = { cs: [], ru: [] };
+
+/** Trust points + client reviews (when there are any). */
 export function TrustBlock({ lang }: { lang: PublicLocale }) {
   const s = publicStrings(lang);
+  const reviews = REVIEWS[lang];
   const points = [
     { title: s.trust1Title, text: s.trust1Text, icon: "Kč" },
     { title: s.trust2Title, text: s.trust2Text, icon: "✓" },
@@ -27,16 +40,22 @@ export function TrustBlock({ lang }: { lang: PublicLocale }) {
           ))}
         </ul>
 
-        <h2 className="pub-h2 pub-reviews__title">{s.reviewsTitle}</h2>
-        {/* TODO: replace with real client reviews (name, text, destination). */}
-        <div className="pub-reviews">
-          {[1, 2, 3].map((n) => (
-            <figure key={n} className="pub-review pub-review--placeholder">
-              <blockquote>{s.reviewsPlaceholder}</blockquote>
-              <figcaption>— SkyTravel</figcaption>
-            </figure>
-          ))}
-        </div>
+        {reviews.length > 0 && (
+          <>
+            <h2 className="pub-h2 pub-reviews__title">{s.reviewsTitle}</h2>
+            <div className="pub-reviews">
+              {reviews.map((review) => (
+                <figure key={`${review.name}-${review.text.slice(0, 16)}`} className="pub-review">
+                  <blockquote>{review.text}</blockquote>
+                  <figcaption>
+                    — {review.name}
+                    {review.destination ? `, ${review.destination}` : ""}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

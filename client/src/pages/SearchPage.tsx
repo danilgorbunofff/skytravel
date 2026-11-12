@@ -611,16 +611,15 @@ export default function SearchPage() {
                     />
                     <div className="dest-thumb__label">
                       <strong>{dest.destination}</strong>
-                      {isPlausibleTourPrice(
-                        destinationLivePrices[dest.destination]?.minPrice ?? dest.price,
-                      ) && (
-                        <span>
-                          od{" "}
-                          {formatPrice(
-                            destinationLivePrices[dest.destination]?.minPrice ?? dest.price,
-                          )}
-                        </span>
-                      )}
+                      {(destinationLivePrices[dest.destination]?.count ?? 0) > 0 &&
+                        isPlausibleTourPrice(
+                          destinationLivePrices[dest.destination]?.minPrice ?? 0,
+                        ) && (
+                          <span>
+                            {t("from")}{" "}
+                            {formatPrice(destinationLivePrices[dest.destination]?.minPrice ?? 0)}
+                          </span>
+                        )}
                     </div>
                   </button>
                 ))}

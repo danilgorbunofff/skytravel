@@ -2092,7 +2092,9 @@ html[lang="ru"] .logo {
 .lead-modal__card {
   position: relative;
   z-index: 1;
-  width: min(520px, 92vw);
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 2.4rem);
+  overflow-y: auto;
   background: #ffffff;
   border-radius: 18px;
   padding: 1.6rem 1.6rem 1.4rem;
@@ -9197,4 +9199,10 @@ html[lang="ru"] .logo {
     transition: none !important;
     animation: none !important;
   }
+}
+
+.footer-main .footer-note {
+  max-width: 34ch;
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
