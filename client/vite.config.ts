@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -44,29 +44,37 @@ export default defineConfig({
       "www.sky-travel.tours",
     ],
   },
+  // SSR bundle (dist-ssr/entry-server.js, loaded by the Express server) is
+  // self-contained so the server needs no client dependencies at runtime.
+  ssr: {
+    noExternal: true,
+  },
   build: {
     chunkSizeWarningLimit: 200,
+    copyPublicDir: !isSsrBuild,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (
-            id.includes("node_modules/react-dom") ||
-            id.includes("node_modules/react/") ||
-            id.includes("node_modules/react-router")
-          ) {
-            return "vendor-react";
-          }
-          if (id.includes("node_modules/@radix-ui")) {
-            return "vendor-radix";
-          }
-          if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
-            return "vendor-tiptap";
-          }
-          if (id.includes("node_modules/lucide-react")) {
-            return "vendor-icons";
-          }
-        },
+        manualChunks: isSsrBuild
+          ? undefined
+          : (id: string) => {
+              if (
+                id.includes("node_modules/react-dom") ||
+                id.includes("node_modules/react/") ||
+                id.includes("node_modules/react-router")
+              ) {
+                return "vendor-react";
+              }
+              if (id.includes("node_modules/@radix-ui")) {
+                return "vendor-radix";
+              }
+              if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
+                return "vendor-tiptap";
+              }
+              if (id.includes("node_modules/lucide-react")) {
+                return "vendor-icons";
+              }
+            },
       },
     },
   },
-});
+}));

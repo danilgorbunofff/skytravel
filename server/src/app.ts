@@ -23,6 +23,9 @@ import { searchTimingMiddleware } from "./middleware/searchTiming.js";
 import healthRoutes from "./routes/health.js";
 import sitemapRouter from "./routes/sitemap.xml.js";
 import blogRouter from "./routes/blog.js";
+import ssrPagesRouter from "./routes/ssrPages.js";
+import leadsRouter from "./routes/leads.js";
+import { SSR_INTERNAL_HEADER, SSR_INTERNAL_TOKEN } from "./ssr/pageData.js";
 import { csrfTokenMiddleware, csrfProtectionMiddleware } from "./middleware/csrf.js";
 
 // Sentry — disabled unless SENTRY_DSN is configured
@@ -140,8 +143,31 @@ export function createApp() {
     );
   }
 
+  // Built client assets (hashed JS/CSS). In production nginx serves these
+  // from client/dist directly; this keeps a plain `node dist/index.js`
+  // (local SSR testing, e2e) fully working too.
+  const clientDistAssets = path.resolve(
+    process.env.CLIENT_DIST_DIR ?? path.resolve(process.cwd(), "../client/dist"),
+    "assets",
+  );
+  if (fs.existsSync(clientDistAssets)) {
+    app.use(
+      "/assets",
+      express.static(clientDistAssets, {
+        setHeaders: (res) => {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        },
+      }),
+    );
+  }
+
   // ── Blog router mounted before session/CSRF — see block above. ──
   app.use("/blog", blogRouter);
+
+  // ── Server-rendered public pages (/, /cs/…, /ru/…), sitemap, robots,
+  //    IndexNow key. Anonymous + cacheable, so mounted before the session.
+  app.use(sitemapRouter);
+  app.use(ssrPagesRouter);
 
   // ── Body parsing ──────────────────────────────────────────────────────
   app.use(express.json({ limit: "1mb" }));
@@ -195,7 +221,12 @@ export function createApp() {
     },
   });
 
+  // Loopback requests made by the SSR renderer (ssr/pageData.ts) carry a
+  // per-process token and must not eat into visitors' rate-limit budget.
+  const isSsrInternal = (req: Request) => req.get(SSR_INTERNAL_HEADER) === SSR_INTERNAL_TOKEN;
+
   const publicSearchLimiter = rateLimit({
+    skip: isSsrInternal,
     windowMs: 60 * 1000,
     max: 200,
     standardHeaders: true,
@@ -221,6 +252,7 @@ export function createApp() {
     !config.isProd || config.disableRateLimit
       ? (_req: Request, _res: Response, next: NextFunction) => next()
       : rateLimit({
+          skip: isSsrInternal,
           windowMs: 15 * 60 * 1000,
           max: 30,
           standardHeaders: true,
@@ -233,6 +265,7 @@ export function createApp() {
 
   app.use("/api/admin/login", loginLimiter);
   app.use("/api/inquiries", inquiryLimiter);
+  app.use("/api/leads", inquiryLimiter, leadsRouter);
   app.use("/api/search", publicSearchLimiter);
   app.use("/api/admin", adminLimiter);
 
@@ -286,9 +319,6 @@ export function createApp() {
         },
       });
   app.use("/api/erasure", erasureLimiter, erasureRouter);
-
-  // ── Sitemap ───────────────────────────────────────────────────────────
-  app.use(sitemapRouter);
 
   // ── 404 handler ───────────────────────────────────────────────────────
   app.use((_req: express.Request, res: express.Response) => {

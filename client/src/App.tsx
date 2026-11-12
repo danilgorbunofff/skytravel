@@ -1,34 +1,17 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import HomePage from "./pages/HomePage";
-import ScrollToTop from "./components/ScrollToTop";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./AppRoutes";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { PageLoader } from "./components/PageLoader";
+import { SsrDataContext } from "./ssr/SsrDataContext";
+import type { SsrPayload } from "./ssr/types";
 
-const SearchPage = lazy(() => import("./pages/SearchPage"));
-const GdprPage = lazy(() => import("./pages/GdprPage"));
-const TermsPage = lazy(() => import("./pages/TermsPage"));
-const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
-const AdminRoutes = lazy(() => import("./features/admin/AdminRoutes"));
-const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
-
-export default function App() {
+export default function App({ ssrData = null }: { ssrData?: SsrPayload | null }) {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/favorites" element={<FavoritesPage />} />
-            <Route path="/gdpr" element={<GdprPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/admin-login" element={<AdminLoginPage />} />
-            <Route path="/admin/*" element={<AdminRoutes />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+      <SsrDataContext.Provider value={ssrData}>
+        <BrowserRouter>
+          <AppRoutes initialDict={ssrData?.dict} initialDictLang={ssrData?.lang} />
+        </BrowserRouter>
+      </SsrDataContext.Provider>
     </ErrorBoundary>
   );
 }

@@ -20,11 +20,22 @@ export type Favorite = {
 };
 
 export const heroImages = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=2200&q=80",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2200&q=80",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=70",
+  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=1600&q=70",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=70",
+  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=1600&q=70",
 ];
+
+/**
+ * Responsive srcset for an Unsplash URL. `auto=format` makes the CDN serve
+ * WebP/AVIF to browsers that accept it, so phones get a ~640px WebP instead
+ * of a 2200px JPEG.
+ */
+export function heroSrcSet(url: string): string {
+  return [640, 960, 1280, 1600]
+    .map((w) => `${url.replace(/([?&])w=\d+/, `$1w=${w}`)} ${w}w`)
+    .join(", ");
+}
 
 export const defaultOwnTours: OwnTour[] = [
   {
@@ -167,5 +178,3 @@ export const favorites: Favorite[] = [
       "https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=1200&q=80",
   },
 ];
-
-

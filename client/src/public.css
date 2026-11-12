@@ -1,0 +1,629 @@
+/* Styles for the server-rendered public blocks (landing pages, trust, lead form,
+   Telegram). Builds on the tokens from site.css. Prefix: .pub- */
+
+.hero-slide__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.footer-heading {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.pub-main {
+  min-height: 40vh;
+}
+
+.pub-section {
+  padding: 2.5rem 0;
+}
+
+.pub-h1 {
+  color: var(--blue-900);
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.05;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.pub-h2 {
+  color: var(--blue-900);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.pub-muted {
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.pub-link {
+  color: var(--blue-700);
+  font-weight: 700;
+}
+
+.pub-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+.pub-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.65rem 1.3rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 150ms ease,
+    background 150ms ease;
+}
+
+.pub-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pub-btn--primary {
+  background: var(--blue-900);
+  color: #fff;
+}
+
+.pub-btn--primary:hover {
+  background: var(--blue-800);
+}
+
+.pub-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.pub-btn--tg {
+  background: #229ed9;
+  color: #fff;
+}
+
+.pub-btn--tg:hover {
+  background: #1b8bc0;
+}
+
+/* ── Language switcher ──────────────────────────────── */
+.pub-lang {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: rgba(18, 61, 140, 0.08);
+}
+
+.pub-lang__link {
+  min-width: 40px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--blue-900);
+}
+
+.pub-lang__link.is-active {
+  background: var(--blue-900);
+  color: #fff;
+}
+
+/* ── Landing hero ───────────────────────────────────── */
+.pub-hero {
+  background: linear-gradient(180deg, #e3ecf9, var(--bg));
+  padding: 2rem 0 1.5rem;
+}
+
+.pub-hero__intro {
+  font-size: 1.15rem;
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.pub-hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.pub-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.pub-breadcrumbs li + li::before {
+  content: "›";
+  margin-right: 0.35rem;
+}
+
+.pub-breadcrumbs a {
+  color: var(--blue-700);
+}
+
+/* ── Content (markdown) ─────────────────────────────── */
+.pub-content {
+  max-width: 78ch;
+  line-height: 1.65;
+  font-size: 1.05rem;
+}
+
+.pub-content h2 {
+  color: var(--blue-900);
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  margin: 1.75rem 0 0.6rem;
+}
+
+.pub-content h3 {
+  color: var(--blue-900);
+  font-size: 1.35rem;
+  margin: 1.25rem 0 0.4rem;
+}
+
+.pub-content p,
+.pub-content ul,
+.pub-content ol {
+  margin: 0 0 0.9rem;
+}
+
+.pub-content a {
+  color: var(--blue-700);
+  text-decoration: underline;
+}
+
+.pub-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+/* ── Deals ──────────────────────────────────────────── */
+.pub-deals {
+  background: #f6f7f9;
+}
+
+.pub-deals__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pub-deal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(18, 61, 140, 0.08);
+}
+
+.pub-deal img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 400 / 260;
+  object-fit: cover;
+  background: #e7edf6;
+}
+
+.pub-deal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem;
+  flex: 1;
+}
+
+.pub-deal__body h3 {
+  font-size: 1.15rem;
+  color: var(--blue-900);
+}
+
+.pub-deal__meta {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.pub-deal__price {
+  margin-top: auto;
+  padding-top: 0.4rem;
+}
+
+.pub-deal__price strong {
+  font-size: 1.25rem;
+  color: var(--blue-900);
+}
+
+.pub-deal .pub-btn {
+  margin-top: 0.5rem;
+}
+
+.pub-deal--skeleton {
+  min-height: 320px;
+  background: linear-gradient(90deg, #eef2f8, #f8fafd, #eef2f8);
+}
+
+.pub-deals__empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.pub-deals__empty p {
+  flex: 1 1 320px;
+  line-height: 1.5;
+}
+
+.pub-deals__more {
+  margin-top: 1rem;
+}
+
+/* ── FAQ ────────────────────────────────────────────── */
+.pub-faq__item {
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 0.6rem;
+  padding: 0.25rem 1rem;
+  border: 1px solid var(--line);
+}
+
+.pub-faq__item summary {
+  cursor: pointer;
+  padding: 0.75rem 0;
+  list-style-position: outside;
+}
+
+.pub-faq__item summary h3 {
+  display: inline;
+  font-size: 1.15rem;
+  color: var(--blue-900);
+}
+
+.pub-faq__item > div {
+  padding-bottom: 0.9rem;
+  line-height: 1.6;
+}
+
+/* ── Lead form ──────────────────────────────────────── */
+.pub-lead-section {
+  background: #e7edf6;
+}
+
+.pub-lead {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 6px 24px rgba(18, 61, 140, 0.08);
+  max-width: 880px;
+}
+
+.pub-lead__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.pub-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.pub-field--wide {
+  grid-column: 1 / -1;
+}
+
+.pub-field input,
+.pub-field select,
+.pub-field textarea {
+  font: inherit;
+  font-weight: 500;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  width: 100%;
+}
+
+.pub-field textarea {
+  resize: vertical;
+}
+
+.pub-contact-method legend {
+  margin-bottom: 0.3rem;
+}
+
+.pub-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pub-segmented label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.pub-segmented label.is-active {
+  background: var(--blue-900);
+  border-color: var(--blue-900);
+  color: #fff;
+}
+
+.pub-segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pub-segmented label:focus-within {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 2px;
+}
+
+.pub-hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.pub-consent {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.pub-consent input {
+  margin-top: 0.2rem;
+  width: 18px;
+  height: 18px;
+}
+
+.pub-consent a {
+  color: var(--blue-700);
+  text-decoration: underline;
+}
+
+.pub-lead__error {
+  color: #b42318;
+  font-weight: 700;
+  margin-top: 0.75rem;
+}
+
+.pub-lead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pub-lead__success {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #146c2e;
+}
+
+/* ── Trust + reviews ────────────────────────────────── */
+.pub-trust__grid {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.pub-trust__item {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+}
+
+.pub-trust__item h3 {
+  color: var(--blue-900);
+  font-size: 1.3rem;
+  margin: 0.6rem 0 0.4rem;
+}
+
+.pub-trust__item p {
+  line-height: 1.5;
+}
+
+.pub-trust__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--blue-900);
+  font-weight: 900;
+}
+
+.pub-reviews {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.pub-review {
+  margin: 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem;
+  border: 1px dashed var(--line);
+}
+
+.pub-review blockquote {
+  margin: 0 0 0.6rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.pub-review figcaption {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* ── Telegram channel ───────────────────────────────── */
+.pub-channel {
+  background: var(--blue-900);
+  color: #fff;
+}
+
+.pub-channel .pub-h2 {
+  color: #fff;
+}
+
+.pub-channel__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.pub-channel__inner > div {
+  flex: 1 1 420px;
+}
+
+.pub-channel p {
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+/* ── Related / intro ────────────────────────────────── */
+.pub-related {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.pub-related a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--blue-900);
+  font-weight: 700;
+}
+
+.pub-related a:hover {
+  border-color: var(--blue-700);
+}
+
+.pub-intro {
+  background: #fff;
+}
+
+.pub-intro__inner {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* ── Sticky Telegram ────────────────────────────────── */
+.pub-sticky-tg {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: #229ed9;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45);
+}
+
+.pub-sticky-tg:hover {
+  background: #1b8bc0;
+}
+
+@media (max-width: 640px) {
+  .pub-lead__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pub-sticky-tg {
+    width: 52px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .pub-sticky-tg__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .pub-section {
+    padding: 2rem 0;
+  }
+}
+
+/* Keep the back-to-top button clear of the sticky Telegram button. */
+.back-to-top {
+  bottom: 80px;
+}

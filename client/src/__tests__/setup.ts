@@ -33,9 +33,12 @@ const createMockStorage = (): Storage => {
   };
 };
 
-const mockStorage = createMockStorage();
-Object.defineProperty(window, "localStorage", {
-  value: mockStorage,
-  writable: false,
-  configurable: true,
-});
+// SSR tests run with `@vitest-environment node`, where there is no window.
+if (typeof window !== "undefined") {
+  const mockStorage = createMockStorage();
+  Object.defineProperty(window, "localStorage", {
+    value: mockStorage,
+    writable: false,
+    configurable: true,
+  });
+}

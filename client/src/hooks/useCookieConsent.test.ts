@@ -1,8 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCookieConsent } from "./useCookieConsent";
 
 describe("useCookieConsent", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("remembers the choice and hides the banner on the next visit", () => {
+    const first = renderHook(() => useCookieConsent());
+    act(() => {
+      first.result.current.applyCookiePrefs({ necessary: true, analytics: true, marketing: false });
+    });
+    const second = renderHook(() => useCookieConsent());
+    expect(second.result.current.showCookies).toBe(false);
+    expect(second.result.current.cookiePrefs.analytics).toBe(true);
+  });
+
   it("starts with cookies shown", () => {
     const { result } = renderHook(() => useCookieConsent());
     expect(result.current.showCookies).toBe(true);

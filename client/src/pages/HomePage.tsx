@@ -8,7 +8,6 @@ import type { PublicDestinationSummary, UnifiedTour, UnifiedFilters } from "../t
 import { TourDetailModal } from "../features/search/components/TourDetailModal";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import { useLanguage } from "../hooks/useLanguage";
-import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
@@ -20,13 +19,32 @@ import SearchHero from "../components/home/SearchHero";
 import TourGrid from "../components/home/TourGrid";
 import LastMinuteDeals from "../components/home/LastMinuteDeals";
 import FavoriteDestinations from "../components/home/FavoriteDestinations";
+import { HOME_META } from "../seo/homeMeta";
+import { useSsrData } from "../ssr/SsrDataContext";
+import { isPublicLocale, localePath } from "../i18n/locales";
+import { LanguageSwitcher } from "../components/public/LanguageSwitcher";
+import { HomeSeoSection } from "../components/public/HomeSeoSection";
+import { LeadForm } from "../components/public/LeadForm";
+import { TrustBlock } from "../components/public/TrustBlock";
+import { TelegramChannelBlock } from "../components/public/TelegramChannelBlock";
+import { StickyTelegram } from "../components/public/StickyTelegram";
+import { publicStrings } from "../components/public/strings";
+import { track } from "../lib/analytics";
 import "../site.css";
+import "../public.css";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { lang, setLang, t } = useLanguage();
-  usePageTitle();
-  const ownTours = useTours();
+  const { lang: rawLang, t } = useLanguage();
+  // HomePage is only mounted under /cs/ and /ru/ (see AppRoutes).
+  const lang = isPublicLocale(rawLang) ? rawLang : "cs";
+  const ps = publicStrings(lang);
+  const ssr = useSsrData();
+  const ssrHome = ssr?.page === "home" ? ssr : null;
+  useEffect(() => {
+    document.title = HOME_META[lang].title;
+  }, [lang]);
+  const ownTours = useTours(ssrHome?.ownTours);
   const leadPopup = useLeadPopup();
   const cookies = useCookieConsent();
 
@@ -133,8 +151,10 @@ export default function HomePage() {
   }, [activeBudget]);
 
   // ── Live Alexandria last-minute offers ──────────────────────
-  const [lastMinuteItems, setLastMinuteItems] = useState<AlexandriaLastMinuteItem[]>([]);
-  const [lastMinuteLoading, setLastMinuteLoading] = useState(true);
+  const [lastMinuteItems, setLastMinuteItems] = useState<AlexandriaLastMinuteItem[]>(
+    () => ssrHome?.lastMinute ?? [],
+  );
+  const [lastMinuteLoading, setLastMinuteLoading] = useState(!ssrHome?.lastMinute);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +184,13 @@ export default function HomePage() {
   }, []);
 
   function openLastMinuteModal(item: AlexandriaLastMinuteItem) {
+    track("deal_click", {
+      deal_id: item.externalId,
+      deal_destination: item.destination,
+      value: item.price,
+      currency: "CZK",
+      click_location: "home_last_minute",
+    });
     const tour: UnifiedTour = {
       externalId: item.externalId,
       destination: item.destination,
@@ -215,7 +242,9 @@ export default function HomePage() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeBudget]);
 
   const lastMinuteRelated = useMemo(() => {
@@ -388,7 +417,7 @@ export default function HomePage() {
         <div className="container header-top">
           <a
             className="logo"
-            href="#home"
+            href={localePath(lang)}
             onClick={(e) => {
               handleNavClick(e);
               setMobileMenuOpen(false);
@@ -416,52 +445,12 @@ export default function HomePage() {
               <a href="tel:+420721163860">+420 721 163 860</a>
               <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
             </div>
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿", label: "Přepnout do češtiny" },
-                  { code: "uk", flag: "🇺🇦", label: "Перейти на українську" },
-                  { code: "en", flag: "🇬🇧", label: "Switch to English" },
-                  { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                  aria-label={item.label}
-                  aria-pressed={lang === item.code}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitcher lang={lang} />
           </div>
 
           {/* Mobile Right Side */}
           <div className="mobile-header-actions mobile-only">
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿", label: "Přepnout do češtiny" },
-                  { code: "uk", flag: "🇺🇦", label: "Перейти на українську" },
-                  { code: "en", flag: "🇬🇧", label: "Switch to English" },
-                  { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                  aria-label={item.label}
-                  aria-pressed={lang === item.code}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitcher lang={lang} />
             <button
               className="hamburger"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -469,12 +458,28 @@ export default function HomePage() {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <line x1="3" y1="12" x2="21" y2="12" />
                   <line x1="3" y1="18" x2="21" y2="18" />
@@ -565,6 +570,7 @@ export default function HomePage() {
           searchDateStart={searchDateStart}
           searchDateEnd={searchDateEnd}
           lang={lang}
+          h1={HOME_META[lang].h1}
           isDatePickerOpen={isDatePickerOpen}
           t={t}
           onSearchSubmit={handleSearchSubmit}
@@ -573,11 +579,9 @@ export default function HomePage() {
           onNavClick={handleNavClick}
         />
 
-        <TourGrid
-          ownTours={ownTours}
-          onTourClick={openOwnTourModal}
-          t={t}
-        />
+        <HomeSeoSection lang={lang} links={ssrHome?.landingIndex} />
+
+        <TourGrid ownTours={ownTours} onTourClick={openOwnTourModal} t={t} />
 
         <LastMinuteDeals
           lastMinuteItems={lastMinuteItems}
@@ -674,16 +678,73 @@ export default function HomePage() {
               <h3>{t("sectionSocialTitle")}</h3>
               <p>{t("sectionSocialSub")}</p>
               <div className="social-buttons">
-                <a href="https://instagram.com/skytravel.cz" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+                <a
+                  href="https://instagram.com/skytravel.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x="2"
+                      y="2"
+                      width="20"
+                      height="20"
+                      rx="5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" />
+                  </svg>
                   <span className="sr-only">Instagram</span>
                 </a>
-                <a href="https://facebook.com/skytravel.cz" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <a
+                  href="https://facebook.com/skytravel.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
                   <span className="sr-only">Facebook</span>
                 </a>
-                <a href="https://tiktok.com/@skytravel.cz" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                <a
+                  href="https://tiktok.com/@skytravel.cz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="TikTok"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+                  </svg>
                   <span className="sr-only">TikTok</span>
                 </a>
               </div>
@@ -714,18 +775,34 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        <section
+          id="poptavka"
+          className="pub-section pub-lead-section"
+          aria-labelledby="home-lead-title"
+        >
+          <div className="container">
+            <h2 id="home-lead-title" className="pub-h2">
+              {ps.leadTitle}
+            </h2>
+            <p className="pub-muted">{ps.leadSubtitle}</p>
+            <LeadForm lang={lang} location="home" />
+          </div>
+        </section>
+
+        <TrustBlock lang={lang} />
+        <TelegramChannelBlock lang={lang} />
       </main>
 
       <footer id="kontakt" className="footer">
         <div className="container footer-main">
           <div>
-            <h4>{t("footerCity")}</h4>
+            <h2 className="footer-heading">{t("footerCity")}</h2>
             <p>SkyTravel</p>
             <p>Křižíkova 6, Praha</p>
             <p>{t("footerHours")}</p>
           </div>
           <div>
-            <h4>{t("footerContact")}</h4>
+            <h2 className="footer-heading">{t("footerContact")}</h2>
             <p>
               <a href="tel:+420721163860">+420 721 163 860</a>
             </p>
@@ -737,25 +814,24 @@ export default function HomePage() {
             </p>
           </div>
           <form className="newsletter" onSubmit={handleNewsletterSubmit}>
-            <h4>{t("footerNewsTitle")}</h4>
+            <h2 className="footer-heading">{t("footerNewsTitle")}</h2>
             <input
               type="email"
               placeholder={t("modalEmailPlaceholder")}
               value={newsletterEmail}
               onChange={(e) => setNewsletterEmail(e.target.value)}
             />
-            <label>
+            <label className="newsletter__consent">
               <input
                 type="checkbox"
                 checked={newsletterConsent}
                 onChange={(e) => setNewsletterConsent(e.target.checked)}
-              />{" "}
-              {t("modalConsentGdpr")}{" "}
-              <Link to="/gdpr">{t("modalGdprLink")}.</Link>
+              />
+              <span>
+                {t("modalConsentGdpr")} <Link to="/gdpr">{t("modalGdprLink")}</Link>.
+              </span>
             </label>
-            {newsletterError && (
-              <p className="newsletter__error">{newsletterError}</p>
-            )}
+            {newsletterError && <p className="newsletter__error">{newsletterError}</p>}
             {newsletterSubmitted ? (
               <p className="newsletter__success">{t("footerNewsSuccess")}</p>
             ) : (
@@ -765,10 +841,18 @@ export default function HomePage() {
         </div>
 
         <div className="container footer-bottom">
-          <a href="#" className="footer-bottom__link">{t("navContact")}</a>
-          <a href="#" className="footer-bottom__link">{t("f3_1")}</a>
-          <Link to="/gdpr" className="footer-bottom__link">{t("footerGdpr")}</Link>
-          <Link to="/terms" className="footer-bottom__link">{t("footerTerms")}</Link>
+          <a href="#kontakt" className="footer-bottom__link">
+            {t("navContact")}
+          </a>
+          <a href="/blog" className="footer-bottom__link">
+            {ps.footerBlog}
+          </a>
+          <Link to="/gdpr" className="footer-bottom__link">
+            {t("footerGdpr")}
+          </Link>
+          <Link to="/terms" className="footer-bottom__link">
+            {t("footerTerms")}
+          </Link>
           <span>
             &copy; <span>{new Date().getFullYear()}</span> SkyTravel
           </span>
@@ -812,6 +896,8 @@ export default function HomePage() {
 
       <LeadPopup {...leadPopup} />
 
+      <StickyTelegram lang={lang} />
+
       {showBackToTop && (
         <button
           type="button"
@@ -819,7 +905,15 @@ export default function HomePage() {
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Zpět nahoru"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
             <polyline points="18 15 12 9 6 15" />
           </svg>
         </button>
@@ -827,4 +921,3 @@ export default function HomePage() {
     </div>
   );
 }
-

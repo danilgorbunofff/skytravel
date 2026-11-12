@@ -3,43 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SkyTravel | Dovolená na míru</title>
+    <!--
+      Everything between head:start / head:end is replaced by the server for
+      server-rendered pages (/cs/…, /ru/…) with per-page title, description,
+      canonical, hreflang, Open Graph and JSON-LD (client/src/seo/head.ts).
+      The defaults below are only used by SPA-only routes (/search, /admin…).
+    -->
+    <!--head:start-->
+    <title>SkyTravel | Zájezdy z Prahy od českých CK</title>
     <meta
       name="description"
-      content="SkyTravel - exkluzivní nabídky SkyTravel a partnerské zájezdy na jednom místě."
+      content="Vyhledávač zájezdů od českých cestovních kanceláří. Srovnejte ceny a najděte tu nejlepší dovolenou."
     />
-
-    <!-- SEO -->
-    <meta name="robots" content="index, follow" />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="SkyTravel" />
-    <meta property="og:title" content="SkyTravel — Dovolená na míru" />
+    <meta property="og:title" content="SkyTravel | Zájezdy z Prahy od českých CK" />
     <meta
       property="og:description"
       content="Vyhledávač zájezdů od českých cestovních kanceláří. Srovnejte ceny a najděte tu nejlepší dovolenou."
     />
-    <meta property="og:url" content="https://sky-travel.tours/" />
-    <meta property="og:image" content="https://sky-travel.tours/og-image.jpg" />
+    <meta property="og:image" content="https://sky-travel.tours/images/blog/og-default.jpg" />
     <meta property="og:locale" content="cs_CZ" />
-
-    <!-- JSON-LD structured data -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "TravelAgency",
-        "name": "SkyTravel",
-        "url": "https://sky-travel.tours",
-        "description": "Cestovní agentura nabízející exkluzivní zájezdy a last minute dovolenou.",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "Křižíkova 6",
-          "addressLocality": "Praha",
-          "addressCountry": "CZ"
-        }
-      }
-    </script>
+    <!--head:end-->
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -50,7 +35,8 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><!--app-html--></div>
+    <!--app-data-->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

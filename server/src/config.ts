@@ -34,7 +34,9 @@ if (env.NODE_ENV === "production") {
 const isProd = env.NODE_ENV === "production";
 
 if (!isProd && env.SESSION_SECRET === "dev-secret") {
-  console.warn("[config] ⚠ Using default SESSION_SECRET 'dev-secret' in non-production. Set a strong secret for realistic security.");
+  console.warn(
+    "[config] ⚠ Using default SESSION_SECRET 'dev-secret' in non-production. Set a strong secret for realistic security.",
+  );
 }
 
 export const config = {
@@ -68,12 +70,23 @@ export const config = {
     },
   },
 
+  /** Lead-form notifications (@skytravel_tours_bot). See README → "Lead form". */
+  telegramLeads: {
+    botToken: process.env.TELEGRAM_LEADS_BOT_TOKEN || "",
+    chatIds: (process.env.TELEGRAM_LEADS_CHAT_ID || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  },
+
+  /** IndexNow (Seznam, Bing). Any 8–128 char [a-zA-Z0-9-] string; served at /indexnow-key.txt */
+  indexNowKey: process.env.INDEXNOW_KEY || "",
+
   alexandria: {
     url: process.env.ALEXANDRIA_API_URL || "http://export.alexandria.cz/export",
     apiKey: process.env.ALEXANDRIA_API_KEY || "",
     country: Number(process.env.ALEXANDRIA_COUNTRY || 107),
   },
-
 } as const;
 
 // ── Startup warnings for optional but important config ────────────────
@@ -92,6 +105,12 @@ function validateConfig() {
 
   if (!config.alexandria.apiKey) {
     warnings.push("ALEXANDRIA_API_KEY is not set — Alexandria provider will fail.");
+  }
+
+  if (!config.telegramLeads.botToken || config.telegramLeads.chatIds.length === 0) {
+    warnings.push(
+      "Lead form notifications disabled — set TELEGRAM_LEADS_BOT_TOKEN and TELEGRAM_LEADS_CHAT_ID.",
+    );
   }
 
   for (const w of warnings) {

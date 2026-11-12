@@ -11,7 +11,8 @@
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "indexnow": "node dist/scripts/indexnow.js"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.8.0",

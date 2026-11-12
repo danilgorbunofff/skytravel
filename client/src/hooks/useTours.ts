@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { fetchTours } from "../api";
 import { defaultOwnTours, type OwnTour } from "../data";
 
-export function useTours() {
-  const [tours, setTours] = useState<OwnTour[]>(defaultOwnTours);
+/** @param initial tours rendered by the server (avoids a flash of the defaults). */
+export function useTours(initial?: OwnTour[]) {
+  const [tours, setTours] = useState<OwnTour[]>(
+    initial && initial.length > 0 ? initial : defaultOwnTours,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
