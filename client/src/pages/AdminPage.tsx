@@ -1,25 +1,41 @@
-import { useState, useCallback } from "react";
-import { useLanguage } from "../hooks/useLanguage";
+import { useState } from "react";
 import AdminLayout from "../components/AdminLayout";
 import ConfirmDialog from "../components/ConfirmDialog";
+import AdminToastViewport from "../components/admin/AdminToastViewport";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { useAdminTours } from "../features/admin/hooks/useAdminTours";
+import { emptyForm, useAdminTours } from "../features/admin/hooks/useAdminTours";
 import { useTourPhotos } from "../features/admin/hooks/useTourPhotos";
 import { useTourPreview } from "../features/admin/hooks/useTourPreview";
+import { useAdminToast } from "../features/admin/hooks/useAdminToast";
 import AdminTourForm from "../features/admin/components/AdminTourForm";
 import AdminTourPreview from "../features/admin/components/AdminTourPreview";
 import AdminTourOrderList from "../features/admin/components/AdminTourOrderList";
-import { Check } from "lucide-react";
 import type { OwnTour } from "../features/admin/types";
 
-export default function AdminPage() {
-  const { t } = useLanguage();
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+type Snapshot = { form: OwnTour; photos: string[] };
 
-  const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  }, []);
+/**
+ * Stable string for dirty checks: sorted keys, and empty strings / empty
+ * objects dropped so typing and then clearing a field does not count as a change.
+ */
+function snapshotKey(value: unknown): string {
+  const clean = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(clean);
+    if (v && typeof v === "object") {
+      const entries = Object.entries(v as Record<string, unknown>)
+        .map(([k, val]) => [k, clean(val)] as const)
+        .filter(([, val]) => val !== "" && val !== undefined && val !== null)
+        .filter(([, val]) => !(typeof val === "object" && Object.keys(val as object).length === 0))
+        .sort(([a], [b]) => a.localeCompare(b));
+      return Object.fromEntries(entries);
+    }
+    return v;
+  };
+  return JSON.stringify(clean(value));
+}
+
+export default function AdminPage() {
+  const { toasts, showToast, dismissToast } = useAdminToast(3500);
 
   const {
     form,
@@ -28,6 +44,8 @@ export default function AdminPage() {
     ordering,
     orderDirty,
     loading,
+    submitting,
+    savingOrder,
     error,
     confirmDeleteId,
     setConfirmDeleteId,
@@ -48,6 +66,7 @@ export default function AdminPage() {
     dragOverIndex,
     setDragOverIndex,
     resetPhotos,
+    uploadFiles,
     handleUpload,
     movePhoto,
     removePhoto,
@@ -67,46 +86,81 @@ export default function AdminPage() {
     nextSlide,
   } = useTourPreview(form, photos);
 
-  function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // ── Unsaved-changes guard ──
+  const [baseline, setBaseline] = useState<Snapshot>({ form: emptyForm, photos: [] });
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const isDirty = snapshotKey({ form, photos }) !== snapshotKey(baseline);
+
+  /** Runs `action` now, or after the admin confirms discarding unsaved changes. */
+  function guardDirty(action: () => void) {
+    if (isDirty) setPendingAction(() => action);
+    else action();
+  }
+
+  async function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    handleSubmit(photos).then((ok) => {
-      if (ok) {
-        resetPhotos([]);
-        showToast(editingId ? "Nabídka byla aktualizována." : "Nabídka byla vytvořena.");
-      }
-    });
+    if (submitting) return;
+    const wasEditing = editingId !== null;
+    const ok = await handleSubmit(photos);
+    if (ok) {
+      resetPhotos([]);
+      setBaseline({ form: emptyForm, photos: [] });
+      showToast(wasEditing ? "Nabídka byla aktualizována." : "Nabídka byla vytvořena.");
+    }
   }
 
   function onFormReset() {
-    resetForm();
-    resetPhotos([]);
+    guardDirty(() => {
+      resetForm();
+      resetPhotos([]);
+      setBaseline({ form: emptyForm, photos: [] });
+    });
   }
 
   function onEdit(tour: OwnTour) {
-    const newPhotos = handleEdit(tour);
-    resetPhotos(newPhotos);
+    guardDirty(() => {
+      const loaded = handleEdit(tour);
+      resetPhotos(loaded.photos);
+      setBaseline(loaded);
+    });
   }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const err = await handleUpload(e);
-    if (err) setForm((prev) => ({ ...prev })); // trigger re-render if needed
+    if (err) showToast(err, "error");
+  }
+
+  async function onDropFiles(files: File[]) {
+    const err = await uploadFiles(files);
+    if (err) showToast(err, "error");
+  }
+
+  async function onSaveOrder() {
+    try {
+      await saveOrder();
+      showToast("Pořadí bylo uloženo.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Uložení pořadí se nezdařilo.", "error");
+    }
+  }
+
+  async function onConfirmDelete() {
+    const deletingEdited = confirmDeleteId !== null && confirmDeleteId === editingId;
+    try {
+      await performDelete();
+      if (deletingEdited) {
+        resetPhotos([]);
+        setBaseline({ form: emptyForm, photos: [] });
+      }
+      showToast("Nabídka byla smazána.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Smazání se nezdařilo.", "error");
+    }
   }
 
   return (
     <AdminLayout title="Správa nabídek">
-      {/* ── Toast ──────────────────────────────────── */}
-      {toast && (
-        <div
-          className={`fixed right-4 top-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg transition-all animate-in fade-in slide-in-from-top-2 ${
-            toast.type === "success"
-              ? "border-green-200 bg-green-50 text-green-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {toast.type === "success" && <Check className="h-4 w-4" />}
-          {toast.message}
-        </div>
-      )}
+      <AdminToastViewport toasts={toasts} onDismiss={dismissToast} />
 
       {/* ── Section 1: Tour Builder ────────────────── */}
       <section>
@@ -118,9 +172,11 @@ export default function AdminPage() {
               </div>
               <div>
                 <CardTitle className="text-lg">
-                  {editingId ? "Upravit nabídku" : t("editOwn")}
+                  {editingId ? "Upravit nabídku" : "Editace exkluzivních nabídek"}
                 </CardTitle>
-                <p className="mt-0.5 text-sm text-muted-foreground">{t("editNote")}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Změny se ihned projeví na hlavní stránce v sekci exkluzivních nabídek.
+                </p>
               </div>
             </div>
           </CardHeader>
@@ -131,6 +187,7 @@ export default function AdminPage() {
                 setForm={setForm}
                 editingId={editingId}
                 error={error}
+                submitting={submitting}
                 photos={photos}
                 uploading={uploading}
                 dragIndex={dragIndex}
@@ -138,6 +195,7 @@ export default function AdminPage() {
                 onSubmit={onFormSubmit}
                 onReset={onFormReset}
                 onUpload={onUpload}
+                onDropFiles={onDropFiles}
                 onMovePhoto={movePhoto}
                 onRemovePhoto={removePhoto}
                 onDragStart={handleDragStart}
@@ -147,7 +205,6 @@ export default function AdminPage() {
                 onDragLeave={() => setDragOverIndex(null)}
                 onDrop={handleDrop}
                 onUpdateI18n={updateI18n}
-                t={t}
               />
 
               <AdminTourPreview
@@ -174,7 +231,7 @@ export default function AdminPage() {
                 <span className="text-lg font-bold">2</span>
               </div>
               <div className="flex-1">
-                <CardTitle className="text-lg">{t("listOwn")}</CardTitle>
+                <CardTitle className="text-lg">Vaše SkyTravel nabídky</CardTitle>
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   Správa pořadí a nabídek na hlavní stránce
                 </p>
@@ -186,14 +243,11 @@ export default function AdminPage() {
               ordering={ordering}
               loading={loading}
               orderDirty={orderDirty}
-              onSaveOrder={() => {
-                saveOrder();
-                showToast("Pořadí bylo uloženo.");
-              }}
+              savingOrder={savingOrder}
+              onSaveOrder={onSaveOrder}
               onMoveOrder={moveOrder}
               onEdit={onEdit}
               onDelete={handleDelete}
-              t={t}
             />
           </CardContent>
         </Card>
@@ -204,15 +258,21 @@ export default function AdminPage() {
         title="Smazat nabídku?"
         message="Opravdu chcete tuto nabídku smazat? Tato akce je nevratná."
         confirmLabel="Smazat"
-        onConfirm={async () => {
-          try {
-            await performDelete();
-            showToast("Nabídka byla smazána.");
-          } catch {
-            showToast("Smazání se nezdařilo.", "error");
-          }
-        }}
+        onConfirm={onConfirmDelete}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingAction !== null}
+        title="Zahodit neuložené změny?"
+        message="Formulář obsahuje neuložené změny. Pokud budete pokračovat, budou ztraceny."
+        confirmLabel="Zahodit změny"
+        cancelLabel="Pokračovat v úpravách"
+        onConfirm={() => {
+          pendingAction?.();
+          setPendingAction(null);
+        }}
+        onCancel={() => setPendingAction(null)}
       />
     </AdminLayout>
   );

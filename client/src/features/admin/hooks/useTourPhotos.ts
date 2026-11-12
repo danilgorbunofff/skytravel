@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { uploadAdminImages } from "../services/adminApi";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -12,33 +13,37 @@ export function useTourPhotos(initialPhotos: string[] = []) {
     setPhotos(newPhotos);
   }, []);
 
+  /**
+   * Uploads image files and appends them to the gallery.
+   * Resolves to an error message (Czech) or null on success.
+   */
+  const uploadFiles = useCallback(async (files: File[]): Promise<string | null> => {
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    if (images.length === 0) {
+      return files.length > 0 ? "Vyberte prosím obrázky (JPG, PNG, WebP)." : null;
+    }
+    setUploading(true);
+    try {
+      // uploadAdminImages goes through csrfFetch; a plain fetch is rejected by
+      // the CSRF middleware on /api/admin.
+      const { urls } = await uploadAdminImages(images);
+      const normalized = urls.map((url) => (url.startsWith("/") ? `${API_BASE}${url}` : url));
+      setPhotos((prev) => [...prev, ...normalized]);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : "Nahrání fotek se nezdařilo.";
+    } finally {
+      setUploading(false);
+    }
+  }, []);
+
   const handleUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<string | null> => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return null;
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        Array.from(files).forEach((file) => formData.append("images", file));
-        const res = await fetch(`${API_BASE}/api/admin/uploads`, {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Upload failed");
-        const body = (await res.json()) as { data?: { urls?: string[] } };
-        const urls = (body.data?.urls || []) as string[];
-        const normalized = urls.map((url) => (url.startsWith("/") ? `${API_BASE}${url}` : url));
-        setPhotos((prev) => [...prev, ...normalized]);
-        return null;
-      } catch {
-        return "Upload se nezdařil.";
-      } finally {
-        setUploading(false);
-        event.target.value = "";
-      }
+      const files = Array.from(event.target.files ?? []);
+      event.target.value = "";
+      return uploadFiles(files);
     },
-    [],
+    [uploadFiles],
   );
 
   const movePhoto = useCallback((index: number, direction: "left" | "right") => {
@@ -95,6 +100,7 @@ export function useTourPhotos(initialPhotos: string[] = []) {
     dragOverIndex,
     setDragOverIndex,
     resetPhotos,
+    uploadFiles,
     handleUpload,
     movePhoto,
     removePhoto,
