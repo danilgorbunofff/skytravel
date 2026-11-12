@@ -16,7 +16,6 @@ import { SkipToContent } from "../components/SkipToContent";
 import { StatCard } from "../components/admin/StatCard";
 import { StatChart } from "../components/admin/StatChart";
 
-
 const periods: { value: "30" | "90" | "year"; label: string }[] = [
   { value: "30", label: "30 dní" },
   { value: "90", label: "90 dní" },
@@ -51,7 +50,7 @@ export default function AdminStatisticsPage() {
             <div>
               <CardTitle>Statistiky</CardTitle>
               <CardDescription>
-                Google Analytics + ruční metriky k poptávkám a e-mailům.
+                Přehled poptávek a e-mailů — GA/visits zatím neměříme, kanály nezobrazujeme.
               </CardDescription>
             </div>
             <div className="flex gap-1">
@@ -101,24 +100,18 @@ export default function AdminStatisticsPage() {
           <ErrorBoundary key="kpi-cards" onReset={() => window.location.reload()}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                label="Návštěvy webu"
-                value={data ? data.totalVisits.toLocaleString("cs-CZ") : "—"}
-                change={loading ? undefined : data ? "+0%" : undefined}
-                up
+                label="Nabídky celkem"
+                value={data ? data.totalOffers.toLocaleString("cs-CZ") : "—"}
                 loading={cardLoading}
               />
               <StatCard
                 label="Poptávky odeslané"
                 value={data ? data.inquiries.toLocaleString("cs-CZ") : "—"}
-                change={loading ? undefined : data ? "+0%" : undefined}
-                up
                 loading={cardLoading}
               />
               <StatCard
-                label="Konverzní poměr"
-                value={data ? `${data.conversionRate}%` : "—"}
-                change={loading ? undefined : data ? "+0%" : undefined}
-                up
+                label="Souhlas s marketingem"
+                value={data ? `${data.consentRate}%` : "—"}
                 loading={cardLoading}
               />
               <StatCard
@@ -131,41 +124,21 @@ export default function AdminStatisticsPage() {
 
           {/* Charts row */}
           <ErrorBoundary key="charts" onReset={() => window.location.reload()}>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-1">
               {/* Trends chart */}
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Trendy návštěv</CardTitle>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <CardTitle className="text-lg">Poptávky — trend</CardTitle>
+                    {data?.trendGranularity === "month" && (
+                      <span className="text-xs text-muted-foreground">agregace po měsících</span>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-4 text-xs text-muted-foreground mb-3">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                      Návštěvy
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-amber-500" />
-                      Poptávky
-                    </span>
-                  </div>
                   <StatChart
                     type="line"
-                    data={data?.visitsTrend || []}
-                    loading={loading}
-                    error={error || undefined}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Channels */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Kanály</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <StatChart
-                    type="bar"
-                    data={data?.channels.map((ch) => ({ label: ch.label, value: ch.pct })) || []}
+                    data={data?.inquiriesTrend || []}
                     loading={loading}
                     error={error || undefined}
                   />
@@ -191,15 +164,13 @@ export default function AdminStatisticsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Destinace</TableHead>
-                  <TableHead className="text-right">Prohlédnutí</TableHead>
                   <TableHead className="text-right">Poptávky</TableHead>
-                  <TableHead className="text-right">E-maily</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(data?.perDestination ?? []).length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
                       Žádná data k zobrazení.
                     </TableCell>
                   </TableRow>
@@ -207,13 +178,7 @@ export default function AdminStatisticsPage() {
                   (data?.perDestination ?? []).map((row) => (
                     <TableRow key={row.destination}>
                       <TableCell className="font-medium">{row.destination}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {row.inquiries}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {row.inquiries}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">—</TableCell>
+                      <TableCell className="text-right font-medium">{row.inquiries}</TableCell>
                     </TableRow>
                   ))
                 )}

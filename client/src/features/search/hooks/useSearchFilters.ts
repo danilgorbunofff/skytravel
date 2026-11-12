@@ -22,7 +22,9 @@ function getParamNumber(
   min = 1,
   max = Number.MAX_SAFE_INTEGER,
 ): number {
-  const value = Number(searchParams.get(key));
+  const raw = searchParams.get(key);
+  if (raw == null || raw.trim() === "") return fallback;
+  const value = Number(raw);
   if (!Number.isFinite(value)) return fallback;
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
@@ -30,6 +32,11 @@ function getParamNumber(
 function clampCount(value: number, fallback: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return fallback;
   return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function parseCountParam(raw: string | null, fallback: number, min: number, max: number): number {
+  if (raw == null || raw.trim() === "") return fallback;
+  return clampCount(Number(raw), fallback, min, max);
 }
 
 function parsePriceParam(value: string): number | null {
@@ -124,10 +131,10 @@ export function useSearchFilters(t: (key: TranslationKey) => string): SearchFilt
   const [dateEnd, setDateEnd] = useState(urlDateEnd);
   const [transport, setTransport] = useState(urlTransport);
   const [adults, setAdults] = useState(
-    clampCount(Number(urlAdults), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS),
+    parseCountParam(urlAdults, DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS),
   );
   const [children, setChildren] = useState(
-    clampCount(Number(urlChildren), DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN),
+    parseCountParam(urlChildren, DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN),
   );
 
   // Sync local state when the URL changes (e.g., browser back/forward).
@@ -141,8 +148,8 @@ export function useSearchFilters(t: (key: TranslationKey) => string): SearchFilt
     setDateStart(urlDateStart);
     setDateEnd(urlDateEnd);
     setTransport(urlTransport);
-    setAdults(clampCount(Number(urlAdults), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS));
-    setChildren(clampCount(Number(urlChildren), DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN));
+    setAdults(parseCountParam(urlAdults, DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS));
+    setChildren(parseCountParam(urlChildren, DEFAULT_CHILDREN, MIN_CHILDREN, MAX_CHILDREN));
   }, [urlQuery, urlDateStart, urlDateEnd, urlTransport, urlAdults, urlChildren]);
 
   // Read active URL params
@@ -277,10 +284,10 @@ export function useSearchFilters(t: (key: TranslationKey) => string): SearchFilt
       if (pMax) filters.priceMax = Number(pMax);
       const adultCount = searchParams.get("adults");
       const childCount = searchParams.get("children");
-      if (adultCount) {
+      if (adultCount != null && adultCount.trim() !== "") {
         filters.adults = clampCount(Number(adultCount), DEFAULT_ADULTS, MIN_ADULTS, MAX_ADULTS);
       }
-      if (childCount) {
+      if (childCount != null && childCount.trim() !== "") {
         filters.children = clampCount(
           Number(childCount),
           DEFAULT_CHILDREN,

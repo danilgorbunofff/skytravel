@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
+import { getLocale } from "../../../lib/locale";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -17,11 +18,33 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
 
   const sorted = [...destinations].sort((a, b) => {
     if (a.count !== b.count) return b.count - a.count;
-    return a.czechName.localeCompare(b.czechName, "cs-CZ");
+    return a.czechName.localeCompare(b.czechName, getLocale());
   });
 
-  const visible = expanded ? sorted : sorted.slice(0, 6);
-  const hiddenCount = Math.max(sorted.length - 6, 0);
+  const COLLAPSED = 6;
+  const alwaysVisible = sorted.slice(0, COLLAPSED);
+  const extraItems = sorted.slice(COLLAPSED);
+  const hasOverflow = extraItems.length > 0;
+  const hiddenCount = extraItems.length;
+
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+
+  useEffect(() => {
+    if (!hasOverflow) return;
+    const el = innerRef.current;
+    if (!el) return;
+    const measure = () => setMeasuredHeight(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    // also re-measure after fonts load / counts update
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [hasOverflow, extraItems.length]);
 
   function toggle(slug: string) {
     if (activeSlug === slug) {
@@ -37,7 +60,6 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
 
   return (
     <div className="destination-multi-select">
-      {/* List */}
       <div className="search-region-list" role="radiogroup" aria-label={t("sDestination")}>
         <button
           type="button"
@@ -48,7 +70,7 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
         >
           {t("sFilterAllDestinations")}
         </button>
-        {visible.map((d) => {
+        {alwaysVisible.map((d) => {
           const isActive = activeSlug === d.slug;
           return (
             <button
@@ -64,7 +86,39 @@ export function DestinationMultiSelect({ t, value, onChange, destinations }: Pro
             </button>
           );
         })}
-        {hiddenCount > 0 && (
+
+        {hasOverflow && (
+          <div
+            className="search-region-list__extra"
+            aria-hidden={!expanded}
+            style={{
+              height: expanded ? measuredHeight : 0,
+              opacity: expanded ? 1 : 0,
+            }}
+          >
+            <div ref={innerRef} className="search-region-list__extra-inner">
+              {extraItems.map((d) => {
+                const isActive = activeSlug === d.slug;
+                return (
+                  <button
+                    key={d.slug}
+                    type="button"
+                    className={isActive ? "is-active" : ""}
+                    onClick={() => toggle(d.slug)}
+                    role="radio"
+                    aria-checked={isActive}
+                    tabIndex={expanded ? 0 : -1}
+                  >
+                    {d.czechName}
+                    {d.count > 0 && <span className="region-count">({d.count})</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {hasOverflow && (
           <button
             type="button"
             className="search-region-toggle"

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DealsBlock } from "../components/public/DealsBlock";
 import { LeadForm } from "../components/public/LeadForm";
-import { SiteFooter, SiteHeader } from "../components/public/SiteChrome";
+import SiteHeader from "../components/SiteHeader";
+import { AppFooter } from "../components/AppFooter";
+import { useLanguage } from "../hooks/useLanguage";
 import { StickyTelegram } from "../components/public/StickyTelegram";
 import { TelegramChannelBlock } from "../components/public/TelegramChannelBlock";
 import { TrustBlock } from "../components/public/TrustBlock";
@@ -73,7 +75,7 @@ export default function LandingPage() {
   if (state.status === "loading") {
     return (
       <div className="pub-page">
-        <SiteHeader lang={lang} />
+        <SiteHeader />
         <main id="main-content" className="pub-main" aria-busy="true" />
       </div>
     );
@@ -85,12 +87,13 @@ export default function LandingPage() {
 function LandingView({ page, deals }: { page: LandingPageData; deals?: UnifiedTour[] }) {
   const { lang } = page;
   const s = publicStrings(lang);
+  const { t } = useLanguage();
   const crumbs = page.breadcrumbs;
 
   return (
     <div className="pub-page">
       <SkipToContent />
-      <SiteHeader lang={lang} alternates={page.alternates} />
+      <SiteHeader alternates={page.alternates} />
 
       <main id="main-content" className="pub-main">
         <section className="pub-hero">
@@ -195,7 +198,7 @@ function LandingView({ page, deals }: { page: LandingPageData; deals?: UnifiedTo
         )}
       </main>
 
-      <SiteFooter lang={lang} />
+      <AppFooter t={t} />
       <StickyTelegram lang={lang} />
     </div>
   );

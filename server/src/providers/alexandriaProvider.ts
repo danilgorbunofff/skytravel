@@ -37,7 +37,7 @@ import {
 const KNOWN_COUNTRIES: { id: number; name: string }[] = [
   { id: 53, name: "Bulharsko" },
   { id: 107, name: "Chorvatsko" },
-  { id: 2338, name: "Itálie" },       // was incorrectly 147
+  { id: 2338, name: "Itálie" }, // was incorrectly 147
   { id: 971, name: "Španělsko" },
   { id: 976, name: "Řecko" },
   { id: 5613, name: "Turecko" },
@@ -154,7 +154,8 @@ export class AlexandriaProvider extends BaseProvider {
 
   async fetchTours(filters: UnifiedFilters): Promise<ToursResult> {
     const { where, sortBy, sortDir, page, limit, nightsRange } = this.buildQuery(filters);
-    const groupBy = typeof filters.providerFilters.groupBy === "string" ? filters.providerFilters.groupBy : "";
+    const groupBy =
+      typeof filters.providerFilters.groupBy === "string" ? filters.providerFilters.groupBy : "";
     const omitHeavy = filters.omitHeavy === true;
 
     if (filters.groupResults) {
@@ -163,7 +164,15 @@ export class AlexandriaProvider extends BaseProvider {
 
     // Destination grouping — uses in-memory aggregation of DB results
     if (groupBy === "destination") {
-      return this.fetchGroupedByDestination(where, sortBy, sortDir, page, limit, omitHeavy, nightsRange);
+      return this.fetchGroupedByDestination(
+        where,
+        sortBy,
+        sortDir,
+        page,
+        limit,
+        omitHeavy,
+        nightsRange,
+      );
     }
 
     const orderBy: Prisma.ProviderTourOrderByWithRelationInput =
@@ -212,7 +221,7 @@ export class AlexandriaProvider extends BaseProvider {
         : prisma.providerRegion.count({ where: { providerId: this.id } }),
     ]);
 
-    let finalItems: Array<typeof items[0]>;
+    let finalItems: Array<(typeof items)[0]>;
     let finalFiltered: number;
     if (nightsRange && allRows) {
       const filteredRows = this.filterRowsByNights(allRows, nightsRange);
@@ -398,16 +407,15 @@ export class AlexandriaProvider extends BaseProvider {
               );
             }
 
-            // Delete stale rows for this region
-            if (seenIds.size > 0) {
-              await prisma.providerTour.deleteMany({
-                where: {
-                  source: this.id,
-                  regionKey,
-                  externalId: { notIn: [...seenIds] },
-                },
-              });
-            }
+            // Delete stale rows for this region — also when the feed is
+            // valid but empty, otherwise removed hotels linger forever.
+            await prisma.providerTour.deleteMany({
+              where: {
+                source: this.id,
+                regionKey,
+                externalId: { notIn: [...seenIds] },
+              },
+            });
 
             const count = await prisma.providerTour.count({
               where: { source: this.id, regionKey },

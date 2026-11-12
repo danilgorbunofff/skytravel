@@ -20,16 +20,16 @@ export type Favorite = {
 };
 
 export const heroImages = [
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=70",
-  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=1600&q=70",
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=70",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=1600&q=70",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1520454974749-611b7248ffdb?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1080&q=80",
+  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=1080&q=80",
 ];
 
 /**
  * Responsive srcset for an Unsplash URL. `auto=format` makes the CDN serve
  * WebP/AVIF to browsers that accept it, so phones get a ~640px WebP instead
- * of a 2200px JPEG.
+ * of a full-size JPEG.
  */
 export function heroSrcSet(url: string): string {
   return [640, 960, 1280, 1600]
@@ -86,56 +86,6 @@ export const defaultOwnTours: OwnTour[] = [
       "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80",
-    ],
-  },
-  {
-    destination: "Thajsko",
-    title: "SkyTravel Signature",
-    price: 26990,
-    startDate: "2026-02-21",
-    endDate: "2026-04-21",
-    transport: "plane",
-    description:
-      "Exotika s kvalitními hotely, transfery a doporučenými výlety na míru vaší skupině.",
-    image:
-      "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=1200&q=80",
-    photos: [
-      "https://images.unsplash.com/photo-1504214208698-ea1916a2195a?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
-    ],
-  },
-  {
-    destination: "Madagaskar",
-    title: "SkyTravel Signature",
-    price: 55410,
-    startDate: "2026-02-21",
-    endDate: "2026-04-21",
-    transport: "plane",
-    description:
-      "Dobrodružná exotika s jedinečnou přírodou, delším pobytem a kompletní asistencí agentury.",
-    image:
-      "https://images.unsplash.com/photo-1506710503106-38f3c2070cea?auto=format&fit=crop&w=1200&q=80",
-    photos: [
-      "https://images.unsplash.com/photo-1506710503106-38f3c2070cea?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1600&q=80",
-    ],
-  },
-  {
-    destination: "Madeira",
-    title: "SkyTravel Signature",
-    price: 16490,
-    startDate: "2026-02-21",
-    endDate: "2026-04-21",
-    transport: "plane",
-    description: "Květinový ostrov s lehkou turistikou, oceánským výhledem a komfortním zázemím.",
-    image:
-      "https://images.unsplash.com/photo-1510097467424-192d713fd8b2?auto=format&fit=crop&w=1200&q=80",
-    photos: [
-      "https://images.unsplash.com/photo-1510097467424-192d713fd8b2?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80",
     ],
   },
 ];

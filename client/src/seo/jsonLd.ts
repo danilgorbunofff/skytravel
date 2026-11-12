@@ -14,7 +14,7 @@ export function travelAgencyLd(lang: "cs" | "ru"): JsonLd {
   };
   if (SITE.address.postalCode) address.postalCode = SITE.address.postalCode;
 
-  return {
+  const agency: JsonLd = {
     "@context": "https://schema.org",
     "@type": "TravelAgency",
     "@id": `${SITE.url}/#organization`,
@@ -26,13 +26,14 @@ export function travelAgencyLd(lang: "cs" | "ru"): JsonLd {
       lang === "ru"
         ? "Туры из Праги от всех чешских туроператоров по их ценам. Подбор тура на русском языке."
         : "Zájezdy z Prahy od všech českých cestovních kanceláří za jejich ceny.",
-    telephone: SITE.phone,
     email: SITE.email,
     address,
     areaServed: "CZ",
     knowsLanguage: ["cs", "ru"],
     sameAs: [SITE.instagramUrl, SITE.telegramChannelUrl],
   };
+  if (SITE.phone) agency.telephone = SITE.phone;
+  return agency;
 }
 
 export function breadcrumbLd(items: PageLink[]): JsonLd {

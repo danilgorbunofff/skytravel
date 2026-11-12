@@ -43,8 +43,7 @@ export function OfferComparisonTable({
       default:
         items.sort(
           (a, b) =>
-            new Date(a.startDate).getTime() - new Date(b.startDate).getTime() ||
-            a.price - b.price,
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime() || a.price - b.price,
         );
     }
     return items;
@@ -86,17 +85,19 @@ export function OfferComparisonTable({
     <div className="offer-table">
       <div className="offer-table__header">
         <button type="button" className="offer-table__sort" onClick={() => toggleSort("date")}>
-          <Calendar size={12} /> Datum {sortBy === "date" && <ArrowUpDown size={10} />}
+          <Calendar size={12} /> {t("sOfferSortDate")}{" "}
+          {sortBy === "date" && <ArrowUpDown size={10} />}
         </button>
         <button type="button" className="offer-table__sort" onClick={() => toggleSort("nights")}>
-          <Moon size={12} /> Nocí {sortBy === "nights" && <ArrowUpDown size={10} />}
+          <Moon size={12} /> {t("sOfferSortNights")}{" "}
+          {sortBy === "nights" && <ArrowUpDown size={10} />}
         </button>
         <span className="offer-table__col-label">
-          <Utensils size={12} /> Strava
+          <Utensils size={12} /> {t("sCompareRowBoard")}
         </span>
-        <span className="offer-table__col-label">Pokoj</span>
+        <span className="offer-table__col-label">{t("sOfferRoom")}</span>
         <button type="button" className="offer-table__sort" onClick={() => toggleSort("price")}>
-          Cena {sortBy === "price" && <ArrowUpDown size={10} />}
+          {t("sOfferSortPrice")} {sortBy === "price" && <ArrowUpDown size={10} />}
         </button>
       </div>
 
@@ -108,7 +109,8 @@ export function OfferComparisonTable({
           const nights =
             offer.nights ??
             Math.round(
-              (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) / 86_400_000,
+              (new Date(offer.endDate).getTime() - new Date(offer.startDate).getTime()) /
+                86_400_000,
             );
 
           return (
@@ -127,12 +129,10 @@ export function OfferComparisonTable({
               <span className="offer-table__cell">
                 {boardLabel[offer.board] ?? offer.board ?? "–"}
               </span>
-              <span className="offer-table__cell">
-                {offer.roomType ?? "–"}
-              </span>
+              <span className="offer-table__cell">{offer.roomType ?? "–"}</span>
               <span className="offer-table__cell offer-table__cell--price">
                 {formatPrice(offer.price)}
-                {isCheapest && <span className="offer-table__badge">Nejlevnější</span>}
+                {isCheapest && <span className="offer-table__badge">{t("sOfferCheapest")}</span>}
               </span>
             </button>
           );
@@ -140,11 +140,7 @@ export function OfferComparisonTable({
       </div>
 
       {!showAll && hiddenCount > 0 && (
-        <button
-          type="button"
-          className="offer-table__show-all"
-          onClick={() => setShowAll(true)}
-        >
+        <button type="button" className="offer-table__show-all" onClick={() => setShowAll(true)}>
           Zobrazit všech {sorted.length} termínů
         </button>
       )}

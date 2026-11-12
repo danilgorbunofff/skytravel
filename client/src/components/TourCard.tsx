@@ -34,7 +34,11 @@ export default memo(function TourCard({ tour, onClick }: Props) {
       {imageLoaded ? (
         <img
           className="destination-card__bg"
-          src={tour.image || "/placeholder-tour.svg"}
+          src={
+            tour.image && tour.image.includes("images.unsplash.com")
+              ? tour.image.replace(/([?&])w=\d+/, "$1w=400")
+              : tour.image || "/placeholder-tour.svg"
+          }
           alt={tour.i18n?.[lang]?.destination || tour.destination}
           loading="lazy"
           decoding="async"

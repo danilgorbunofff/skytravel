@@ -1,0 +1,44 @@
+/* Page-level adjustments that do not belong to a shared component. */
+
+.page--home .block:last-of-type {
+  margin-bottom: 0;
+}
+
+.page--hub .lead {
+  margin-top: var(--gap-lg);
+}
+
+.page--destinations .page-head {
+  max-width: 720px;
+}
+
+.page--author .page-head__meta,
+.page--tag .page-head__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.page--author .chips,
+.page--tag .chips {
+  margin-top: 20px;
+}
+
+.page--about .page-head {
+  max-width: 720px;
+}
+
+.page--404 .page-head {
+  max-width: 640px;
+}
+
+.page--search .page-head {
+  max-width: 720px;
+}
+
+/* Article index inside author/tag listings keeps the reading rhythm. */
+.page--tag .row-list,
+.page--author .row-list,
+.page--search .row-list {
+  margin-top: 8px;
+}

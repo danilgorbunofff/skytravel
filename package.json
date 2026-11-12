@@ -8,9 +8,9 @@
     "bots"
   ],
   "scripts": {
-    "dev": "concurrently -k -n server,client -c blue,green \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
+    "dev": "concurrently -k -n blog,server,client -c magenta,blue,green \"node scripts/build-blog-css.mjs --watch\" \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
     "dev:bots": "npm --workspace bots run dev",
-    "build": "npm --workspace server run build && npm --workspace client run build && npm --workspace bots run build",
+    "build": "npm run build:blog && npm --workspace server run build && npm --workspace client run build && npm --workspace bots run build",
     "lint": "eslint client/src server/src bots/src e2e",
     "lint:fix": "eslint --fix client/src server/src bots/src e2e",
     "typecheck": "npm --workspace client exec -- tsc -b && npm --workspace server exec -- tsc --noEmit && npm --workspace bots exec -- tsc --noEmit",
@@ -18,7 +18,9 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "test": "npm --workspace server run test && npm --workspace client run test",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "build:blog": "node scripts/build-blog-css.mjs",
+    "build:blog:images": "node scripts/build-blog-images.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -110,33 +110,29 @@ export default function AdminEmailPage() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), TOAST_DURATION);
   }, []);
 
-  useEffect(() => {
-    fetchLeads()
-      .then((data) => {
-        setLeads((data.items ?? []) as Lead[]);
+  const refreshLeads = useCallback(() => {
+    setLoading(true);
+    fetchLeads({ segment, q: searchQuery.trim() || undefined, limit: 500, offset: 0 })
+      .then((res) => {
+        const body = res as unknown as { data: { items: Lead[] } };
+        setLeads((body.data.items ?? []) as Lead[]);
         setError("");
       })
       .catch(() => setError("Nepodařilo se načíst e-maily."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [segment, searchQuery]);
 
-  const consentedCount = useMemo(
-    () => leads.filter((lead) => lead.marketingConsent).length,
-    [leads],
-  );
+  useEffect(() => {
+    refreshLeads();
+  }, [refreshLeads]);
 
-  const filtered = useMemo(() => {
-    let result = leads;
-    if (segment === "consented") result = result.filter((l) => l.marketingConsent);
-    else if (segment === "pending") result = result.filter((l) => !l.marketingConsent);
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      result = result.filter(
-        (l) => l.email.toLowerCase().includes(q) || (l.destination ?? "").toLowerCase().includes(q),
-      );
-    }
-    return result;
-  }, [segment, leads, searchQuery]);
+  const consentedCount = useMemo(() => {
+    if (segment === "consented") return leads.length;
+    return leads.filter((lead) => lead.marketingConsent).length;
+  }, [leads, segment]);
+
+  // Server already filters by segment+q; keep for CSV/export scope
+  const filtered = useMemo(() => leads, [leads]);
 
   // ── Validation ──
   const subjectValid = subject.trim().length > 0;
@@ -179,6 +175,14 @@ export default function AdminEmailPage() {
   }
 
   async function handleSendCampaign() {
+    if (segment !== "consented") {
+      addToast(
+        "error",
+        "Kampaně lze posílat pouze na segment se souhlasem. Přepněte na „Souhlas“.",
+      );
+      setConfirmSendOpen(false);
+      return;
+    }
     setSending(true);
     try {
       const result = await sendCampaign({
@@ -186,7 +190,7 @@ export default function AdminEmailPage() {
         preheader,
         fromEmail,
         html: editor?.getHTML() ?? "",
-        segment: "consented",
+        segment,
       });
       addToast("success", `Kampaň odeslána (${result.recipients} příjemců).`);
     } catch (err) {
@@ -224,9 +228,9 @@ export default function AdminEmailPage() {
       lead.gdprConsent ? "yes" : "no",
       new Date(lead.createdAt).toISOString(),
     ]);
-    const csv = [header, ...rows]
+    const csv = `\uFEFF${[header, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+      .join("\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -316,135 +320,144 @@ export default function AdminEmailPage() {
 
       {/* ── Campaign composer card ── */}
       <ErrorBoundary key="editor-section" onReset={() => window.location.reload()}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Nová kampaň</CardTitle>
-          <CardDescription>
-            Vytvořte a odešlete marketingový e-mail kontaktům se souhlasem ({consentedCount}{" "}
-            příjemců).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-            <div className="space-y-4">
-              {/* ── Sender fields ── */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="from-email">Od</Label>
-                  <Input
-                    id="from-email"
-                    value={fromEmail}
-                    onChange={(e) => setFromEmail(e.target.value)}
-                    className={cn(
-                      !fromEmailValid &&
-                        fromEmail &&
-                        "border-destructive focus-visible:ring-destructive",
-                    )}
-                  />
-                  {!fromEmailValid && fromEmail && (
-                    <p className="text-xs text-destructive">Neplatný formát e-mailu.</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="subject">Předmět</Label>
-                  <Input
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className={cn(
-                      !subjectValid && "border-destructive focus-visible:ring-destructive",
-                    )}
-                  />
-                  {!subjectValid && <p className="text-xs text-destructive">Předmět je povinný.</p>}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="preheader">
-                  Preheader <span className="font-normal text-muted-foreground">(volitelný)</span>
-                </Label>
-                <Input
-                  id="preheader"
-                  value={preheader}
-                  onChange={(e) => setPreheader(e.target.value)}
-                  placeholder="Krátký text viditelný v náhledu v inboxu"
-                />
-              </div>
-
-              {/* ── TipTap editor ── */}
-              <EmailEditor
-                editor={editor}
-                fileInputRef={fileInputRef}
-                onUploadImage={handleUploadImage}
-                onPreviewOpen={() => setPreviewOpen(true)}
-              />
-
-              {/* ── Actions ── */}
-              <Separator />
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                {/* Test send */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="test-email">Testovací e-mail</Label>
-                  <div className="flex gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Nová kampaň</CardTitle>
+            <CardDescription>
+              Vytvořte a odešlete marketingový e-mail kontaktům se souhlasem ({consentedCount}{" "}
+              příjemců).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+              <div className="space-y-4">
+                {/* ── Sender fields ── */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="from-email">Od</Label>
                     <Input
-                      id="test-email"
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      placeholder="test@skytravel.cz"
+                      id="from-email"
+                      value={fromEmail}
+                      onChange={(e) => setFromEmail(e.target.value)}
                       className={cn(
-                        "w-60",
-                        !testEmailValid &&
-                          testEmail &&
+                        !fromEmailValid &&
+                          fromEmail &&
                           "border-destructive focus-visible:ring-destructive",
                       )}
                     />
+                    {!fromEmailValid && fromEmail && (
+                      <p className="text-xs text-destructive">Neplatný formát e-mailu.</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subject">Předmět</Label>
+                    <Input
+                      id="subject"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className={cn(
+                        !subjectValid && "border-destructive focus-visible:ring-destructive",
+                      )}
+                    />
+                    {!subjectValid && (
+                      <p className="text-xs text-destructive">Předmět je povinný.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="preheader">
+                    Preheader <span className="font-normal text-muted-foreground">(volitelný)</span>
+                  </Label>
+                  <Input
+                    id="preheader"
+                    value={preheader}
+                    onChange={(e) => setPreheader(e.target.value)}
+                    placeholder="Krátký text viditelný v náhledu v inboxu"
+                  />
+                </div>
+
+                {/* ── TipTap editor ── */}
+                <EmailEditor
+                  editor={editor}
+                  fileInputRef={fileInputRef}
+                  onUploadImage={handleUploadImage}
+                  onPreviewOpen={() => setPreviewOpen(true)}
+                />
+
+                {/* ── Actions ── */}
+                <Separator />
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  {/* Test send */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="test-email">Testovací e-mail</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="test-email"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        placeholder="test@skytravel.cz"
+                        className={cn(
+                          "w-60",
+                          !testEmailValid &&
+                            testEmail &&
+                            "border-destructive focus-visible:ring-destructive",
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendTest}
+                        disabled={!canSendTest || sendingTest}
+                      >
+                        {sendingTest ? (
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ) : (
+                          <SendHorizonal className="mr-1.5 h-4 w-4" />
+                        )}
+                        Poslat test
+                      </Button>
+                    </div>
+                    {!testEmailValid && testEmail && (
+                      <p className="text-xs text-destructive">Neplatný formát e-mailu.</p>
+                    )}
+                  </div>
+                  {/* Campaign send */}
+                  <div className="space-y-1">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={handleSendTest}
-                      disabled={!canSendTest || sendingTest}
+                      size="lg"
+                      onClick={() => setConfirmSendOpen(true)}
+                      disabled={!canSend || sending || segment !== "consented"}
                     >
-                      {sendingTest ? (
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      {sending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <SendHorizonal className="mr-1.5 h-4 w-4" />
+                        <SendHorizonal className="mr-2 h-4 w-4" />
                       )}
-                      Poslat test
+                      Odeslat kampaň ({consentedCount})
                     </Button>
+                    {segment !== "consented" && (
+                      <p className="text-xs text-amber-600">
+                        Přepněte na segment „Souhlas“ pro odeslání kampaně.
+                      </p>
+                    )}
                   </div>
-                  {!testEmailValid && testEmail && (
-                    <p className="text-xs text-destructive">Neplatný formát e-mailu.</p>
-                  )}
                 </div>
-                {/* Campaign send */}
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={() => setConfirmSendOpen(true)}
-                  disabled={!canSend || sending}
-                >
-                  {sending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <SendHorizonal className="mr-2 h-4 w-4" />
-                  )}
-                  Odeslat kampaň ({consentedCount})
-                </Button>
               </div>
-            </div>
 
-            {/* ── Live preview sidebar ── */}
-            <SendPreview
-              editorHtml={editorHtml}
-              fromEmail={fromEmail}
-              subject={subject}
-              preheader={preheader}
-              previewOpen={previewOpen}
-              onPreviewOpenChange={setPreviewOpen}
-            />
-          </div>
-        </CardContent>
-      </Card>
+              {/* ── Live preview sidebar ── */}
+              <SendPreview
+                editorHtml={editorHtml}
+                fromEmail={fromEmail}
+                subject={subject}
+                preheader={preheader}
+                previewOpen={previewOpen}
+                onPreviewOpenChange={setPreviewOpen}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </ErrorBoundary>
 
       {/* ── Campaign history ── */}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, X, ZoomIn } from "lucide-react";
 import { buildSrcSet } from "../../../lib/images";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 interface Props {
   photos: string[];
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function TourGallery({ photos, alt }: Props) {
+  const { t } = useLanguage();
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const thumbsRef = useRef<HTMLDivElement>(null);
@@ -29,8 +31,14 @@ export function TourGallery({ photos, alt }: Props) {
     const el = galleryRef.current;
     if (!el || !hasMultiple) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
-      if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      }
     }
     el.addEventListener("keydown", handleKey);
     return () => el.removeEventListener("keydown", handleKey);
@@ -56,10 +64,14 @@ export function TourGallery({ photos, alt }: Props) {
             width={1200}
             height={750}
             onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallback) {
+                img.dataset.fallback = "1";
+                img.src = "/placeholder-tour.svg";
+              }
             }}
           />
-          <button type="button" className="tour-gallery__zoom" aria-label="Zvětšit">
+          <button type="button" className="tour-gallery__zoom" aria-label={t("sGalleryZoom")}>
             <ZoomIn size={18} />
           </button>
           {hasMultiple && (
@@ -74,16 +86,22 @@ export function TourGallery({ photos, alt }: Props) {
             <button
               type="button"
               className="tour-gallery__nav tour-gallery__nav--prev"
-              onClick={(e) => { e.stopPropagation(); prev(); }}
-              aria-label="Předchozí fotka"
+              onClick={(e) => {
+                e.stopPropagation();
+                prev();
+              }}
+              aria-label={t("sGalleryPrev")}
             >
               <ArrowLeft size={18} />
             </button>
             <button
               type="button"
               className="tour-gallery__nav tour-gallery__nav--next"
-              onClick={(e) => { e.stopPropagation(); next(); }}
-              aria-label="Další fotka"
+              onClick={(e) => {
+                e.stopPropagation();
+                next();
+              }}
+              aria-label={t("sGalleryNext")}
             >
               <ArrowRight size={18} />
             </button>
@@ -100,16 +118,29 @@ export function TourGallery({ photos, alt }: Props) {
                 onClick={() => setIndex(i)}
                 aria-label={`Fotka ${i + 1}`}
               >
-                <img src={photo} alt="" loading="lazy" decoding="async" onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
-                }} />
+                <img
+                  src={photo}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (!img.dataset.fallback) {
+                      img.dataset.fallback = "1";
+                      img.src = "/placeholder-tour.svg";
+                    }
+                  }}
+                />
               </button>
             ))}
             {photos.length > 8 && (
               <button
                 type="button"
                 className="tour-gallery__thumb tour-gallery__thumb--more"
-                onClick={() => { setIndex(8); setLightbox(true); }}
+                onClick={() => {
+                  setIndex(8);
+                  setLightbox(true);
+                }}
               >
                 +{photos.length - 8}
               </button>
@@ -140,6 +171,7 @@ interface LightboxProps {
 }
 
 function TourGalleryLightbox({ photos, index, onIndexChange, onClose }: LightboxProps) {
+  const { t } = useLanguage();
   const touchStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -177,17 +209,23 @@ function TourGalleryLightbox({ photos, index, onIndexChange, onClose }: Lightbox
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <button type="button" className="tour-lightbox__close" aria-label="Zavřít">
+      <button type="button" className="tour-lightbox__close" aria-label={t("sAriaClose")}>
         <X size={24} />
       </button>
-      <div className="tour-lightbox__counter">{index + 1} / {photos.length}</div>
+      <div className="tour-lightbox__counter">
+        {index + 1} / {photos.length}
+      </div>
       <img
         className="tour-lightbox__image"
         src={photos[index]}
         alt=""
         onClick={(e) => e.stopPropagation()}
         onError={(e) => {
-          const img = e.currentTarget as HTMLImageElement; if (!img.dataset.fallback) { img.dataset.fallback = "1"; img.src = "/placeholder-tour.svg"; }
+          const img = e.currentTarget as HTMLImageElement;
+          if (!img.dataset.fallback) {
+            img.dataset.fallback = "1";
+            img.src = "/placeholder-tour.svg";
+          }
         }}
       />
       {photos.length > 1 && (
@@ -195,16 +233,22 @@ function TourGalleryLightbox({ photos, index, onIndexChange, onClose }: Lightbox
           <button
             type="button"
             className="tour-lightbox__nav tour-lightbox__nav--prev"
-            onClick={(e) => { e.stopPropagation(); onIndexChange((index - 1 + photos.length) % photos.length); }}
-            aria-label="Předchozí"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index - 1 + photos.length) % photos.length);
+            }}
+            aria-label={t("sAriaPrev")}
           >
             <ArrowLeft size={24} />
           </button>
           <button
             type="button"
             className="tour-lightbox__nav tour-lightbox__nav--next"
-            onClick={(e) => { e.stopPropagation(); onIndexChange((index + 1) % photos.length); }}
-            aria-label="Další"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIndexChange((index + 1) % photos.length);
+            }}
+            aria-label={t("sAriaNext")}
           >
             <ArrowRight size={24} />
           </button>

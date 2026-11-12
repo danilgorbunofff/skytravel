@@ -9,7 +9,7 @@
  *   create duplicate sources of truth and cause filter/URL drift.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
-import { Link } from "react-router-dom";
+import SiteHeader from "../components/SiteHeader";
 import { useFavorites } from "../hooks/useFavorites";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import LeadPopup from "../components/LeadPopup";
@@ -45,16 +45,17 @@ import {
   StickySearchBar,
   TrustBar,
   MobileFilterDrawer,
-  RecentSearches,
 } from "../features/search/components";
 import { useRecentSearches } from "../features/search/hooks/useRecentSearches";
 import { CompareTray } from "../features/search/components/CompareTray";
+import { AppFooter } from "../components/AppFooter";
 import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
+import { localeForText } from "../lib/locale";
 
 export default function SearchPage() {
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
   usePageTitle("Vyhledávání zájezdů");
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -66,12 +67,7 @@ export default function SearchPage() {
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [topQuery, setTopQuery] = useState(filters.query);
-  const {
-    searches: recentItems,
-    save: saveRecent,
-    clear: clearRecent,
-    remove: removeRecent,
-  } = useRecentSearches();
+  const { save: saveRecent } = useRecentSearches();
 
   // Keep the header box in step with the committed query. Previously it was
   // seeded once from `filters.query` and never updated, so the header and the
@@ -136,7 +132,6 @@ export default function SearchPage() {
   }, [offerGroups.detailTour]);
 
   // ─── Transient UI state ──────────────────────────────────────────────
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [pastHero, setPastHero] = useState(false);
   // Mobile switches from "accumulate pages" to normal pagination once the
@@ -228,7 +223,7 @@ export default function SearchPage() {
     }
     if (filters.activePriceMin || filters.activePriceMax) {
       chips.push({
-        label: `${t("sChipPrice")}: ${results.priceMin.toLocaleString("cs-CZ")} – ${results.priceMax.toLocaleString("cs-CZ")} Kč`,
+        label: `${t("sChipPrice")}: ${results.priceMin.toLocaleString(localeForText())} – ${results.priceMax.toLocaleString(localeForText())} Kč`,
         onClear: () => filters.updateParams({ priceMin: null, priceMax: null, page: 1 }),
       });
     }
@@ -464,11 +459,11 @@ export default function SearchPage() {
     ? Math.min(results.result.page * results.result.limit, results.result.filtered)
     : 0;
   const totalText = showFavoritesOnly
-    ? `${results.displayedTours.length.toLocaleString("cs-CZ")} ${t("sStateSavedHotels")}`
+    ? `${results.displayedTours.length.toLocaleString(localeForText())} ${t("sStateSavedHotels")}`
     : results.result
       ? !filters.hasUserFilters
         ? t("sBestDealsTitle")
-        : `${t("sStateShown")} ${visibleFrom.toLocaleString("cs-CZ")}–${visibleTo.toLocaleString("cs-CZ")} ${t("sStateOf")} ${results.result.filtered.toLocaleString("cs-CZ")} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString("cs-CZ")} ${t("sStateTerms")})` : ""}`
+        : `${t("sStateShown")} ${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())} ${t("sStateOf")} ${results.result.filtered.toLocaleString(localeForText())} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString(localeForText())} ${t("sStateTerms")})` : ""}`
       : results.resultsLoading
         ? t("sStateLoading")
         : filters.hasUserFilters
@@ -523,13 +518,8 @@ export default function SearchPage() {
         filteredCount={results.result?.filtered ?? null}
       />
 
-      <header className="site-header">
-        <div className="container header-top">
-          <Link className="logo" to="/">
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </Link>
-
+      <SiteHeader
+        topSearch={
           <form
             className="top-search"
             onSubmit={(e) => {
@@ -552,77 +542,8 @@ export default function SearchPage() {
               GO
             </button>
           </form>
-
-          <div className="header-contact-wrap desktop-only">
-            <div className="header-contact">
-              <a href="tel:+420721163860">+420 721 163 860</a>
-              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-            </div>
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿" },
-                  { code: "uk", flag: "🇺🇦" },
-                  { code: "en", flag: "🇬🇧" },
-                  { code: "ru", flag: "🇷🇺" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mobile-header-actions mobile-only">
-            <div className="lang-toggle" aria-label="Language switcher">
-              {(
-                [
-                  { code: "cs", flag: "🇨🇿" },
-                  { code: "uk", flag: "🇺🇦" },
-                  { code: "en", flag: "🇬🇧" },
-                  { code: "ru", flag: "🇷🇺" },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-                  onClick={() => setLang(item.code)}
-                >
-                  {item.flag}
-                </button>
-              ))}
-            </div>
-            <button
-              className="hamburger"
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? "✕" : "☰"}
-            </button>
-          </div>
-        </div>
-
-        <div className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
-          <div className="container site-nav-inner">
-            <nav className="main-nav">
-              <a href="/#vlastni">{t("navExclusive")}</a>
-              <a href="/#allinclusive">{t("navPartner")}</a>
-              <a href="/#destinace">{t("navTop")}</a>
-              <a href="/#lastminute">Last minute</a>
-              <a href="/#sluzby">{t("navServices")}</a>
-              <a href="/#kontakt">{t("navContact")}</a>
-              <Link to="/admin-login">{t("navAdmin")}</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       <main id="main-content" className="search-page">
         <SearchHero
@@ -666,21 +587,6 @@ export default function SearchPage() {
             }
           }}
         />
-
-        {!filters.hasUserFilters && (
-          <div className="container">
-            <RecentSearches
-              t={t}
-              searches={recentItems}
-              onSelect={(search) => {
-                filters.setQuery(search.query);
-                filters.updateParams({ q: search.query, page: 1 });
-              }}
-              onRemove={removeRecent}
-              onClear={clearRecent}
-            />
-          </div>
-        )}
 
         <TrustBar t={t} />
 
@@ -799,7 +705,9 @@ export default function SearchPage() {
           </div>
         </section>
 
-        <div className="mobile-filter-fab mobile-only">
+        <div
+          className={`mobile-filter-fab mobile-only${compare.tours.length > 0 ? " is-tray-visible" : ""}`}
+        >
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}
@@ -812,6 +720,8 @@ export default function SearchPage() {
           </button>
         </div>
       </main>
+
+      <AppFooter t={t} />
 
       <MobileFilterDrawer
         t={t}
@@ -848,7 +758,7 @@ export default function SearchPage() {
           }
           offers={
             offerGroups.detailTour.offerGroupKey &&
-            offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]
+            offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]?.length
               ? offerGroups.offerGroupItems[offerGroups.detailTour.offerGroupKey]
               : [offerGroups.detailTour]
           }

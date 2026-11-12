@@ -4,3 +4,7 @@ server/prisma/migrations/
 *.generated.*
 pnpm-lock.yaml
 package-lock.json
+
+# Built by scripts/build-blog-css.mjs — keep the minified output verbatim, or
+# lint-staged rewrites the artifact and the tree never matches a fresh build.
+client/public/assets/blog.css

@@ -1,6 +1,7 @@
 import { LayoutGrid, LayoutList, Share2 } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { ViewMode, SortField } from "../types";
+import { localeForText } from "../../../lib/locale";
 
 /** Props for {@link SearchResultsToolbar}. */
 interface Props {
@@ -54,8 +55,8 @@ export function SearchResultsToolbar({
         <p>{toolbarDescription}</p>
         {filteredCount !== null && totalCount !== null && filteredCount !== totalCount && (
           <p className="results-sub">
-            {t("sStateShown")} {displayedCount.toLocaleString("cs-CZ")} {t("sStateOf")}{" "}
-            {totalCount.toLocaleString("cs-CZ")} {t("sTotalSuffix")}
+            {t("sStateShown")} {displayedCount.toLocaleString(localeForText())} {t("sStateOf")}{" "}
+            {totalCount.toLocaleString(localeForText())} {t("sTotalSuffix")}
           </p>
         )}
       </div>
@@ -78,9 +79,7 @@ export function SearchResultsToolbar({
           aria-label={`${t("sSortDate")} — ${sortBy === "date" && sortDir === "asc" ? "sestupně" : "vzestupně"}`}
         >
           {t("sSortDate")}{" "}
-          {sortBy === "date" && (
-            <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>
-          )}
+          {sortBy === "date" && <span className="sort-arrow">{sortDir === "asc" ? "↑" : "↓"}</span>}
         </button>
         <div className="view-toggle">
           <button
@@ -89,7 +88,11 @@ export function SearchResultsToolbar({
             className={viewMode === "grid" ? "is-active" : ""}
             onClick={() => onSetView("grid")}
           >
-            <LayoutGrid size={16} aria-hidden="true" fill={viewMode === "grid" ? "currentColor" : "none"} />
+            <LayoutGrid
+              size={16}
+              aria-hidden="true"
+              fill={viewMode === "grid" ? "currentColor" : "none"}
+            />
           </button>
           <button
             type="button"
@@ -97,7 +100,11 @@ export function SearchResultsToolbar({
             className={viewMode === "list" ? "is-active" : ""}
             onClick={() => onSetView("list")}
           >
-            <LayoutList size={16} aria-hidden="true" fill={viewMode === "list" ? "currentColor" : "none"} />
+            <LayoutList
+              size={16}
+              aria-hidden="true"
+              fill={viewMode === "list" ? "currentColor" : "none"}
+            />
           </button>
         </div>
         <button

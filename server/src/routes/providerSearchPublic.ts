@@ -14,6 +14,7 @@ import type {
   UnifiedTour,
 } from "../providers/types.js";
 import { validateProviderFilters } from "../lib/validateProviderFilters.js";
+import { groupOfferRows } from "../providers/offerGrouping.js";
 import { firstQueryValue } from "../providers/shared/queryUtils.js";
 import { logger } from "../lib/logger.js";
 
@@ -213,13 +214,15 @@ router.get(
     // hotelOnly=1 includes hotel-only (car) tours; otherwise exclude them by default
     const hotelOnly = firstQueryValue(req.query.hotelOnly) === "1";
 
-    const destinationContext = destinationSlugs.length === 1
-      ? await getDestinationSearchContext(destinationSlugs[0])
-      : null;
+    const destinationContext =
+      destinationSlugs.length === 1 ? await getDestinationSearchContext(destinationSlugs[0]) : null;
     // For multi-destination, resolve all contexts
-    const multiDestinationContexts = destinationSlugs.length > 1
-      ? (await Promise.all(destinationSlugs.map((s) => getDestinationSearchContext(s)))).filter(Boolean)
-      : [];
+    const multiDestinationContexts =
+      destinationSlugs.length > 1
+        ? (await Promise.all(destinationSlugs.map((s) => getDestinationSearchContext(s)))).filter(
+            Boolean,
+          )
+        : [];
     if (destinationSlugs.length === 1 && !destinationContext) {
       const emptyResult = {
         total: 0,
@@ -274,8 +277,9 @@ router.get(
               }
             }
 
-            const fallbackQuery = destinationContext?.destination.czechName
-              ?? (multiDestinationContexts.length > 0
+            const fallbackQuery =
+              destinationContext?.destination.czechName ??
+              (multiDestinationContexts.length > 0
                 ? multiDestinationContexts
                     .filter((ctx) => ctx != null)
                     .map((ctx) => ctx.destination.czechName)
@@ -307,7 +311,10 @@ router.get(
             const message =
               item.reason instanceof Error ? item.reason.message : String(item.reason);
             providerErrors.push({ providerId: meta.id, message });
-            logger.warn({ err: item.reason }, `[PublicSearch] all-provider search failed for ${meta.id}`);
+            logger.warn(
+              { err: item.reason },
+              `[PublicSearch] all-provider search failed for ${meta.id}`,
+            );
           }
         }
 
@@ -325,8 +332,13 @@ router.get(
           filtered,
           rawTotalOffers: sumOptional(successful.map(({ result }) => result.rawTotalOffers)),
           rawFilteredOffers: sumOptional(successful.map(({ result }) => result.rawFilteredOffers)),
+          // Count distinct destinations over *hotel groups* (source+title+
+          // destination), matching the single-provider route semantics —
+          // raw rows overcount since one hotel yields many price rows.
           uniqueDestinations: new Set(
-            mergedItems.map((tour) => tour.destination.toLocaleLowerCase("cs-CZ")),
+            groupOfferRows(mergedItems).map((g) =>
+              g.representative.destination.toLocaleLowerCase("cs-CZ"),
+            ),
           ).size,
           page,
           limit,
@@ -364,9 +376,7 @@ let bootstrapCache: {
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`timeout: ${label}`)), ms),
-    ),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timeout: ${label}`)), ms)),
   ]);
 }
 
@@ -583,17 +593,11 @@ router.get(
       return;
     }
 
-    // Search with minimal filters and look for the specific externalId
-    const filters: UnifiedFilters = {
-      q: externalId,
-      providerFilters: {},
-      page: 1,
-      limit: 100,
-      sortBy: "price",
-      sortDir: "asc",
-    };
-    const result: ToursResult = await provider.fetchTours(filters);
-    const tour = result.items.find((t: UnifiedTour) => t.externalId === externalId);
+    if (!provider.getTourByExternalId) {
+      res.status(404).json({ error: "Tour not found" });
+      return;
+    }
+    const tour = await provider.getTourByExternalId(externalId);
 
     if (!tour) {
       res.status(404).json({ error: "Tour not found" });

@@ -202,7 +202,6 @@ export function SearchAutocomplete({
   }
 
   const showDropdown = open && suggestions.length > 0;
-  const recentChips = useMemo(() => suggestions.filter((s) => s.type === "recent"), [suggestions]);
 
   return (
     <div className="search-autocomplete" ref={containerRef}>
@@ -301,26 +300,6 @@ export function SearchAutocomplete({
             );
           })}
         </ul>
-      )}
-
-      {/* Recent search chips shown on focus when input is empty */}
-      {open && !value && recentChips.length > 0 && (
-        <div className="search-autocomplete__chips">
-          {recentChips.slice(0, 4).map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              className="search-autocomplete__chip"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelectItem(s);
-              }}
-            >
-              <Clock size={10} aria-hidden="true" />
-              {s.label}
-            </button>
-          ))}
-        </div>
       )}
     </div>
   );

@@ -15,9 +15,9 @@ export const SITE = {
   // Social share image, 1200×630.
   ogImage: "https://sky-travel.tours/images/blog/og-default.jpg",
 
-  // Contact — shown in the TravelAgency JSON-LD.
-  // TODO: confirm the phone number (taken from the current site header).
-  phone: "+420 721 163 860",
+  // Contact — shown in the TravelAgency JSON-LD. No phone: the site has no phone
+  // contact points. To add one, set e.g. phone: "+420 …" and it is emitted.
+  phone: "",
   email: "info@skytravel.cz",
   address: {
     streetAddress: "Křižíkova 6",

@@ -10,6 +10,7 @@ import campaignRoutes from "./campaigns.js";
 import providersRoutes from "./providers.js";
 import statisticsRoutes from "./statistics.js";
 import auditLogRoutes from "./auditLog.js";
+import { siteSettingsAdminRouter } from "../siteSettings.js";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use("/leads", leadRoutes);
 router.use("/campaigns", campaignRoutes);
 router.use("/statistics", statisticsRoutes);
 router.use("/audit-log", auditLogRoutes);
+router.use("/site-settings", siteSettingsAdminRouter);
 
 router.get("/cache-stats", (_req, res) => {
   success(res, getPublicSearchCacheStats());

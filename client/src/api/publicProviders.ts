@@ -125,9 +125,11 @@ export async function fetchPublicProviderOfferGroup(
 export async function fetchPublicSingleTour(
   providerId: string,
   externalId: string,
+  signal?: AbortSignal,
 ): Promise<UnifiedTour> {
   const res = await fetch(
     `${API_URL}/api/search/tour/${encodeURIComponent(providerId)}/${encodeURIComponent(externalId)}`,
+    { signal },
   );
   await throwIfNotOk(res);
   const data = await safeParseJSON<{ tour: UnifiedTour }>(res, "detail zájezdu");

@@ -48,10 +48,7 @@ export function parseNightsRange(value: string | undefined): NightsRange {
   return { min, max };
 }
 
-export function nightsFromDates(
-  startDate: Date | string,
-  endDate: Date | string,
-): number | null {
+export function nightsFromDates(startDate: Date | string, endDate: Date | string): number | null {
   const start = startDate instanceof Date ? startDate : new Date(startDate);
   const end = endDate instanceof Date ? endDate : new Date(endDate);
   const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000);
@@ -60,9 +57,7 @@ export function nightsFromDates(
 
 export function photosFromJson(value: unknown, image: string): string[] {
   const photos = Array.isArray(value)
-    ? value.filter(
-        (item): item is string => typeof item === "string" && item.length > 0,
-      )
+    ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
     : [];
   return photos.length > 0 ? photos : image ? [image] : [];
 }
@@ -136,13 +131,8 @@ export abstract class BaseProvider implements TourProvider {
   >(rows: T[], nightsRange: NightsRange): T[] {
     if (!nightsRange) return rows;
     return rows.filter((row) => {
-      const nights =
-        row.nights ?? nightsFromDates(row.startDate, row.endDate);
-      return (
-        nights != null &&
-        nights >= nightsRange.min &&
-        nights <= nightsRange.max
-      );
+      const nights = row.nights ?? nightsFromDates(row.startDate, row.endDate);
+      return nights != null && nights >= nightsRange.min && nights <= nightsRange.max;
     });
   }
 
@@ -155,19 +145,12 @@ export abstract class BaseProvider implements TourProvider {
   protected rowToUnified(row: Record<string, unknown>): UnifiedTour {
     const nights =
       safeNumber(row.nights) ??
-      nightsFromDates(
-        safeString(row.startDate) || "",
-        safeString(row.endDate) || "",
-      ) ??
+      nightsFromDates(safeString(row.startDate) || "", safeString(row.endDate) || "") ??
       undefined;
     const startDateStr =
-      row.startDate instanceof Date
-        ? row.startDate.toISOString()
-        : safeString(row.startDate);
+      row.startDate instanceof Date ? row.startDate.toISOString() : safeString(row.startDate);
     const endDateStr =
-      row.endDate instanceof Date
-        ? row.endDate.toISOString()
-        : safeString(row.endDate);
+      row.endDate instanceof Date ? row.endDate.toISOString() : safeString(row.endDate);
     return {
       externalId: safeString(row.externalId, "unknown"),
       destination: safeString(row.destination, "unknown"),
@@ -201,25 +184,25 @@ export abstract class BaseProvider implements TourProvider {
    * Returns a base where that subclasses extend with provider-specific
    * region filtering in their `buildQuery` override.
    */
-  protected buildWhereClause(
-    filters: UnifiedFilters,
-  ): Prisma.ProviderTourWhereInput {
+  protected buildWhereClause(filters: UnifiedFilters): Prisma.ProviderTourWhereInput {
     const pf = filters.providerFilters;
     const transport = typeof pf.transport === "string" ? pf.transport : "";
-    const boardArr: string[] =
-      Array.isArray(filters.board) ? filters.board :
-      typeof filters.board === "string" ? filters.board.split(",").filter(Boolean) :
-      Array.isArray(pf.board) ? pf.board :
-      typeof pf.board === "string" ? pf.board.split(",").filter(Boolean) :
-      [];
+    const boardArr: string[] = Array.isArray(filters.board)
+      ? filters.board
+      : typeof filters.board === "string"
+        ? filters.board.split(",").filter(Boolean)
+        : Array.isArray(pf.board)
+          ? pf.board
+          : typeof pf.board === "string"
+            ? pf.board.split(",").filter(Boolean)
+            : [];
     const stars =
       typeof filters.stars === "string"
         ? filters.stars
         : typeof pf.stars === "string"
           ? pf.stars
           : "";
-    const excludeTransport =
-      typeof pf.excludeTransport === "string" ? pf.excludeTransport : "";
+    const excludeTransport = typeof pf.excludeTransport === "string" ? pf.excludeTransport : "";
 
     const where: Prisma.ProviderTourWhereInput = {
       source: this.id,
@@ -228,10 +211,7 @@ export abstract class BaseProvider implements TourProvider {
 
     if (filters.q) {
       const q = filters.q;
-      where.OR = [
-        { destination: { contains: q } },
-        { title: { contains: q } },
-      ];
+      where.OR = [{ destination: { contains: q } }, { title: { contains: q } }];
     }
 
     if (transport) where.transport = transport;
@@ -245,9 +225,7 @@ export abstract class BaseProvider implements TourProvider {
       const minStars = Number(stars);
       if (Number.isFinite(minStars)) {
         where.stars = {
-          in: ["1", "2", "3", "4", "5"].filter(
-            (value) => Number(value) >= minStars,
-          ),
+          in: ["1", "2", "3", "4", "5"].filter((value) => Number(value) >= minStars),
         };
       }
     }
@@ -302,14 +280,8 @@ export abstract class BaseProvider implements TourProvider {
     ]);
 
     const filteredRows = this.filterRowsByNights(allFiltered, nightsRange);
-    const rawFilteredOffers = nightsRange
-      ? filteredRows.length
-      : rawFilteredDb;
-    const grouped = sortOfferGroups(
-      groupOfferRows(filteredRows),
-      sortBy,
-      sortDir,
-    );
+    const rawFilteredOffers = nightsRange ? filteredRows.length : rawFilteredDb;
+    const grouped = sortOfferGroups(groupOfferRows(filteredRows), sortBy, sortDir);
     const filteredCount = grouped.length;
     const totalPages = Math.ceil(filteredCount / limit);
     const start = (page - 1) * limit;
@@ -335,10 +307,7 @@ export abstract class BaseProvider implements TourProvider {
   /**
    * Fetch all offers belonging to a single offer group.
    */
-  async fetchOfferGroup(
-    filters: UnifiedFilters,
-    offerGroupKey: string,
-  ): Promise<UnifiedTour[]> {
+  async fetchOfferGroup(filters: UnifiedFilters, offerGroupKey: string): Promise<UnifiedTour[]> {
     const { where, sortBy, sortDir, nightsRange } = this.buildQuery(filters);
     const rows = await prisma.providerTour.findMany({
       where,
@@ -346,9 +315,9 @@ export abstract class BaseProvider implements TourProvider {
       take: MAX_GROUPED_TOUR_ROWS,
       select: buildTourSelect(true),
     });
-    const group = groupOfferRows(
-      this.filterRowsByNights(rows, nightsRange),
-    ).find((entry) => entry.key === offerGroupKey);
+    const group = groupOfferRows(this.filterRowsByNights(rows, nightsRange)).find(
+      (entry) => entry.key === offerGroupKey,
+    );
     if (!group) return [];
 
     const externalIds = group.offers.map((o) => o.externalId);
@@ -356,9 +325,7 @@ export abstract class BaseProvider implements TourProvider {
       where: { source: this.id, externalId: { in: externalIds } },
     });
     const fullRowsMap = new Map(fullRows.map((r) => [r.externalId, r]));
-    const offersWithFullData = group.offers.map(
-      (o) => fullRowsMap.get(o.externalId) || o,
-    );
+    const offersWithFullData = group.offers.map((o) => fullRowsMap.get(o.externalId) || o);
 
     return sortOfferRows(offersWithFullData, sortBy, sortDir).map((row) => ({
       ...this.rowToUnified(row),
@@ -368,12 +335,19 @@ export abstract class BaseProvider implements TourProvider {
   }
 
   /**
+   * Fetch a single tour by externalId (direct DB lookup — used for deep links).
+   */
+  async getTourByExternalId(externalId: string): Promise<UnifiedTour | null> {
+    const row = await prisma.providerTour.findFirst({
+      where: { source: this.id, externalId },
+    });
+    return row ? this.rowToUnified(row) : null;
+  }
+
+  /**
    * Import tours from ProviderTour into the public Tour table.
    */
-  async importTours(
-    ids: string[],
-    _regionCtx: Record<string, unknown>,
-  ): Promise<ImportResult> {
+  async importTours(ids: string[], _regionCtx: Record<string, unknown>): Promise<ImportResult> {
     const providerRows = await prisma.providerTour.findMany({
       where: {
         source: this.id,
@@ -384,9 +358,7 @@ export abstract class BaseProvider implements TourProvider {
     let created = 0;
     let updated = 0;
 
-    const externalIds = providerRows
-      .map((r) => r.externalId)
-      .filter(Boolean) as string[];
+    const externalIds = providerRows.map((r) => r.externalId).filter(Boolean) as string[];
     const existingTours = await prisma.tour.findMany({
       where: { source: this.id, externalId: { in: externalIds } },
       select: { id: true, externalId: true },
@@ -423,10 +395,7 @@ export abstract class BaseProvider implements TourProvider {
         transport: row.transport,
         image: row.image,
         description: row.description,
-        photos:
-          Array.isArray(row.photos) && row.photos.length > 0
-            ? row.photos
-            : undefined,
+        photos: Array.isArray(row.photos) && row.photos.length > 0 ? row.photos : undefined,
         source: this.id,
         externalId: row.externalId,
       };
@@ -447,9 +416,7 @@ export abstract class BaseProvider implements TourProvider {
           data: { ...data, sortOrder: 0 },
         }),
       ),
-      ...toUpdate.map(({ id, data }) =>
-        prisma.tour.update({ where: { id }, data }),
-      ),
+      ...toUpdate.map(({ id, data }) => prisma.tour.update({ where: { id }, data })),
     ]);
 
     return { ok: true, created, updated, total: providerRows.length };
@@ -458,12 +425,9 @@ export abstract class BaseProvider implements TourProvider {
   /**
    * Stream tours via callback. Default implementation calls fetchTours
    * and delivers the whole page in one batch. Providers that support
-    * true streaming override this.
+   * true streaming override this.
    */
-  async streamTours(
-    filters: UnifiedFilters,
-    onBatch: StreamCallback,
-  ): Promise<void> {
+  async streamTours(filters: UnifiedFilters, onBatch: StreamCallback): Promise<void> {
     const result = await this.fetchTours(filters);
     onBatch({ batch: result.items, loaded: result.items.length });
   }

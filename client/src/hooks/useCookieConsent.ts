@@ -7,10 +7,12 @@ export type CookiePrefs = {
   marketing: boolean;
 };
 
-const STORAGE_KEY = "skytravel:cookie-prefs";
+const PREFS_STORAGE_KEY = "skytravel:cookie-prefs";
+/** Older flag (before prefs were stored) — still honoured so nobody sees the banner twice. */
+const CONSENT_STORAGE_KEY = "cookieConsentGiven";
 
 export function useCookieConsent() {
-  // Always start visible so server and client render the same markup;
+  // Always start visible so server-rendered and hydrated markup match;
   // a stored choice hides the banner right after hydration.
   const [showCookies, setShowCookies] = useState(true);
   const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
@@ -22,11 +24,19 @@ export function useCookieConsent() {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const stored = JSON.parse(raw) as CookiePrefs;
-      setCookiePrefs({ ...stored, necessary: true });
-      setShowCookies(false);
+      // Disabled in dev so the banner never interrupts local design review; prod unaffected.
+      if (import.meta.env.DEV) {
+        setShowCookies(false);
+        return;
+      }
+      const raw = window.localStorage.getItem(PREFS_STORAGE_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw) as CookiePrefs;
+        setCookiePrefs({ ...stored, necessary: true });
+        setShowCookies(false);
+        return;
+      }
+      if (window.localStorage.getItem(CONSENT_STORAGE_KEY) === "true") setShowCookies(false);
     } catch {
       // ignore malformed / unavailable storage
     }
@@ -38,9 +48,10 @@ export function useCookieConsent() {
     setCookieSettingsOpen(false);
     setAnalyticsConsent(prefs.analytics);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+      window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+      window.localStorage.setItem(CONSENT_STORAGE_KEY, "true");
     } catch {
-      // ignore
+      // storage unavailable (private mode) — banner simply reappears next visit
     }
   }
 

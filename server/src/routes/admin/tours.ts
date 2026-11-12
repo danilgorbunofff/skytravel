@@ -40,21 +40,28 @@ router.post(
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       fail("INVALID_DATES", "Invalid date range.", 400);
     }
+    if (end <= start) {
+      fail("INVALID_DATE_ORDER", "End date must be after start date.", 400);
+    }
 
-    const created = await prisma.tour.create({
-      data: {
-        destination,
-        title,
-        price,
-        image,
-        description: description ?? null,
-        photos: photos ?? null,
-        startDate: start,
-        endDate: end,
-        transport,
-        i18n: i18n ?? null,
-        sortOrder: await prisma.tour.count(),
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const maxOrder = await tx.tour.aggregate({ _max: { sortOrder: true } });
+      const nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+      return tx.tour.create({
+        data: {
+          destination,
+          title,
+          price,
+          image,
+          description: description ?? null,
+          photos: photos ?? null,
+          startDate: start,
+          endDate: end,
+          transport,
+          i18n: i18n ?? null,
+          sortOrder: nextOrder,
+        },
+      });
     });
 
     success(res, { item: created }, 201);

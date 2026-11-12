@@ -9,12 +9,6 @@
   object-fit: cover;
 }
 
-.footer-heading {
-  font-size: 1.15rem;
-  font-weight: 800;
-  margin-bottom: 0.5rem;
-}
-
 .pub-main {
   min-height: 40vh;
 }

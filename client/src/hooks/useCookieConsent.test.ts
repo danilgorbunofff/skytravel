@@ -1,11 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCookieConsent } from "./useCookieConsent";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("useCookieConsent", () => {
   beforeEach(() => window.localStorage.clear());
 
   it("remembers the choice and hides the banner on the next visit", () => {
+    vi.stubEnv("DEV", false);
     const first = renderHook(() => useCookieConsent());
     act(() => {
       first.result.current.applyCookiePrefs({ necessary: true, analytics: true, marketing: false });
@@ -16,8 +21,17 @@ describe("useCookieConsent", () => {
   });
 
   it("starts with cookies shown", () => {
+    // DEV would auto-hide the banner — stub prod behaviour for this test.
+    vi.stubEnv("DEV", false);
     const { result } = renderHook(() => useCookieConsent());
     expect(result.current.showCookies).toBe(true);
+  });
+
+  it("never shows the banner in dev", () => {
+    localStorage.clear();
+    vi.stubEnv("DEV", true);
+    const { result } = renderHook(() => useCookieConsent());
+    expect(result.current.showCookies).toBe(false);
   });
 
   it("starts with settings closed", () => {

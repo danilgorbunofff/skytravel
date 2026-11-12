@@ -235,11 +235,6 @@ export function SearchResultsSection({
             )}
             <li>{t("sNoResultsTipDates")}</li>
             <li>{t("sNoResultsTipRegion")}</li>
-            <li>
-              {t("sNoResultsTipCallPre")}{" "}
-              <a href="tel:+420721163860">{t("sNoResultsTipCallLink")}</a>{" "}
-              {t("sNoResultsTipCallPost")}
-            </li>
           </ul>
         </div>
       )}

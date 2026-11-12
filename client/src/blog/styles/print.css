@@ -1,0 +1,71 @@
+/* Print: articles only. Navigation, rail and calls to action are noise on paper. */
+
+@media print {
+  .site-head,
+  .site-foot,
+  .post-rail,
+  .post-nav,
+  .cta,
+  .byline,
+  .related,
+  .crumbs,
+  .skip-link,
+  .faq__item summary::after {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+  }
+
+  .shell,
+  .post-head,
+  .post-grid,
+  .prose,
+  .post-hero {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .post-grid {
+    display: block;
+  }
+
+  .prose {
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  .prose h2,
+  .prose h3 {
+    break-after: avoid;
+  }
+
+  .prose img,
+  .post-hero {
+    max-width: 60%;
+  }
+
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    word-break: break-all;
+  }
+
+  .faq__item {
+    break-inside: avoid;
+  }
+
+  /* The hairline border keeps the card outline on paper; the shadow would mud. */
+  .card {
+    box-shadow: none;
+  }
+}

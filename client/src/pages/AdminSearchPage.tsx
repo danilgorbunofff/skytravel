@@ -15,7 +15,7 @@ import {
   refreshProviderCache,
   importProviderTours,
 } from "../api/providers";
-import { useSearchStore } from "../stores/searchStore";
+import { useAdminSearchStore } from "../stores/searchStore";
 import type {
   ImportResult,
   ProviderMeta,
@@ -38,37 +38,37 @@ export default function AdminSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Store state ──
-  const providers = useSearchStore((s) => s.providers);
-  const selectedProviderId = useSearchStore((s) => s.selectedProviderId);
+  const providers = useAdminSearchStore((s) => s.providers);
+  const selectedProviderId = useAdminSearchStore((s) => s.selectedProviderId);
   const selectedProvider = useMemo(
     () => providers.find((p) => p.id === selectedProviderId) ?? null,
     [providers, selectedProviderId],
   );
 
-  const regions = useSearchStore((s) => s.regions);
-  const regionsLoading = useSearchStore((s) => s.regionsLoading);
-  const selectedRegion = useSearchStore((s) => s.selectedRegion);
-  const selectedSubRegion = useSearchStore((s) => s.selectedSubRegion);
+  const regions = useAdminSearchStore((s) => s.regions);
+  const regionsLoading = useAdminSearchStore((s) => s.regionsLoading);
+  const selectedRegion = useAdminSearchStore((s) => s.selectedRegion);
+  const selectedSubRegion = useAdminSearchStore((s) => s.selectedSubRegion);
 
-  const cacheStatus = useSearchStore((s) => s.cacheStatus);
+  const cacheStatus = useAdminSearchStore((s) => s.cacheStatus);
 
-  const providerFilters = useSearchStore((s) => s.providerFilters);
+  const providerFilters = useAdminSearchStore((s) => s.providerFilters);
 
-  const search = useSearchStore((s) => s.search);
-  const priceMin = useSearchStore((s) => s.priceMin);
-  const priceMax = useSearchStore((s) => s.priceMax);
-  const dateStart = useSearchStore((s) => s.dateStart);
-  const dateEnd = useSearchStore((s) => s.dateEnd);
-  const sortBy = useSearchStore((s) => s.sortBy);
-  const sortDir = useSearchStore((s) => s.sortDir);
-  const limit = useSearchStore((s) => s.limit);
+  const search = useAdminSearchStore((s) => s.search);
+  const priceMin = useAdminSearchStore((s) => s.priceMin);
+  const priceMax = useAdminSearchStore((s) => s.priceMax);
+  const dateStart = useAdminSearchStore((s) => s.dateStart);
+  const dateEnd = useAdminSearchStore((s) => s.dateEnd);
+  const sortBy = useAdminSearchStore((s) => s.sortBy);
+  const sortDir = useAdminSearchStore((s) => s.sortDir);
+  const limit = useAdminSearchStore((s) => s.limit);
 
-  const tours = useSearchStore((s) => s.tours);
-  const loading = useSearchStore((s) => s.loading);
-  const error = useSearchStore((s) => s.error);
-  const filteredCount = useSearchStore((s) => s.filteredCount);
-  const page = useSearchStore((s) => s.page);
-  const totalPages = useSearchStore((s) => s.totalPages);
+  const tours = useAdminSearchStore((s) => s.tours);
+  const loading = useAdminSearchStore((s) => s.loading);
+  const error = useAdminSearchStore((s) => s.error);
+  const filteredCount = useAdminSearchStore((s) => s.filteredCount);
+  const page = useAdminSearchStore((s) => s.page);
+  const totalPages = useAdminSearchStore((s) => s.totalPages);
 
   // ── Store actions (stable refs — zustand actions never change) ──
   const {
@@ -88,7 +88,7 @@ export default function AdminSearchPage() {
     setSelectedRegion: storeSetSelectedRegion,
     setSelectedSubRegion: storeSetSelectedSubRegion,
     loadTours,
-  } = useSearchStore.getState();
+  } = useAdminSearchStore.getState();
 
   // ── Local-only state (doesn't need persistence across navigation) ──
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});

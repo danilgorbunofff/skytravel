@@ -10,7 +10,7 @@ import {
   photosFromJson,
   buildTourSelect,
 } from "./BaseProvider.js";
-import { extractToursFromParsed } from "../lib/alexandria.js";
+import { extractToursFromParsed, mapBoard } from "../lib/alexandria.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -66,10 +66,7 @@ describe("nightsFromDates", () => {
   });
 
   it("handles Date objects", () => {
-    assert.equal(
-      nightsFromDates(new Date("2026-07-01"), new Date("2026-07-10")),
-      9,
-    );
+    assert.equal(nightsFromDates(new Date("2026-07-01"), new Date("2026-07-10")), 9);
   });
 
   it("returns null for same start and end date (zero nights)", () => {
@@ -90,17 +87,11 @@ describe("nightsFromDates", () => {
 // ──────────────────────────────────────────────
 describe("photosFromJson", () => {
   it("returns photo array as-is when valid", () => {
-    assert.deepEqual(
-      photosFromJson(["a.jpg", "b.jpg"], "fallback.jpg"),
-      ["a.jpg", "b.jpg"],
-    );
+    assert.deepEqual(photosFromJson(["a.jpg", "b.jpg"], "fallback.jpg"), ["a.jpg", "b.jpg"]);
   });
 
   it("filters out empty strings from array", () => {
-    assert.deepEqual(
-      photosFromJson(["a.jpg", "", "b.jpg"], "fallback.jpg"),
-      ["a.jpg", "b.jpg"],
-    );
+    assert.deepEqual(photosFromJson(["a.jpg", "", "b.jpg"], "fallback.jpg"), ["a.jpg", "b.jpg"]);
   });
 
   it("falls back to image string when array is empty", () => {
@@ -108,9 +99,7 @@ describe("photosFromJson", () => {
   });
 
   it("falls back to image string for non-array input", () => {
-    assert.deepEqual(photosFromJson("not-an-array", "fallback.jpg"), [
-      "fallback.jpg",
-    ]);
+    assert.deepEqual(photosFromJson("not-an-array", "fallback.jpg"), ["fallback.jpg"]);
   });
 
   it("returns empty array when array is empty and image is empty", () => {
@@ -217,10 +206,7 @@ describe("extractToursFromParsed with fixture XML", () => {
   });
 
   function loadFixture(): Record<string, unknown> {
-    const xml = readFileSync(
-      resolve(__dirname, "__fixtures__", "alexandria-sample.xml"),
-      "utf-8",
-    );
+    const xml = readFileSync(resolve(__dirname, "__fixtures__", "alexandria-sample.xml"), "utf-8");
     return xmlParser.parse(xml) as Record<string, unknown>;
   }
 
@@ -365,5 +351,44 @@ describe("extractToursFromParsed with fixture XML", () => {
     const tours = extractToursFromParsed(parsed);
     const ids = tours.map((t) => t.externalId);
     assert.equal(new Set(ids).size, ids.length);
+  });
+});
+
+// ──────────────────────────────────────────────
+// mapBoard (Alexandria typstravy mapping)
+// ──────────────────────────────────────────────
+describe("mapBoard", () => {
+  it("maps valid short codes through unchanged (normalized to uppercase)", () => {
+    for (const code of ["AI", "UAI", "FB", "HB", "BB", "RO"]) {
+      assert.equal(mapBoard(code), code);
+      assert.equal(mapBoard(code.toLowerCase()), code);
+    }
+  });
+
+  it("maps 'ALL' and 'All Inclusive' to AI", () => {
+    assert.equal(mapBoard("ALL"), "AI");
+    assert.equal(mapBoard("all inclusive"), "AI");
+    assert.equal(mapBoard("All Inclusive"), "AI");
+  });
+
+  it("maps Czech names to codes", () => {
+    assert.equal(mapBoard("plná penze"), "FB");
+    assert.equal(mapBoard("Polopenze"), "HB");
+    assert.equal(mapBoard("snídaně"), "BB");
+    assert.equal(mapBoard("ultra all inclusive"), "UAI");
+  });
+
+  it("returns '' for empty input", () => {
+    assert.equal(mapBoard(""), "");
+    assert.equal(mapBoard("   "), "");
+  });
+
+  it("returns '' for undocumented DN/LN codes instead of guessing", () => {
+    assert.equal(mapBoard("DN"), "");
+    assert.equal(mapBoard("LN"), "");
+  });
+
+  it("returns '' for unknown values", () => {
+    assert.equal(mapBoard("xyz"), "");
   });
 });

@@ -1,190 +1,144 @@
 import { Router } from "express";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import {
-  listPublishedPosts,
+  getDestinationHub,
   getPublishedPost,
+  getTag,
+  listPostsByDestination,
+  listPostsByTag,
+  listPublishedPosts,
   paginatePosts,
-  listDestinationHubs,
+  resolveAlias,
 } from "../blog/loader.js";
-import { isValidSlug } from "../blog/slug.js";
-import type { BlogPostMeta } from "../blog/types.js";
-import {
-  renderArticlePage,
-  renderListPage,
-  renderHubPage,
-  renderNotFoundPage,
-  renderDestinationsIndexPage,
-  renderRss,
-} from "../blog/render.js";
+import { getAuthor } from "../blog/authors.js";
+import { isValidSlug, slugifyCzechTitle } from "../blog/slug.js";
+import { renderIndexPage } from "../blog/pages/index.js";
+import { renderArticlePage } from "../blog/pages/article.js";
+import { renderHubPage } from "../blog/pages/hub.js";
+import { renderDestinationsPage } from "../blog/pages/destinations.js";
+import { renderTagPage } from "../blog/pages/tag.js";
+import { renderAuthorPage } from "../blog/pages/author.js";
+import { renderAboutPage } from "../blog/pages/about.js";
+import { renderSearchPage } from "../blog/pages/search.js";
+import { renderNotFoundPage } from "../blog/pages/notFound.js";
+import { renderRss } from "../blog/pages/feed.js";
 
 const router = Router();
 
-const CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=600";
-const BLOG_HOME_INTRO =
-  "Praktické průvodce destinacemi, pláže, výlety a rady před dovolenou. Vše, co potřebujete vědět, než vyrazíte k moři.";
+const HTML_CACHE = "public, max-age=300, stale-while-revalidate=600";
+const FEED_CACHE = "public, max-age=600";
 
-const HUB_INTROS: Record<string, string> = {
-  Bulharsko:
-    "Praktický průvodce Bulharskem — pláže Zlatých písků a Slunečného břehu, ceny, tipy na výlety a rady před dovolenou u moře.",
-  Chorvatsko:
-    "Průvodce chorvatským pobřežím — Istrie, Dalmácie, ostrovy, pláže. Co vědět před cestou do Chorvatska.",
-  Itálie:
-    "Itálie od Apulije po Toskánsko — pláže, města, gastronomie a praktické rady pro dovolenou v Itálii.",
-  Albánie:
-    "Albanian Riviera v rychlém rozvoji. Praktické průvodce, pláže, ceny a tipy pro dovolenou v Albánii.",
-  "Černá Hora":
-    "Záliv Boka Kotorská, dlouhé pláže u Ulcinje a hory nad mořem. Průvodce dovolenou v Černé Hoře.",
-  Řecko:
-    "Ostrovy i pevninské Řecko — Kréta, Rhodos, Chalkidiki. Pláže, antické památky a praktické rady před dovolenou.",
-  Turecko:
-    "Riviéra mezi Antalyí a Bodrumem — all inclusive resorty, památky a bazaary. Průvodce dovolenou v Turecku.",
-  Španělsko:
-    "Costa Brava, Costa del Sol, Baleáry. Průvodce plážemi, městy a praktickými radami pro dovolenou ve Španělsku.",
-};
-
-function sendHtml(res: Response, html: string): void {
+function sendHtml(res: Response, html: string, status = 200): void {
+  res.status(status);
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Cache-Control", CACHE_CONTROL);
+  res.setHeader("Cache-Control", HTML_CACHE);
   res.send(html);
 }
 
-function hubIntro(name: string): string {
-  return (
-    HUB_INTROS[name] ??
-    `Všechny články o destinaci ${name} — průvodce, tipy na výlety a rady před dovolenou.`
-  );
+function sendNotFound(res: Response): void {
+  sendHtml(res, renderNotFoundPage(), 404);
+}
+
+/** Positive integer from a raw path segment, or null. */
+function parsePage(raw: string | undefined): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const value = Number.parseInt(raw, 10);
+  return value >= 1 ? value : null;
+}
+
+/**
+ * `/blog/tema/pláže/` and `/blog/destinace/španělsko/` are what people type;
+ * fold them to the ASCII slug and redirect instead of answering 404.
+ */
+function foldedSlugRedirect(
+  res: Response,
+  pathname: string,
+  candidate: string | undefined,
+): boolean {
+  if (!candidate) return false;
+  let decoded = candidate;
+  try {
+    decoded = decodeURIComponent(candidate);
+  } catch {
+    return false;
+  }
+  const folded = slugifyCzechTitle(decoded);
+  if (!folded || folded === candidate) return false;
+  res.redirect(301, `${pathname}/${folded}/`);
+  return true;
+}
+
+/**
+ * Only one URL should ever serve a listing: `/page/1/` redirects to the bare
+ * path, and pages past the end redirect to the last real one.
+ */
+function redirectIfNotCanonical(
+  res: Response,
+  requested: number | null,
+  totalPages: number,
+  basePath: string,
+): boolean {
+  if (requested === null) {
+    res.redirect(301, `${basePath}/page/1/`);
+    return true;
+  }
+  if (requested === 1) {
+    res.redirect(301, basePath);
+    return true;
+  }
+  const clamped = Math.min(requested, totalPages);
+  if (requested > totalPages) {
+    res.redirect(301, `${basePath}/page/${clamped}/`);
+    return true;
+  }
+  return false;
 }
 
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const posts = listPublishedPosts();
-    const hubs = listDestinationHubs();
-    const { items, totalPages } = paginatePosts(posts, 1);
-    sendHtml(
-      res,
-      renderListPage({
-        heading: "SkyTravel Blog",
-        intro: BLOG_HOME_INTRO,
-        canonicalPath: "/blog/",
-        posts: items,
-        page: 1,
-        totalPages,
-        hubs,
-      }),
-    );
+    sendHtml(res, renderIndexPage(1));
   }),
 );
 
 router.get(
-  "/page/:page/",
+  "/page/:page",
   asyncHandler(async (req, res) => {
-    const parsed = Number.parseInt(req.params.page ?? "", 10);
-    const posts = listPublishedPosts();
-    const { items, totalPages, page: safePage } = paginatePosts(posts, parsed);
-    if (Number.isNaN(parsed) || safePage !== parsed) {
-      res.redirect(301, safePage === 1 ? "/blog/" : `/blog/page/${safePage}/`);
-      return;
-    }
-    sendHtml(
-      res,
-      renderListPage({
-        heading: "SkyTravel Blog",
-        intro: BLOG_HOME_INTRO,
-        canonicalPath: `/blog/page/${safePage}/`,
-        posts: items,
-        page: safePage,
-        totalPages,
-        hubs: safePage === 1 ? listDestinationHubs() : undefined,
-      }),
-    );
+    const requested = parsePage(req.params.page);
+    const { totalPages } = paginatePosts(listPublishedPosts(), requested ?? 1);
+    if (redirectIfNotCanonical(res, requested, totalPages, "/blog")) return;
+    sendHtml(res, renderIndexPage(requested as number));
   }),
 );
 
 router.get(
   "/rss.xml",
   asyncHandler(async (_req, res) => {
-    const xml = renderRss(listPublishedPosts());
     res.setHeader("Content-Type", "application/rss+xml; charset=utf-8");
-    res.setHeader("Cache-Control", CACHE_CONTROL);
-    res.send(xml);
+    res.setHeader("Cache-Control", FEED_CACHE);
+    res.send(renderRss(listPublishedPosts()));
   }),
 );
 
 router.get(
-  "/destinace/",
+  "/destinace",
   asyncHandler(async (_req, res) => {
-    const posts = listPublishedPosts();
-    const hubs = listDestinationHubs();
-    const hubsWithLatest = hubs.map((hub) => ({
-      ...hub,
-      latest: posts.filter((p) => p.destinationCzechName === hub.czechName).slice(0, 3),
-    }));
-    sendHtml(
-      res,
-      renderDestinationsIndexPage({
-        hubs: hubsWithLatest,
-      }),
-    );
+    sendHtml(res, renderDestinationsPage());
   }),
 );
-
-/** Same-destination related posts, falling back to the newest articles. */
-function relatedFor(slug: string, destinationCzechName: string | null) {
-  const all = listPublishedPosts().filter((p) => p.slug !== slug);
-  const sameDestination = destinationCzechName
-    ? all.filter((p) => p.destinationCzechName === destinationCzechName)
-    : [];
-  const pool = sameDestination.length >= 3 ? sameDestination : all;
-  return pool.slice(0, 5);
-}
-
-/** Chronological neighbours of a post in the global published list. */
-function neighboursFor(slug: string): {
-  prevPost: BlogPostMeta | null;
-  nextPost: BlogPostMeta | null;
-} {
-  const posts = listPublishedPosts();
-  const idx = posts.findIndex((p) => p.slug === slug);
-  if (idx === -1) return { prevPost: null, nextPost: null };
-  return {
-    // Newest first: previous = older, next = newer.
-    prevPost: idx < posts.length - 1 ? posts[idx + 1] : null,
-    nextPost: idx > 0 ? posts[idx - 1] : null,
-  };
-}
 
 router.get(
   "/destinace/:hubSlug",
   asyncHandler(async (req, res) => {
     const { hubSlug } = req.params;
-    if (!isValidSlug(hubSlug)) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
-      return;
-    }
-    const hubs = listDestinationHubs();
-    const hub = hubs.find((h) => h.slug === hubSlug);
+    const hub = hubSlug && isValidSlug(hubSlug) ? getDestinationHub(hubSlug) : null;
     if (!hub) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
+      if (foldedSlugRedirect(res, "/blog/destinace", hubSlug)) return;
+      sendNotFound(res);
       return;
     }
-    const posts = listPublishedPosts().filter((p) => p.destinationCzechName === hub.czechName);
-    const page = 1;
-    const { items, totalPages } = paginatePosts(posts, page);
-    sendHtml(
-      res,
-      renderHubPage({
-        destinationName: hub.czechName,
-        intro: hubIntro(hub.czechName),
-        posts: items,
-        page,
-        totalPages,
-        otherHubs: hubs.filter((h) => h.slug !== hub.slug),
-      }),
-    );
+    sendHtml(res, renderHubPage(hub, 1));
   }),
 );
 
@@ -192,67 +146,115 @@ router.get(
   "/destinace/:hubSlug/page/:page",
   asyncHandler(async (req, res) => {
     const { hubSlug } = req.params;
-    if (!isValidSlug(hubSlug)) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
-      return;
-    }
-    const parsed = Number.parseInt(req.params.page ?? "", 10);
-    const hubs = listDestinationHubs();
-    const hub = hubs.find((h) => h.slug === hubSlug);
+    const hub = hubSlug && isValidSlug(hubSlug) ? getDestinationHub(hubSlug) : null;
     if (!hub) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
+      if (foldedSlugRedirect(res, "/blog/destinace", hubSlug)) return;
+      sendNotFound(res);
       return;
     }
-    const posts = listPublishedPosts().filter((p) => p.destinationCzechName === hub.czechName);
-    const { items, totalPages, page: safePage } = paginatePosts(posts, parsed);
-    if (Number.isNaN(parsed) || safePage !== parsed) {
-      res.redirect(
-        301,
-        safePage === 1
-          ? `/blog/destinace/${hub.slug}/`
-          : `/blog/destinace/${hub.slug}/page/${safePage}/`,
-      );
-      return;
-    }
-    sendHtml(
-      res,
-      renderHubPage({
-        destinationName: hub.czechName,
-        intro: hubIntro(hub.czechName),
-        posts: items,
-        page: safePage,
-        totalPages,
-        otherHubs: hubs.filter((h) => h.slug !== hub.slug),
-      }),
-    );
+    const requested = parsePage(req.params.page);
+    const { totalPages } = paginatePosts(listPostsByDestination(hub.czechName), requested ?? 1);
+    if (redirectIfNotCanonical(res, requested, totalPages, `/blog/destinace/${hub.slug}`)) return;
+    sendHtml(res, renderHubPage(hub, requested as number));
   }),
 );
+
+router.get(
+  "/tema/:tag",
+  asyncHandler(async (req, res) => {
+    const { tag: tagSlug } = req.params;
+    const tag = tagSlug && isValidSlug(tagSlug) ? getTag(tagSlug) : null;
+    if (!tag) {
+      if (foldedSlugRedirect(res, "/blog/tema", tagSlug)) return;
+      sendNotFound(res);
+      return;
+    }
+    sendHtml(res, renderTagPage(tag, 1));
+  }),
+);
+
+router.get(
+  "/tema/:tag/page/:page",
+  asyncHandler(async (req, res) => {
+    const { tag: tagSlug } = req.params;
+    const tag = tagSlug && isValidSlug(tagSlug) ? getTag(tagSlug) : null;
+    if (!tag) {
+      if (foldedSlugRedirect(res, "/blog/tema", tagSlug)) return;
+      sendNotFound(res);
+      return;
+    }
+    const requested = parsePage(req.params.page);
+    const { totalPages } = paginatePosts(listPostsByTag(tag.slug), requested ?? 1);
+    if (redirectIfNotCanonical(res, requested, totalPages, `/blog/tema/${tag.slug}`)) return;
+    sendHtml(res, renderTagPage(tag, requested as number));
+  }),
+);
+
+router.get(
+  "/autor/:slug",
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params;
+    const html = slug && isValidSlug(slug) && getAuthor(slug) ? renderAuthorPage(slug) : null;
+    if (!html) {
+      sendNotFound(res);
+      return;
+    }
+    sendHtml(res, html);
+  }),
+);
+
+router.get(
+  "/o-blogu",
+  asyncHandler(async (_req, res) => {
+    sendHtml(res, renderAboutPage());
+  }),
+);
+
+router.get(
+  "/hledat",
+  asyncHandler(async (req, res) => {
+    const raw = req.query.q;
+    sendHtml(res, renderSearchPage(typeof raw === "string" ? raw : ""));
+  }),
+);
+
+/** Legacy paths registered through `aliases:` frontmatter. */
+function aliasTarget(pathname: string): string | null {
+  return resolveAlias(pathname) ?? resolveAlias(`${pathname}/`);
+}
 
 router.get(
   "/:slug",
   asyncHandler(async (req, res) => {
     const { slug } = req.params;
-    if (!isValidSlug(slug)) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
+    if (!slug || !isValidSlug(slug)) {
+      sendNotFound(res);
       return;
     }
     const post = getPublishedPost(slug);
-    if (!post) {
-      res.status(404);
-      sendHtml(res, renderNotFoundPage());
+    if (post) {
+      sendHtml(res, renderArticlePage(post));
       return;
     }
-    sendHtml(
-      res,
-      renderArticlePage({
-        post,
-        relatedPosts: relatedFor(post.slug, post.destinationCzechName),
-        ...neighboursFor(post.slug),
-      }),
-    );
+    const target = aliasTarget(`/blog/${slug}`);
+    if (target) {
+      res.redirect(301, target);
+      return;
+    }
+    sendNotFound(res);
+  }),
+);
+
+/** Two-segment legacy paths, e.g. `/blog/chorvatsko/stare-jmeno`. */
+router.get(
+  "/:section/:slug",
+  asyncHandler(async (req: Request, res: Response) => {
+    const target = aliasTarget(`/blog/${req.params.section}/${req.params.slug}`);
+    if (!target) {
+      sendNotFound(res);
+      return;
+    }
+    res.redirect(301, target);
   }),
 );
 

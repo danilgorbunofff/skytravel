@@ -16,12 +16,28 @@ router.get(
         : segment === "pending"
           ? { marketingConsent: false }
           : {};
+    const limitRaw = Number(req.query.limit ?? 500);
+    const offsetRaw = Number(req.query.offset ?? 0);
+    const limit = Math.min(1000, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 500));
+    const offset = Math.max(0, Number.isFinite(offsetRaw) ? offsetRaw : 0);
+    const qRaw = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 120) : "";
+    const whereWithSearch = qRaw
+      ? {
+          ...where,
+          OR: [{ email: { contains: qRaw } }, { destination: { contains: qRaw } }],
+        }
+      : where;
 
-    const leads = await prisma.lead.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-    success(res, { items: leads });
+    const [total, leads] = await Promise.all([
+      prisma.lead.count({ where: whereWithSearch }),
+      prisma.lead.findMany({
+        where: whereWithSearch,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+    ]);
+    success(res, { items: leads, total, limit, offset });
   }),
 );
 

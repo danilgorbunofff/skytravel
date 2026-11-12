@@ -1,50 +1,29 @@
+/* SkyTravel blog — progressive enhancement only.
+   The blog is fully usable without this file. */
 (function () {
-  "use strict";
+  var buttons = document.querySelectorAll("[data-copy-url]");
+  if (!buttons.length || !navigator.clipboard) return;
 
-  function init(root) {
-    var track = root.querySelector("[data-carousel-track]");
-    var prev = root.querySelector("[data-carousel-prev]");
-    var next = root.querySelector("[data-carousel-next]");
-    if (!track || !prev || !next) return;
+  function copy(text) {
+    if (navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return Promise.reject(new Error("unsupported"));
+  }
 
-    function step() {
-      // pick the first card child of whichever inner grid is mounted inside the track
-      var card = track.querySelector(
-        ".post-grid--carousel > *, .destination-grid--carousel > *"
-      );
-      var cardWidth = card ? card.getBoundingClientRect().width : 0;
-      var styles = card
-        ? getComputedStyle(track.querySelector(".post-grid--carousel, .destination-grid--carousel") || track)
-        : null;
-      var gap = styles ? parseFloat(styles.columnGap || styles.gap || "0") : 22;
-      return cardWidth + (gap || 22);
-    }
-
-    function update() {
-      var atStart = track.scrollLeft <= 2;
-      var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
-      prev.disabled = atStart;
-      next.disabled = atEnd;
-    }
-
-    prev.addEventListener("click", function () {
-      track.scrollBy({ left: -step(), behavior: "smooth" });
+  Array.prototype.forEach.call(buttons, function (button) {
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      copy(location.origin + button.getAttribute("data-copy-url"))
+        .then(function () {
+          button.textContent = "Odkaz zkopírován";
+          button.classList.add("is-done");
+          setTimeout(function () {
+            button.textContent = "Kopírovat odkaz";
+            button.classList.remove("is-done");
+          }, 2200);
+        })
+        .catch(function () {
+          button.hidden = true;
+        });
     });
-    next.addEventListener("click", function () {
-      track.scrollBy({ left: step(), behavior: "smooth" });
-    });
-    track.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update, { passive: true });
-    update();
-  }
-
-  function initAll() {
-    document.querySelectorAll("[data-carousel]").forEach(init);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initAll);
-  } else {
-    initAll();
-  }
+  });
 })();

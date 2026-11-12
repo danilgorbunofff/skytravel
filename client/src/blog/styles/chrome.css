@@ -1,0 +1,365 @@
+/* Site chrome: header, footer, buttons. No JavaScript required. */
+
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-head__inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 68px;
+}
+
+/* Wordmark -------------------------------------------------------------- */
+
+.brand {
+  display: inline-flex;
+  align-items: baseline;
+  margin-right: auto;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  text-transform: none;
+}
+
+.brand__sky {
+  color: var(--blue-900);
+}
+
+.brand__travel {
+  color: var(--blue-700);
+}
+
+.site-head .brand::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: var(--yellow);
+}
+
+.brand--foot {
+  color: var(--white);
+}
+
+.brand--foot .brand__sky,
+.brand--foot .brand__travel,
+.brand--foot::after {
+  color: var(--white);
+}
+
+/* Desktop navigation ---------------------------------------------------- */
+
+.head-nav {
+  display: none;
+  gap: 26px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.head-nav a {
+  padding-block: 6px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.head-nav a:hover {
+  color: var(--blue-800);
+}
+
+.head-nav a[aria-current="page"] {
+  color: var(--blue-900);
+  border-bottom-color: var(--yellow);
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.head-search {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  color: var(--muted);
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.head-search:hover {
+  color: var(--blue-800);
+  border-color: var(--blue-100);
+  background: var(--blue-50);
+}
+
+.head-cta {
+  display: none;
+  align-items: center;
+  height: 44px;
+  padding-inline: 20px;
+  border-radius: var(--pill);
+  background: var(--yellow);
+  color: var(--blue-900);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.head-cta:hover {
+  background: #eccb2b;
+}
+
+/* Mobile disclosure menu ------------------------------------------------ */
+
+.head-menu {
+  position: relative;
+}
+
+.head-menu__summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  list-style: none;
+  cursor: pointer;
+}
+
+.head-menu__summary::-webkit-details-marker {
+  display: none;
+}
+
+.head-menu__bars,
+.head-menu__bars::before,
+.head-menu__bars::after {
+  display: block;
+  width: 17px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--blue-900);
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.head-menu__bars {
+  position: relative;
+}
+
+.head-menu__bars::before,
+.head-menu__bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.head-menu__bars::before {
+  top: -6px;
+}
+
+.head-menu__bars::after {
+  top: 6px;
+}
+
+.head-menu[open] .head-menu__bars {
+  background: transparent;
+}
+
+.head-menu[open] .head-menu__bars::before {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.head-menu[open] .head-menu__bars::after {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.head-menu__panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 236px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.head-menu__panel nav {
+  display: grid;
+}
+
+.head-menu__panel a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.head-menu__panel a:hover {
+  background: var(--blue-50);
+  color: var(--blue-900);
+}
+
+.head-menu__panel a[aria-current="page"] {
+  color: var(--blue-900);
+  box-shadow: inset 3px 0 0 var(--yellow);
+}
+
+.head-menu__cta {
+  justify-content: center;
+  margin-top: 4px;
+  background: var(--yellow);
+  color: var(--blue-900) !important;
+}
+
+/* Footer ---------------------------------------------------------------- */
+
+.site-foot {
+  margin-top: var(--section);
+  padding-block: clamp(40px, 5vw, 64px) 28px;
+  background: var(--blue-900);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: var(--fs-sm);
+}
+
+.site-foot__grid {
+  display: grid;
+  gap: 32px 40px;
+  grid-template-columns: 1fr;
+}
+
+.site-foot__brand p {
+  max-width: 42ch;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+.site-foot__col h2 {
+  margin-bottom: 12px;
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-foot__col ul {
+  display: grid;
+  gap: 2px;
+}
+
+.site-foot__col a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.site-foot a:hover {
+  color: var(--yellow);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-foot__legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.site-foot__legal nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.site-foot__legal a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Buttons --------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding-inline: 24px;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--yellow);
+  color: var(--blue-900);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  text-align: center;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.btn:hover {
+  background: #eccb2b;
+  transform: translateY(-1px);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+@media (min-width: 720px) {
+  .site-foot__grid {
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  }
+}
+
+@media (min-width: 900px) {
+  .head-nav {
+    display: flex;
+  }
+
+  .head-search,
+  .head-cta {
+    display: inline-flex;
+  }
+
+  .head-menu {
+    display: none;
+  }
+}

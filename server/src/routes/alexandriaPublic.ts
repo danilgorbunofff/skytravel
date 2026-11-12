@@ -15,19 +15,103 @@ const router = Router();
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 const feedCache = new LRUCache<number, { data: AlexandriaTourInput[]; ts: number }>({
-  max: 10,          // max 10 countries cached
-  ttl: CACHE_TTL,   // auto-expire entries after TTL
+  max: 10, // max 10 countries cached
+  ttl: CACHE_TTL, // auto-expire entries after TTL
+});
+// Negative cache: remember upstream failures briefly so an outage does not
+// turn every page view into a slow doomed fetch.
+const NEGATIVE_CACHE_TTL = 60 * 1000; // 60s
+const negativeCache = new LRUCache<number, { err: Error; ts: number }>({
+  max: 10,
+  ttl: NEGATIVE_CACHE_TTL,
 });
 const ALEXANDRIA_COUNTRY = config.alexandria.country;
+
+async function getDbFallback(limit: number, boardFilter: Set<string> | null) {
+  try {
+    const { default: prisma } = await import("../prisma.js");
+    const now = new Date();
+    const cutoff = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const rows = await prisma.providerTour.findMany({
+      where: {
+        source: "alexandria",
+        startDate: { gt: now, lt: cutoff },
+      },
+      orderBy: [{ stars: "desc" }, { price: "asc" }],
+      take: 200,
+    });
+    const items = rows.map(
+      (r: {
+        externalId: string;
+        destination: string;
+        title: string;
+        price: number;
+        originalPrice: number;
+        startDate: Date;
+        endDate: Date;
+        transport: string;
+        image: string;
+        description: string | null;
+        photos: unknown;
+        url: string;
+        stars: string;
+        board: string;
+      }) => ({
+        externalId: r.externalId,
+        destination: r.destination,
+        title: r.title,
+        price: r.price,
+        originalPrice: r.originalPrice,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        transport: r.transport,
+        image: r.image,
+        description: r.description,
+        photos: Array.isArray(r.photos) ? (r.photos as string[]) : [],
+        url: r.url,
+        stars: r.stars,
+        board: r.board,
+      }),
+    );
+    // Apply the board filter BEFORE dedup so a hotel whose best row has a
+    // different board does not shadow a board-matching row of the same title.
+    const boardMatching = boardFilter
+      ? items.filter((it) => boardFilter.has((it.board ?? "").toUpperCase()))
+      : items;
+    const seen = new Set<string>();
+    const deduped: typeof items = [];
+    for (const it of boardMatching) {
+      if (!seen.has(it.title)) {
+        seen.add(it.title);
+        deduped.push(it);
+      }
+    }
+    return { total: deduped.length, items: deduped.slice(0, limit).map(serializeItem) };
+  } catch {
+    return null;
+  }
+}
 
 async function getCachedFeed(countryId?: number): Promise<AlexandriaTourInput[]> {
   const zeme = countryId ?? ALEXANDRIA_COUNTRY;
   const cached = feedCache.get(zeme);
   if (cached) return cached.data;
-  const parsed = await fetchAlexandriaParsed(zeme);
-  const mapped = extractToursFromParsed(parsed);
-  feedCache.set(zeme, { data: mapped, ts: Date.now() });
-  return mapped;
+  const failed = negativeCache.get(zeme);
+  if (failed) throw failed.err;
+  try {
+    const parsed = await fetchAlexandriaParsed(zeme);
+    const mapped = extractToursFromParsed(parsed);
+    feedCache.set(zeme, { data: mapped, ts: Date.now() });
+    return mapped;
+  } catch (err) {
+    // Cache the failure briefly so an upstream outage doesn't turn every
+    // page view into a slow doomed fetch.
+    negativeCache.set(zeme, {
+      err: err instanceof Error ? err : new Error(String(err)),
+      ts: Date.now(),
+    });
+    throw err;
+  }
 }
 
 function serializeItem(item: AlexandriaTourInput) {
@@ -61,10 +145,25 @@ router.get(
     // Optional board filter (comma-separated, case-insensitive)
     const boardParam = (req.query.board as string | undefined)?.trim();
     const boardFilter = boardParam
-      ? new Set(boardParam.split(",").map((b) => b.trim().toUpperCase()).filter(Boolean))
+      ? new Set(
+          boardParam
+            .split(",")
+            .map((b) => b.trim().toUpperCase())
+            .filter(Boolean),
+        )
       : null;
 
-    const items = await getCachedFeed(countryId);
+    let items: AlexandriaTourInput[];
+    try {
+      items = await getCachedFeed(countryId);
+    } catch {
+      const fb = await getDbFallback(limit, boardFilter);
+      if (fb) {
+        res.json(fb);
+        return;
+      }
+      throw new Error("Alexandria upstream unavailable and no local fallback data.");
+    }
 
     const now = new Date();
     // Only departures starting within the next 7 days with plausible prices
@@ -91,25 +190,32 @@ router.get(
       return a.price - b.price;
     });
 
-    // Deduplicate by title (hotel name) — keep first (best by sort order)
+    // Deduplicate by title (hotel name) — keep first (best by sort order).
+    // Board filter runs BEFORE dedup: dedup keeps only the best row per
+    // hotel, so filtering after dedup drops hotels whose best row has a
+    // different board even when a matching row exists.
+    const boardMatching = boardFilter
+      ? upcoming.filter((it) => boardFilter.has((it.board ?? "").toUpperCase()))
+      : upcoming;
     const seen = new Set<string>();
     const deduped: typeof upcoming = [];
-    for (const item of upcoming) {
+    for (const item of boardMatching) {
       if (!seen.has(item.title)) {
         seen.add(item.title);
         deduped.push(item);
       }
     }
 
-    // Apply board filter if requested
-    const filtered = boardFilter
-      ? deduped.filter((it) => {
-          const code = (it.board ?? "").toUpperCase();
-          return boardFilter.has(code);
-        })
-      : deduped;
+    const filtered = deduped;
 
     const pageItems = filtered.slice(0, limit);
+    if (pageItems.length === 0) {
+      const fb = await getDbFallback(limit, boardFilter);
+      if (fb && fb.items.length > 0) {
+        res.json(fb);
+        return;
+      }
+    }
 
     res.json({
       total: filtered.length,

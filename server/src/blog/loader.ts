@@ -1,192 +1,59 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import matter from "gray-matter";
-import { marked } from "marked";
 import { logger } from "../lib/logger.js";
-import { destinationSlug, isValidSlug } from "./slug.js";
-import { BLOG_PAGE_SIZE, buildHubSlug, type BlogPost, type BlogPostMeta } from "./types.js";
+import { HUB_INTROS } from "./content.js";
+import { parseBlogPostFile } from "./frontmatter.js";
+import { renderMarkdown } from "./markdown.js";
+import { destinationSlug, isValidSlug, slugifyCzechTitle } from "./slug.js";
+import {
+  BLOG_PAGE_SIZE,
+  MIN_TAG_POSTS,
+  type BlogPost,
+  type BlogPostMeta,
+  type DestinationHub,
+  type TagSummary,
+} from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const BLOG_CONTENT_DIR = path.resolve(__dirname, "../../content/blog");
 
-// Mirrors KNOWN_DESTINATIONS in providers/destinationStore.ts — kept as a plain
-// list so the blog layer stays free of Prisma/DB dependencies.
-const KNOWN_DESTINATION_NAMES = [
-  "Bulharsko",
-  "Chorvatsko",
-  "Itálie",
-  "Albánie",
-  "Černá Hora",
-  "Řecko",
-  "Turecko",
-  "Španělsko",
-];
+const MAX_CACHED_BODIES = 64;
 
-const MAX_TITLE_LENGTH = 60;
-const MAX_DESCRIPTION_LENGTH = 160;
-const MAX_CACHED_BODIES = 200;
+type FileEntry = { slug: string; mtimeMs: number };
 
-type RawFrontmatter = {
-  title?: unknown;
-  description?: unknown;
-  destination?: unknown;
-  tags?: unknown;
-  published?: unknown;
-  updated?: unknown;
-  draft?: unknown;
-  cover?: unknown;
-};
-
-/** Minimal bounded LRU used for parsed markdown bodies. */
+/** Minimal bounded LRU for fully rendered posts. */
 class LruMap<K, V> {
   private map = new Map<K, V>();
   constructor(private readonly max: number) {}
   get(key: K): V | undefined {
-    if (!this.map.has(key)) return undefined;
     const value = this.map.get(key);
     if (value === undefined) return undefined;
     this.map.delete(key);
-    this.map.set(key, value); // refresh recency
+    this.map.set(key, value);
     return value;
   }
   set(key: K, value: V): void {
-    if (this.map.has(key)) this.map.delete(key);
-    else if (this.map.size >= this.max) {
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    } else if (this.map.size >= this.max) {
       const oldest = this.map.keys().next().value;
       if (oldest !== undefined) this.map.delete(oldest);
     }
     this.map.set(key, value);
   }
-}
-
-const bodyCache = new LruMap<string, string>(MAX_CACHED_BODIES);
-const bodyMtime = new Map<string, number>();
-
-function asTrimmedString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-/** gray-matter parses unquoted YAML dates into Date objects — accept both forms. */
-function parseIsoDate(value: unknown): string | null {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
-  }
-  const raw = asTrimmedString(value);
-  if (!raw) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
-}
-
-function parseTags(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((tag): tag is string => typeof tag === "string")
-    .map((t) => t.trim())
-    .filter(Boolean);
-}
-
-/** Parse and validate one markdown document; returns null when the file is unusable. */
-export function parseBlogPost(slug: string, raw: string): BlogPost | null {
-  if (!isValidSlug(slug)) {
-    logger.warn({ slug }, "[blog] invalid slug in filename — skipping");
-    return null;
-  }
-
-  let parsed: ReturnType<typeof matter>;
-  try {
-    parsed = matter(raw);
-  } catch (err) {
-    logger.warn({ err, slug }, "[blog] frontmatter parse failed");
-    return null;
-  }
-  const data = (parsed.data ?? {}) as RawFrontmatter;
-
-  const title = asTrimmedString(data.title);
-  if (!title) {
-    logger.warn({ slug }, "[blog] missing title — skipping");
-    return null;
-  }
-  if (title.length > MAX_TITLE_LENGTH) {
-    logger.warn(
-      { slug, length: title.length },
-      `[blog] title longer than ${MAX_TITLE_LENGTH} chars`,
-    );
-  }
-  const description = asTrimmedString(data.description) ?? "";
-  if (description.length > MAX_DESCRIPTION_LENGTH) {
-    logger.warn(
-      { slug, length: description.length },
-      `[blog] description longer than ${MAX_DESCRIPTION_LENGTH} chars`,
-    );
-  }
-
-  let destinationCzechName: string | null = null;
-  const destination = asTrimmedString(data.destination);
-  if (destination) {
-    // Slug-level comparison makes this case- and diacritic-insensitive ("Recko" == "Řecko").
-    const hubSlug = destinationSlug(destination);
-    const match = KNOWN_DESTINATION_NAMES.find((name) => destinationSlug(name) === hubSlug);
-    if (!match) {
-      logger.warn({ slug, destination }, "[blog] unknown destination — ignoring field");
-    } else {
-      destinationCzechName = match;
-    }
-  }
-
-  const publishedAt = parseIsoDate(data.published) ?? new Date().toISOString().slice(0, 10);
-  const updatedAt = parseIsoDate(data.updated);
-  const draft =
-    data.draft === true || (typeof data.draft === "string" && data.draft.toLowerCase() === "true");
-
-  const html = marked.parse(parsed.content.trim(), { async: false }) as string;
-  const readingMinutes = Math.max(
-    1,
-    Math.round(
-      html
-        .replace(/<[^>]+>/g, " ")
-        .split(/\s+/)
-        .filter(Boolean).length / 200,
-    ),
-  );
-
-  return {
-    slug,
-    title,
-    description,
-    destinationCzechName,
-    tags: parseTags(data.tags),
-    publishedAt,
-    updatedAt,
-    draft,
-    coverImage: asTrimmedString(data.cover),
-    readingMinutes,
-    html,
-  };
-}
-
-function readWithCache(slug: string, mtimeMs: number): string | null {
-  const cached = bodyCache.get(slug);
-  if (cached !== undefined && bodyMtime.get(slug) === mtimeMs) return cached;
-  try {
-    const raw = fs.readFileSync(path.join(BLOG_CONTENT_DIR, `${slug}.md`), "utf8");
-    bodyCache.set(slug, raw);
-    bodyMtime.set(slug, mtimeMs);
-    return raw;
-  } catch {
-    bodyMtime.delete(slug);
-    return null;
+  clear(): void {
+    this.map.clear();
   }
 }
 
-type FileEntry = { slug: string; mtimeMs: number };
+const postCache = new LruMap<string, { post: BlogPost; mtimeMs: number }>(MAX_CACHED_BODIES);
 
 function listMarkdownFiles(): FileEntry[] {
   try {
     return fs
       .readdirSync(BLOG_CONTENT_DIR)
-      .filter((name) => name.endsWith(".md"))
+      .filter((name) => name.endsWith(".md") && !name.startsWith("_"))
       .map((name) => ({
         slug: name.slice(0, -3),
         mtimeMs: fs.statSync(path.join(BLOG_CONTENT_DIR, name)).mtimeMs,
@@ -202,51 +69,127 @@ function sortPosts<T extends BlogPostMeta>(posts: T[]): T[] {
   );
 }
 
-function directoryFingerprint(files: FileEntry[]): string {
+function loadPost(file: FileEntry): BlogPost | null {
+  const cached = postCache.get(file.slug);
+  if (cached && cached.mtimeMs === file.mtimeMs) return cached.post;
+  let raw: string;
+  try {
+    raw = fs.readFileSync(path.join(BLOG_CONTENT_DIR, `${file.slug}.md`), "utf8");
+  } catch (err) {
+    logger.warn({ err, slug: file.slug }, "[blog] cannot read markdown file");
+    return null;
+  }
+  const parsed = parseBlogPostFile(file.slug, raw);
+  if (!parsed.ok) return null;
+  const rendered = renderMarkdown(parsed.post.body);
+  const post: BlogPost = {
+    ...parsed.post.meta,
+    html: rendered.html,
+    toc: rendered.toc,
+  };
+  postCache.set(file.slug, { post, mtimeMs: file.mtimeMs });
+  return post;
+}
+
+type BlogIndex = {
+  fingerprint: string;
+  published: BlogPostMeta[];
+  aliases: Map<string, string>;
+  tags: TagSummary[];
+  hubs: DestinationHub[];
+};
+
+let indexCache: BlogIndex | null = null;
+
+function fingerprintFor(files: FileEntry[]): string {
   return files.map((f) => `${f.slug}:${Math.round(f.mtimeMs)}`).join("|");
 }
 
-function loadSinglePost(slug: string, mtimeMs: number): BlogPost | null {
-  const raw = readWithCache(slug, mtimeMs);
-  return raw === null ? null : parseBlogPost(slug, raw);
+function buildTagIndex(posts: BlogPostMeta[]): TagSummary[] {
+  const counts = new Map<string, { name: string; count: number }>();
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      const slug = slugifyCzechTitle(tag);
+      if (!slug) continue;
+      const existing = counts.get(slug);
+      if (existing) existing.count += 1;
+      else counts.set(slug, { name: tag, count: 1 });
+    }
+  }
+  return [...counts.entries()]
+    .map(([slug, value]) => ({ slug, name: value.name, count: value.count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "cs"));
 }
 
-let indexFingerprint = "";
-let indexCache: BlogPostMeta[] | null = null;
+function buildHubIndex(posts: BlogPostMeta[]): DestinationHub[] {
+  const counts = new Map<string, number>();
+  for (const post of posts) {
+    if (!post.destinationCzechName) continue;
+    counts.set(post.destinationCzechName, (counts.get(post.destinationCzechName) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([czechName, count]) => ({
+      czechName,
+      count,
+      slug: destinationSlug(czechName),
+      intro:
+        HUB_INTROS[czechName] ??
+        `Všechny články o destinaci ${czechName} — průvodce, tipy na výlety a rady před dovolenou.`,
+    }))
+    .sort((a, b) => a.czechName.localeCompare(b.czechName, "cs"));
+}
 
-/**
- * All published posts, newest first. Rebuilds the metadata index whenever any
- * markdown file's mtime changes (cheap stat scan; bodies stay LRU-cached).
- */
-export function listPublishedPosts(): BlogPostMeta[] {
+function buildIndex(): BlogIndex {
   const files = listMarkdownFiles();
-  const fingerprint = directoryFingerprint(files);
-  if (indexCache && fingerprint === indexFingerprint) return indexCache;
+  const fingerprint = fingerprintFor(files);
+  if (indexCache && indexCache.fingerprint === fingerprint) return indexCache;
 
   const seen = new Set<string>();
-  const posts: BlogPostMeta[] = [];
+  const published: BlogPostMeta[] = [];
+  const aliases = new Map<string, string>();
+
   for (const file of files) {
-    const post = loadSinglePost(file.slug, file.mtimeMs);
-    if (!post || post.draft) continue;
+    const post = loadPost(file);
+    if (!post) continue;
+    if (post.draft) continue;
     if (seen.has(post.slug)) {
-      logger.warn({ slug: post.slug }, "[blog] duplicate slug across filenames — keeping first");
+      logger.warn({ slug: post.slug }, "[blog] duplicate slug — keeping first");
       continue;
     }
     seen.add(post.slug);
-    const { html: _html, ...meta } = post;
-    posts.push(meta);
+    const { html: _html, toc: _toc, ...meta } = post;
+    published.push(meta);
+    for (const alias of meta.aliases) {
+      if (aliases.has(alias)) {
+        logger.warn({ alias, slug: meta.slug }, "[blog] duplicate alias — keeping first");
+        continue;
+      }
+      aliases.set(alias, `/blog/${meta.slug}/`);
+    }
   }
-  indexCache = sortPosts(posts);
-  indexFingerprint = fingerprint;
+
+  const sorted = sortPosts(published);
+  indexCache = {
+    fingerprint,
+    published: sorted,
+    aliases,
+    tags: buildTagIndex(sorted),
+    hubs: buildHubIndex(sorted),
+  };
   return indexCache;
 }
 
-/** One published post with rendered HTML, or null when missing/draft. */
+/** All published posts, newest first. */
+export function listPublishedPosts(): BlogPostMeta[] {
+  return buildIndex().published;
+}
+
+/** One published post with rendered HTML and TOC. */
 export function getPublishedPost(slug: string): BlogPost | null {
   if (!isValidSlug(slug)) return null;
-  const file = listMarkdownFiles().find((f) => f.slug === slug);
+  const file = listMarkdownFiles().find((entry) => entry.slug === slug);
   if (!file) return null;
-  const post = loadSinglePost(slug, file.mtimeMs);
+  const post = loadPost(file);
   return post && !post.draft ? post : null;
 }
 
@@ -254,31 +197,159 @@ export function listPostsByDestination(czechName: string): BlogPostMeta[] {
   return listPublishedPosts().filter((post) => post.destinationCzechName === czechName);
 }
 
-export type DestinationHubSummary = {
-  czechName: string;
-  slug: string;
-  count: number;
-};
+export function listDestinationHubs(): DestinationHub[] {
+  return buildIndex().hubs;
+}
 
-/** Destinations that have at least one published article, alphabetical by Czech name. */
-export function listDestinationHubs(): DestinationHubSummary[] {
-  const counts = new Map<string, number>();
-  for (const post of listPublishedPosts()) {
-    if (!post.destinationCzechName) continue;
-    counts.set(post.destinationCzechName, (counts.get(post.destinationCzechName) ?? 0) + 1);
+export function getDestinationHub(slug: string): DestinationHub | null {
+  if (!isValidSlug(slug)) return null;
+  return listDestinationHubs().find((hub) => hub.slug === slug) ?? null;
+}
+
+/** Every tag, most used first. */
+export function listTags(): TagSummary[] {
+  return buildIndex().tags;
+}
+
+/** Tags that deserve their own indexable page. */
+export function listIndexableTags(): TagSummary[] {
+  return listTags().filter((tag) => tag.count >= MIN_TAG_POSTS);
+}
+
+export function getTag(slug: string): TagSummary | null {
+  if (!isValidSlug(slug)) return null;
+  return listTags().find((tag) => tag.slug === slug) ?? null;
+}
+
+export function listPostsByTag(slug: string): BlogPostMeta[] {
+  return listPublishedPosts().filter((post) =>
+    post.tags.some((tag) => slugifyCzechTitle(tag) === slug),
+  );
+}
+
+export function listPostsByAuthor(slug: string): BlogPostMeta[] {
+  return listPublishedPosts().filter((post) => post.author.slug === slug);
+}
+
+/** Redirect target for a legacy path, if the path was registered as an alias. */
+export function resolveAlias(pathname: string): string | null {
+  const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  return buildIndex().aliases.get(normalized) ?? null;
+}
+
+export type RelatedOptions = { limit?: number };
+
+/**
+ * Related posts: manual `related:` frontmatter wins, then same destination,
+ * then shared tags, then recency. Never returns the post itself.
+ */
+export function relatedPosts(slug: string, options: RelatedOptions = {}): BlogPostMeta[] {
+  const limit = options.limit ?? 3;
+  const all = listPublishedPosts();
+  const current = all.find((post) => post.slug === slug);
+  if (!current) return all.slice(0, limit);
+
+  const currentTags = new Set(current.tags.map((tag) => slugifyCzechTitle(tag)));
+  const scored = all
+    .filter((post) => post.slug !== slug)
+    .map((post) => {
+      let score = 0;
+      if (current.relatedSlugs.includes(post.slug)) score += 100;
+      if (post.relatedSlugs.includes(slug)) score += 100;
+      if (
+        current.destinationCzechName &&
+        post.destinationCzechName === current.destinationCzechName
+      )
+        score += 10;
+      for (const tag of post.tags) {
+        if (currentTags.has(slugifyCzechTitle(tag))) score += 3;
+      }
+      return { post, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.post.publishedAt.localeCompare(a.post.publishedAt) ||
+        a.post.slug.localeCompare(b.post.slug),
+    );
+
+  const picked = scored.slice(0, limit).map((entry) => entry.post);
+  if (picked.length < limit) {
+    for (const post of all) {
+      if (picked.length >= limit) break;
+      if (post.slug === slug || picked.some((item) => item.slug === post.slug)) continue;
+      picked.push(post);
+    }
   }
-  return [...counts.entries()]
-    .map(([czechName, count]) => ({ czechName, count, slug: buildHubSlug(czechName) }))
-    .sort((a, b) => a.czechName.localeCompare(b.czechName, "cs"));
+  return picked;
+}
+
+/** Chronological neighbours in the global published list (newest first). */
+export function neighbours(slug: string): {
+  prevPost: BlogPostMeta | null;
+  nextPost: BlogPostMeta | null;
+} {
+  const posts = listPublishedPosts();
+  const index = posts.findIndex((post) => post.slug === slug);
+  if (index === -1) return { prevPost: null, nextPost: null };
+  return {
+    prevPost: index < posts.length - 1 ? posts[index + 1] : null,
+    nextPost: index > 0 ? posts[index - 1] : null,
+  };
 }
 
 /** Paginated listing slice. `page` is 1-based and clamped into range. */
 export function paginatePosts(
   posts: BlogPostMeta[],
   page: number,
+  pageSize: number = BLOG_PAGE_SIZE,
 ): { items: BlogPostMeta[]; page: number; totalPages: number } {
-  const totalPages = Math.max(1, Math.ceil(posts.length / BLOG_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
   const current = Math.min(Math.max(1, Math.floor(page) || 1), totalPages);
-  const start = (current - 1) * BLOG_PAGE_SIZE;
-  return { items: posts.slice(start, start + BLOG_PAGE_SIZE), page: current, totalPages };
+  const start = (current - 1) * pageSize;
+  return { items: posts.slice(start, start + pageSize), page: current, totalPages };
+}
+
+/** Posts matching a free-text query (title, description, tags, destination). */
+export function searchPosts(query: string, limit = 12): BlogPostMeta[] {
+  const needle = query.trim().toLowerCase();
+  if (needle.length < 2) return [];
+  const folded = slugifyCzechTitle(needle).replace(/-/g, " ");
+  return listPublishedPosts()
+    .map((post) => {
+      const haystack = [post.title, post.description, post.destinationCzechName ?? "", ...post.tags]
+        .join(" ")
+        .toLowerCase();
+      const foldedHaystack = slugifyCzechTitle(haystack).replace(/-/g, " ");
+      let score = 0;
+      if (haystack.includes(needle)) score += 5;
+      if (foldedHaystack.includes(folded)) score += 3;
+      if (post.title.toLowerCase().includes(needle)) score += 5;
+      return { post, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || b.post.publishedAt.localeCompare(a.post.publishedAt))
+    .slice(0, limit)
+    .map((entry) => entry.post);
+}
+
+/** Small numbers the blog chrome shows ("12 článků · 8 destinací"). */
+export function blogStats(): {
+  postCount: number;
+  destinationCount: number;
+  latestPublishedAt: string | null;
+} {
+  const posts = listPublishedPosts();
+  return {
+    postCount: posts.length,
+    destinationCount: listDestinationHubs().length,
+    latestPublishedAt: posts[0]?.updatedAt ?? posts[0]?.publishedAt ?? null,
+  };
+}
+
+/** Test helper: drop every cache. */
+export function resetBlogCache(): void {
+  indexCache = null;
+  postCache.clear();
 }

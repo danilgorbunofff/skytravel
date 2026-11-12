@@ -204,9 +204,13 @@ export default function AdminPage() {
         title="Smazat nabídku?"
         message="Opravdu chcete tuto nabídku smazat? Tato akce je nevratná."
         confirmLabel="Smazat"
-        onConfirm={() => {
-          performDelete();
-          showToast("Nabídka byla smazána.");
+        onConfirm={async () => {
+          try {
+            await performDelete();
+            showToast("Nabídka byla smazána.");
+          } catch {
+            showToast("Smazání se nezdařilo.", "error");
+          }
         }}
         onCancel={() => setConfirmDeleteId(null)}
       />

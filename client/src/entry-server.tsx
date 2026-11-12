@@ -10,6 +10,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SsrDataContext, serializeSsrPayload } from "./ssr/SsrDataContext";
 import type { SsrPayload } from "./ssr/types";
 import { headDataFor, renderHead } from "./seo/head";
+import { setServerLang } from "./lib/locale";
 import csDict from "./data/translations/cs";
 import ruDict from "./data/translations/ru";
 
@@ -27,6 +28,7 @@ export function render(input: Omit<SsrPayload, "dict">): RenderResult {
     dict: (input.lang === "ru" ? ruDict : csDict) as Record<string, string>,
   };
 
+  setServerLang(payload.lang);
   const html = renderToString(
     <ErrorBoundary>
       <SsrDataContext.Provider value={payload}>

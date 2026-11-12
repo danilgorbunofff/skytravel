@@ -5,6 +5,7 @@ import type { SearchFilterState } from "../hooks/useSearchFilters";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { SearchFilters } from "./SearchFilters";
 import { useFocusTrap, useEscapeKey } from "../hooks/useFocusTrap";
+import { localeForText } from "../../../lib/locale";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -138,14 +139,17 @@ export function MobileFilterDrawer({
             <button
               type="button"
               className="mobile-filter-drawer__reset"
-              onClick={() => { onReset(); onClose(); }}
+              onClick={() => {
+                onReset();
+                onClose();
+              }}
             >
               <RotateCcw size={14} />
               {t("sFilterReset")}
             </button>
             <button type="button" className="btn-primary" onClick={onClose}>
               {t("sDrawerApplyPrefix")}{" "}
-              {filteredCount != null ? filteredCount.toLocaleString("cs-CZ") : ""}{" "}
+              {filteredCount != null ? filteredCount.toLocaleString(localeForText()) : ""}{" "}
               {t("sStickyOffers")}
             </button>
           </div>

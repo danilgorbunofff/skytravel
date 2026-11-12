@@ -1,4 +1,6 @@
-import { SiteFooter, SiteHeader } from "../components/public/SiteChrome";
+import SiteHeader from "../components/SiteHeader";
+import { AppFooter } from "../components/AppFooter";
+import { useLanguage } from "../hooks/useLanguage";
 import { StickyTelegram } from "../components/public/StickyTelegram";
 import { publicStrings } from "../components/public/strings";
 import { localePath, type PublicLocale } from "../i18n/locales";
@@ -7,9 +9,10 @@ import "../public.css";
 
 export default function NotFoundPage({ lang }: { lang: PublicLocale }) {
   const s = publicStrings(lang);
+  const { t } = useLanguage();
   return (
     <div className="pub-page">
-      <SiteHeader lang={lang} />
+      <SiteHeader />
       <main id="main-content" className="pub-main">
         <section className="pub-hero">
           <div className="container">
@@ -23,7 +26,7 @@ export default function NotFoundPage({ lang }: { lang: PublicLocale }) {
           </div>
         </section>
       </main>
-      <SiteFooter lang={lang} />
+      <AppFooter t={t} />
       <StickyTelegram lang={lang} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
+import { formatDate } from "../../../lib/locale";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -47,7 +48,7 @@ function getMonthGrid(year: number, month: number): (Date | null)[][] {
 
 function getMonthLabel(year: number, month: number): string {
   const date = new Date(year, month, 1);
-  return date.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+  return formatDate(date, { month: "long", year: "numeric" });
 }
 
 export function DateRangePicker({
@@ -142,9 +143,10 @@ export function DateRangePicker({
     );
   }
 
-  const displayText = startDate || endDate
-    ? `${startDate ? new Date(startDate).toLocaleDateString("cs-CZ") : "—"} → ${endDate ? new Date(endDate).toLocaleDateString("cs-CZ") : "—"}`
-    : t("sFormDatePlaceholder");
+  const displayText =
+    startDate || endDate
+      ? `${startDate ? formatDate(startDate) : "—"} → ${endDate ? formatDate(endDate) : "—"}`
+      : t("sFormDatePlaceholder");
 
   return (
     <div className="date-range-picker">
