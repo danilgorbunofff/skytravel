@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useLanguage, type LanguageKey } from "../hooks/useLanguage";
 import { useAdminAuth } from "../hooks/useAdminAuth";
+import { useEscapeKey } from "../features/search/hooks/useFocusTrap";
 import "../site.css";
 
 const LANGS: { code: LanguageKey; flag: string; label: string }[] = [
@@ -19,9 +20,21 @@ export default function SiteHeader() {
   function closeMenu() {
     setMobileMenuOpen(false);
   }
+  useEscapeKey(closeMenu, mobileMenuOpen);
+
+  // A tap anywhere outside the header (the dimmed page) closes the open menu
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!headerRef.current?.contains(e.target as Node)) setMobileMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [mobileMenuOpen]);
 
   return (
-    <header className="site-header">
+    <header className="site-header" ref={headerRef}>
       <div className="container header-top">
         <Link className="logo" to="/" aria-label="SkyTravel — domů" onClick={closeMenu}>
           <span className="logo__sky">Sky</span>

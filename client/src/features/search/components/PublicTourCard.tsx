@@ -387,6 +387,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           <button
             type="button"
             className="tour-card__detail-btn"
+            aria-label={t("sCardDetail")}
             onClick={(event) => stopCardAction(event, () => onOpenDetail(tour))}
           >
             <Search size={16} aria-hidden="true" />

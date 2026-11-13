@@ -199,9 +199,10 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
 
         {shareToast && (
           <div
+            role="status"
             className={`tour-detail-modal__toast ${shareToast === "copied" ? "is-success" : "is-error"}`}
           >
-            {shareToast === "copied" ? "Odkaz zkopírován" : "Sdílení se nezdařilo"}
+            {shareToast === "copied" ? t("sShareCopied") : t("sShareFailed")}
           </div>
         )}
 

@@ -9593,3 +9593,22 @@ html[lang="ru"] .logo {
 .price-slider__track input[type="range"] {
   height: 24px;
 }
+
+/* ===== Overlays ===== */
+
+/* Phone tour modal has a sticky "Poptat" bar, so the same button inside the price card is redundant */
+.tour-detail-modal--mobile .tour-price-card__cta {
+  display: none;
+}
+
+.tour-card__detail-btn {
+  position: relative;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+}
+
+.compare-view__remove,
+.compare-view__diff {
+  color: #b91c1c;
+}

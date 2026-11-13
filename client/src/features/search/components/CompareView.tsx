@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { X, Trophy, ArrowRight } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
@@ -5,6 +6,7 @@ import { formatPrice } from "../../../utils";
 import { fmtDate, starsDisplay } from "../../../lib/formatters";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { getBoardLabel, getTransportLabel } from "../constants";
+import { useFocusTrap, useEscapeKey } from "../hooks/useFocusTrap";
 
 interface Props {
   tours: UnifiedTour[];
@@ -58,6 +60,16 @@ function findBest(tours: UnifiedTour[], field: "price" | "stars" | "board"): Set
 }
 
 export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t }: Props) {
+  const dialogRef = useFocusTrap(true);
+  useEscapeKey(onClose);
+  // Full-screen dialog: keep the page behind it from scrolling
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   const transportLabels = getTransportLabel(t);
   const boardLabels = getBoardLabel(t);
   const bestPrice = findBest(tours, "price");
@@ -71,9 +83,15 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
   );
 
   return (
-    <div className="compare-view">
+    <div
+      ref={dialogRef}
+      className="compare-view"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compare-view-title"
+    >
       <div className="compare-view__header">
-        <h2>{t("sCompareTitle")}</h2>
+        <h2 id="compare-view-title">{t("sCompareTitle")}</h2>
         <div className="compare-view__header-actions">
           <button type="button" onClick={onClear}>
             {t("sCompareClearAll")}
@@ -84,7 +102,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
             onClick={onClose}
             aria-label={t("sAriaClose")}
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -117,7 +135,7 @@ export function CompareView({ tours, onRemove, onClear, onClose, onOpenDetail, t
                 {tour.stars ? starsDisplay(tour.stars) : "\u00A0"}
               </div>
               <button type="button" className="compare-view__remove" onClick={() => onRemove(id)}>
-                <X size={14} /> Odebrat
+                <X size={14} aria-hidden="true" /> {t("sCompareRemove")}
               </button>
             </div>
           );
