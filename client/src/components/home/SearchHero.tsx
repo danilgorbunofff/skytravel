@@ -54,7 +54,8 @@ export default function SearchHero({
             height={1067}
             alt=""
             loading={index === 0 ? "eager" : "lazy"}
-            fetchPriority={index === 0 ? "high" : undefined}
+            // React 18 only forwards the lowercase attribute (camelCase logs a warning).
+            {...(index === 0 ? { fetchpriority: "high" } : {})}
             decoding="async"
           />
         ))}
@@ -87,11 +88,15 @@ export default function SearchHero({
               style={{ position: "relative", cursor: "pointer" }}
               onClick={onDateToggle}
             >
-              <label style={{ pointerEvents: "none" }}>{t("searchDate")}</label>
+              <label htmlFor="searchDate" style={{ pointerEvents: "none" }}>
+                {t("searchDate")}
+              </label>
               <div className="hero-search__control">
+                {/* Read-only field that opens the date picker: a combobox may carry aria-expanded. */}
                 <input
                   id="searchDate"
                   type="text"
+                  role="combobox"
                   value={displayDate}
                   placeholder={t("searchDateAny")}
                   readOnly

@@ -59,7 +59,14 @@ export default function TourGrid({ ownTours, loading, error, onTourClick, t }: P
           <h2>{t("sectionOwnTitle")}</h2>
           <p className="section-subtitle">{t("sectionOwnSub")}</p>
         </header>
-        <div id="ownGrid" className="exclusive-row">
+        {/* Scrolls sideways on phones: focusable so keyboard users can scroll it too. */}
+        <div
+          id="ownGrid"
+          className="exclusive-row"
+          role="region"
+          aria-label={t("sectionOwnTitle")}
+          tabIndex={0}
+        >
           {ownTours.map((tour) => (
             <TourCard
               key={`${tour.id ?? tour.destination}`}

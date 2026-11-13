@@ -43,7 +43,11 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <Link to="/" className="text-3xl font-extrabold tracking-tight no-underline">
+          <Link
+            to="/"
+            className="text-3xl font-extrabold tracking-tight no-underline"
+            data-logotype
+          >
             <span className="text-primary">Sky</span>
             <span className="text-amber-500">Travel</span>
           </Link>

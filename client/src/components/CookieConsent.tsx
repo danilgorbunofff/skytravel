@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useLanguage } from "../hooks/useLanguage";
+import { useFocusTrap } from "../features/search/hooks/useFocusTrap";
 import type { CookiePrefs } from "../hooks/useCookieConsent";
 
 type Props = {
@@ -19,15 +21,26 @@ export default function CookieConsent({
   applyCookiePrefs,
 }: Props) {
   const { t } = useLanguage();
+  const trapRef = useFocusTrap(showCookies && cookieSettingsOpen);
+
+  useEffect(() => {
+    if (!showCookies || !cookieSettingsOpen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setCookieSettingsOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showCookies, cookieSettingsOpen, setCookieSettingsOpen]);
 
   if (!showCookies) return null;
 
   return (
     <>
-      <div className="cookie-banner" role="dialog" aria-live="polite" aria-label="Cookie consent">
+      {/* Non-blocking notice, not a modal: a labelled region the page can be used around. */}
+      <section className="cookie-banner" aria-labelledby="cookie-banner-title">
         <div className="cookie-banner__content">
           <div className="cookie-banner__text">
-            <strong>{t("cookieTitle")}</strong>
+            <strong id="cookie-banner-title">{t("cookieTitle")}</strong>
             <span>{t("cookieText")}</span>
           </div>
           <div className="cookie-banner__actions">
@@ -58,34 +71,45 @@ export default function CookieConsent({
             {t("cookieManage")}
           </button>
         </div>
-      </div>
+      </section>
 
       {cookieSettingsOpen && (
         <div
+          ref={trapRef}
           className="cookie-modal"
           role="dialog"
           aria-modal="true"
-          aria-label={t("cookieSettingsTitle")}
+          aria-labelledby="cookie-modal-title"
         >
-          <div className="cookie-modal__backdrop" onClick={() => setCookieSettingsOpen(false)} />
+          <div
+            className="cookie-modal__backdrop"
+            aria-hidden="true"
+            onClick={() => setCookieSettingsOpen(false)}
+          />
           <div className="cookie-modal__card">
             <div className="cookie-modal__head">
-              <strong>{t("cookieSettingsTitle")}</strong>
-              <button type="button" onClick={() => setCookieSettingsOpen(false)}>
-                ✕
+              <strong id="cookie-modal-title">{t("cookieSettingsTitle")}</strong>
+              <button
+                type="button"
+                aria-label={t("sModalClose")}
+                onClick={() => setCookieSettingsOpen(false)}
+              >
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
             <p className="cookie-modal__intro">{t("cookieSettingsIntro")}</p>
             <div className="cookie-modal__list">
               <div className="cookie-modal__item">
                 <div>
-                  <strong>{t("cookieMarketing")}</strong>
+                  <strong id="cookie-marketing-label">{t("cookieMarketing")}</strong>
                   <span>{t("cookieMarketingDesc")}</span>
                 </div>
                 <button
                   type="button"
+                  role="switch"
                   className={`cookie-toggle${cookiePrefs.marketing ? " is-on" : ""}`}
-                  aria-pressed={cookiePrefs.marketing}
+                  aria-checked={cookiePrefs.marketing}
+                  aria-labelledby="cookie-marketing-label"
                   onClick={() =>
                     setCookiePrefs((prev) => ({ ...prev, marketing: !prev.marketing }))
                   }
@@ -93,13 +117,15 @@ export default function CookieConsent({
               </div>
               <div className="cookie-modal__item">
                 <div>
-                  <strong>{t("cookieAnalytics")}</strong>
+                  <strong id="cookie-analytics-label">{t("cookieAnalytics")}</strong>
                   <span>{t("cookieAnalyticsDesc")}</span>
                 </div>
                 <button
                   type="button"
+                  role="switch"
                   className={`cookie-toggle${cookiePrefs.analytics ? " is-on" : ""}`}
-                  aria-pressed={cookiePrefs.analytics}
+                  aria-checked={cookiePrefs.analytics}
+                  aria-labelledby="cookie-analytics-label"
                   onClick={() =>
                     setCookiePrefs((prev) => ({ ...prev, analytics: !prev.analytics }))
                   }
@@ -107,14 +133,16 @@ export default function CookieConsent({
               </div>
               <div className="cookie-modal__item">
                 <div>
-                  <strong>{t("cookieNecessary")}</strong>
+                  <strong id="cookie-necessary-label">{t("cookieNecessary")}</strong>
                   <span>{t("cookieNecessaryDesc")}</span>
                 </div>
                 <button
                   type="button"
+                  role="switch"
                   className="cookie-toggle is-on is-disabled"
                   disabled
-                  aria-pressed
+                  aria-checked
+                  aria-labelledby="cookie-necessary-label"
                 />
               </div>
             </div>

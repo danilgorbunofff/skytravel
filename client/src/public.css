@@ -34,7 +34,8 @@
 }
 
 .pub-muted {
-  color: var(--muted);
+  /* --muted is 3.9:1 on the tinted lead section; this is 5.5:1. */
+  color: #4e5f79;
   margin-bottom: 1rem;
 }
 
@@ -85,12 +86,12 @@
 }
 
 .pub-btn--tg {
-  background: #229ed9;
+  background: #1772a3;
   color: #fff;
 }
 
 .pub-btn--tg:hover {
-  background: #1b8bc0;
+  background: #125d86;
 }
 
 /* ── Landing hero ───────────────────────────────────── */
@@ -260,14 +261,14 @@
   align-items: center;
   gap: 0.4rem;
   min-height: 44px;
-  color: #1b7fb0;
+  color: #125d86;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .pub-tg-link:hover {
-  color: #13628a;
+  color: #0c4566;
 }
 
 .pub-deals__empty p {
@@ -585,7 +586,7 @@
   min-height: 52px;
   padding: 0 1.1rem;
   border-radius: 999px;
-  background: #229ed9;
+  background: #1772a3;
   color: #fff;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45);
@@ -595,7 +596,7 @@
 }
 
 .pub-sticky-tg:hover {
-  background: #1b8bc0;
+  background: #125d86;
 }
 
 /* Out of the way while the inquiry form or the Telegram band is on screen. */
