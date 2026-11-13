@@ -7,6 +7,7 @@ import { AppFooter } from "../components/AppFooter";
 import { SkipToContent } from "../components/SkipToContent";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import "../site.css";
+import { countLabel } from "../lib/formatters";
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function FavoritesPage() {
           <h1>{t("favoritesPageTitle")}</h1>
           {favoriteTours.length > 0 && (
             <p className="favorites-page__count">
-              {favoriteTours.length} {t("favoritesPageCount")}
+              {countLabel(t, favoriteTours.length, "savedTours")}
             </p>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isPlausibleTourPrice, MIN_PUBLIC_TOUR_PRICE_CZK } from "./prices";
+import { discountPercent, isPlausibleTourPrice, MIN_PUBLIC_TOUR_PRICE_CZK } from "./prices";
 
 describe("isPlausibleTourPrice", () => {
   it("accepts prices at or above minimum", () => {
@@ -29,5 +29,23 @@ describe("isPlausibleTourPrice", () => {
 describe("MIN_PUBLIC_TOUR_PRICE_CZK", () => {
   it("equals 2000", () => {
     expect(MIN_PUBLIC_TOUR_PRICE_CZK).toBe(2000);
+  });
+});
+
+describe("discountPercent", () => {
+  it("returns the rounded saving when the original price is higher", () => {
+    expect(discountPercent(18000, 24000)).toBe(25);
+  });
+
+  it("ignores missing, equal, lower or implausible original prices", () => {
+    expect(discountPercent(18000, 0)).toBeNull();
+    expect(discountPercent(18000, 18000)).toBeNull();
+    expect(discountPercent(18000, 15000)).toBeNull();
+    expect(discountPercent(500, 24000)).toBeNull();
+  });
+
+  it("hides rounding noise and absurd discounts", () => {
+    expect(discountPercent(19800, 20000)).toBeNull();
+    expect(discountPercent(2500, 90000)).toBeNull();
   });
 });

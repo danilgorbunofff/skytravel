@@ -2440,6 +2440,15 @@ html[lang="ru"] .logo {
   align-items: start;
 }
 
+/* Active search: just the form, so the first results sit near the top of the screen. */
+.search-hero-section--compact {
+  padding: 1rem 0;
+}
+
+.search-hero-section--compact .search-hero-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .search-eyebrow {
   font-weight: 800;
   text-transform: uppercase;
@@ -2662,11 +2671,8 @@ html[lang="ru"] .logo {
   max-height: calc(100dvh - 185px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.search-sidebar::-webkit-scrollbar {
-  display: none;
+  /* Visible scrollbar: filters below the fold must look scrollable. */
+  scrollbar-width: thin;
 }
 
 .search-filter-block,
@@ -6059,6 +6065,101 @@ html[lang="ru"] .logo {
   font-style: italic;
 }
 
+/* Old price + saving next to the current price. */
+.tour-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+}
+
+.tour-card__price-old {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.tour-card__discount {
+  align-self: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+/* The title button opens the detail; its ::after stretches the hit area over the card. */
+.tour-card {
+  position: relative;
+}
+
+.tour-card__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tour-card__open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.tour-card__open:focus-visible {
+  outline: none;
+}
+
+.tour-card:has(.tour-card__open:focus-visible) {
+  outline: 3px solid var(--blue-700);
+  outline-offset: 2px;
+}
+
+.tour-card__heart,
+.tour-card__compare {
+  z-index: 2;
+}
+
+.tour-card__heart:focus-visible,
+.tour-card__compare:focus-visible {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 2px;
+}
+
+/* Compare stays reachable by keyboard and on touch screens (no hover there). */
+.tour-card__compare:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .tour-card__compare {
+    opacity: 1;
+  }
+}
+
+/* Saved tour whose departure date has passed. */
+.tour-card__status-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #334155;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.tour-card.is-departed .tour-card__image img {
+  filter: grayscale(0.8);
+  opacity: 0.75;
+}
+
 .tour-card__offers-count {
   margin-top: 8px;
   font-size: 0.78rem;
@@ -6425,81 +6526,6 @@ html[lang="ru"] .logo {
   max-width: 380px;
 }
 
-.tour-detail-modal__alert {
-  width: 100%;
-  max-width: 380px;
-  display: flex;
-  justify-content: center;
-}
-.tour-detail-modal__alert-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  width: 100%;
-}
-.tour-detail-modal__alert-btn:hover {
-  border-color: #0ea5e9;
-  color: #0ea5e9;
-  background: #f0f9ff;
-}
-.tour-detail-modal__alert-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-}
-.tour-detail-modal__alert-input {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  width: 180px;
-  outline: none;
-}
-.tour-detail-modal__alert-input:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
-}
-.tour-detail-modal__alert-submit {
-  padding: 8px 14px;
-  background: #0ea5e9;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-.tour-detail-modal__alert-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.tour-detail-modal__alert-sent {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: #f0fdf4;
-  color: #065f46;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-
 .tour-detail-modal__sticky-cta {
   position: sticky;
   bottom: 0;
@@ -6552,9 +6578,6 @@ html[lang="ru"] .logo {
     overflow-y: auto;
     padding: 16px;
     -webkit-overflow-scrolling: touch;
-  }
-  .tour-detail-modal--mobile .tour-detail-modal__alert-input {
-    width: 140px;
   }
 }
 
@@ -7977,8 +8000,6 @@ html[lang="ru"] .logo {
   .tour-inquiry-form__submit,
   .tour-detail-modal__close,
   .tour-detail-modal__share,
-  .tour-detail-modal__alert-btn,
-  .tour-detail-modal__alert-submit,
   .tour-detail-modal__cta-btn,
   .mobile-filter-drawer__footer .btn-primary,
   .mobile-filter-drawer__reset,
@@ -8196,6 +8217,12 @@ html[lang="ru"] .logo {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
+}
+
+/* Saved tours are not arriving from a search: no entrance fade, so they can never be
+   left invisible (the fade starts at opacity 0 and stalls while the tab is hidden). */
+.favorites-page .tour-card {
+  animation: none;
 }
 
 /* ── Back to Top ────────────────────────────────────────────── */

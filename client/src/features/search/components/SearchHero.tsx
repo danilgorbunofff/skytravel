@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Plane, Bus, Car, Train, Ship, Search, Users, Plus, Minus } from "lucide-react";
+import {
+  CalendarDays,
+  Plane,
+  Bus,
+  Car,
+  Train,
+  Ship,
+  Search,
+  Users,
+  Plus,
+  Minus,
+} from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { getTransportOptions, DEFAULT_ADULTS, DEFAULT_CHILDREN } from "../constants";
@@ -24,6 +35,8 @@ interface Props {
   onChildrenChange: (value: number) => void;
   onSubmit: (event: React.FormEvent) => void;
   onDestinationSelect: (slug: string | undefined, label: string) => void;
+  /** A search is active: drop the marketing copy so results start higher on screen. */
+  compact?: boolean;
 }
 
 const TRANSPORT_ICON_MAP: Record<string, typeof Plane> = {
@@ -53,6 +66,7 @@ export function SearchHero({
   onChildrenChange,
   onSubmit,
   onDestinationSelect,
+  compact = false,
 }: Props) {
   const TRANSPORT_OPTIONS = getTransportOptions(t);
   const TransportIcon = TRANSPORT_ICON_MAP[transport] ?? Plane;
@@ -60,8 +74,12 @@ export function SearchHero({
   // Raw string state for editable number inputs (allows empty while typing)
   const [adultsRaw, setAdultsRaw] = useState(String(adults));
   const [childrenRaw, setChildrenRaw] = useState(String(children));
-  useEffect(() => { setAdultsRaw(String(adults)); }, [adults]);
-  useEffect(() => { setChildrenRaw(String(children)); }, [children]);
+  useEffect(() => {
+    setAdultsRaw(String(adults));
+  }, [adults]);
+  useEffect(() => {
+    setChildrenRaw(String(children));
+  }, [children]);
 
   const clampAdults = (v: number) => Math.min(9, Math.max(1, Math.round(v)));
   const clampChildren = (v: number) => Math.min(6, Math.max(0, Math.round(v)));
@@ -83,31 +101,39 @@ export function SearchHero({
   };
 
   const handleAdultsStep = (delta: number) => {
-    const base = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+    const base =
+      adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
     const next = clampAdults(base + delta);
     setAdultsRaw(String(next));
     onAdultsChange(next);
   };
 
   const handleChildrenStep = (delta: number) => {
-    const base = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
+    const base =
+      childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
     const next = clampChildren(base + delta);
     setChildrenRaw(String(next));
     onChildrenChange(next);
   };
 
   // Derived values for stepper disabled state
-  const currentAdults = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
-  const currentChildren = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
+  const currentAdults =
+    adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+  const currentChildren =
+    childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
 
   return (
-    <section className="search-hero-section">
+    <section className={`search-hero-section${compact ? " search-hero-section--compact" : ""}`}>
       <div className="container search-hero-grid">
-        <div>
-          <p className="search-eyebrow">SkyTravel search</p>
-          <h1>{t("sHeroTitle")}</h1>
-          <p>{t("sHeroSubtitle")}</p>
-        </div>
+        {compact ? (
+          <h1 className="sr-only">{t("sHeroTitle")}</h1>
+        ) : (
+          <div>
+            <p className="search-eyebrow">SkyTravel search</p>
+            <h1>{t("sHeroTitle")}</h1>
+            <p>{t("sHeroSubtitle")}</p>
+          </div>
+        )}
 
         <form className="public-search-panel" onSubmit={onSubmit}>
           {/* Row 1: Destination, Od, Do */}
@@ -137,7 +163,9 @@ export function SearchHero({
               />
             </div>
             {dateError && (
-              <span className="search-field-error" role="alert">{dateError}</span>
+              <span className="search-field-error" role="alert">
+                {dateError}
+              </span>
             )}
           </label>
           <label className="search-field-end">
@@ -153,7 +181,9 @@ export function SearchHero({
               />
             </div>
             {dateError && (
-              <span className="search-field-error" role="alert">{dateError}</span>
+              <span className="search-field-error" role="alert">
+                {dateError}
+              </span>
             )}
           </label>
 
@@ -172,10 +202,20 @@ export function SearchHero({
                   onBlur={handleAdultsBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleAdultsStep(1)} disabled={currentAdults >= 9} aria-label="Increase adults">
+                  <button
+                    type="button"
+                    onClick={() => handleAdultsStep(1)}
+                    disabled={currentAdults >= 9}
+                    aria-label="Increase adults"
+                  >
                     <Plus size={12} />
                   </button>
-                  <button type="button" onClick={() => handleAdultsStep(-1)} disabled={currentAdults <= 1} aria-label="Decrease adults">
+                  <button
+                    type="button"
+                    onClick={() => handleAdultsStep(-1)}
+                    disabled={currentAdults <= 1}
+                    aria-label="Decrease adults"
+                  >
                     <Minus size={12} />
                   </button>
                 </div>
@@ -194,10 +234,20 @@ export function SearchHero({
                   onBlur={handleChildrenBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleChildrenStep(1)} disabled={currentChildren >= 6} aria-label="Increase children">
+                  <button
+                    type="button"
+                    onClick={() => handleChildrenStep(1)}
+                    disabled={currentChildren >= 6}
+                    aria-label="Increase children"
+                  >
                     <Plus size={12} />
                   </button>
-                  <button type="button" onClick={() => handleChildrenStep(-1)} disabled={currentChildren <= 0} aria-label="Decrease children">
+                  <button
+                    type="button"
+                    onClick={() => handleChildrenStep(-1)}
+                    disabled={currentChildren <= 0}
+                    aria-label="Decrease children"
+                  >
                     <Minus size={12} />
                   </button>
                 </div>

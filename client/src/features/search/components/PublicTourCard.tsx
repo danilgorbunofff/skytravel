@@ -1,24 +1,24 @@
 import { memo, useEffect, useRef, useState } from "react";
 import {
   Heart,
-  Search,
   Plane,
   Bus,
   Car,
   Train,
   Ship,
-  Layers,
-  Moon,
+  Scale,
   Utensils,
   Coffee,
+  CalendarDays,
+  ChevronRight,
 } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
 import StarRating from "../../../components/StarRating";
 import { buildSrcSet, isValidImageUrl } from "../../../lib/images";
-import { isPlausibleTourPrice } from "../../../lib/prices";
-import { fmtDate } from "../../../lib/formatters";
+import { discountPercent, isPlausibleTourPrice } from "../../../lib/prices";
+import { countLabel, fmtDate } from "../../../lib/formatters";
 import { favorites as popularDestinations } from "../../../data";
 import { fallbackDestinationAliases, getTransportLabel, getBoardLabel } from "../constants";
 
@@ -59,14 +59,14 @@ const TRANSPORT_ICONS: Record<string, typeof Plane> = {
   boat: Ship,
 };
 
-const BOARD_ICONS: Record<string, typeof Moon> = {
-  AI: Moon,
-  UAI: Moon,
+// Meals only: all-inclusive and full/half board share the cutlery icon; breakfast gets a cup;
+// room-only and self-catering show no icon.
+const BOARD_ICONS: Record<string, typeof Utensils> = {
+  AI: Utensils,
+  UAI: Utensils,
   FB: Utensils,
   HB: Utensils,
   BB: Coffee,
-  RO: Coffee,
-  SC: Coffee,
 };
 
 /** Props for {@link PublicTourCard}. */
@@ -111,17 +111,6 @@ export const PublicTourCard = memo(function PublicTourCard({
   onToggleCompare,
   compareFull = false,
 }: Props) {
-  function stopCardAction(event: React.MouseEvent, action: () => void) {
-    event.stopPropagation();
-    action();
-  }
-
-  function handleCardKeyDown(event: React.KeyboardEvent<HTMLElement>) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onOpenDetail(tour);
-  }
-
   const imageSrc = isValidImageUrl(tour.image)
     ? tour.image
     : getTourFallbackImage(tour.destination);
@@ -129,6 +118,11 @@ export const PublicTourCard = memo(function PublicTourCard({
   const TransportIcon = TRANSPORT_ICONS[tour.transport] ?? Plane;
   const transportLabels = getTransportLabel(t);
   const boardLabels = getBoardLabel(t);
+  const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
+  const hasPrice = isPlausibleTourPrice(tour.price);
+  const discount = discountPercent(tour.price, tour.originalPrice);
+  const departed = isDeparted(tour.startDate);
+  const validStars = tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5;
 
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
@@ -154,105 +148,133 @@ export const PublicTourCard = memo(function PublicTourCard({
     animationDelay: `${Math.min(animationIndex * 50, 300)}ms`,
   } as React.CSSProperties;
 
-  // Grid view
+  const cardClass = `tour-card tour-card--${viewMode}${departed ? " is-departed" : ""}`;
+
+  // The title button is the card's single "open detail" control; CSS stretches its hit area
+  // over the whole card, so heart/compare stay real, separate buttons (no nested controls).
+  const openButton = (
+    <button type="button" className="tour-card__open" onClick={() => onOpenDetail(tour)}>
+      {tour.title}
+    </button>
+  );
+
+  const heartButton = (
+    <button
+      type="button"
+      className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
+      aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
+      aria-pressed={isFavorite}
+      onClick={() => onToggleFavorite(tour)}
+    >
+      <Heart size={16} aria-hidden="true" />
+    </button>
+  );
+
+  const image = imageLoaded ? (
+    <img
+      src={imageSrc}
+      srcSet={srcSet}
+      sizes={
+        viewMode === "list"
+          ? "200px"
+          : srcSet
+            ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            : undefined
+      }
+      alt=""
+      loading="lazy"
+      decoding="async"
+      width={viewMode === "list" ? 200 : 640}
+      height={viewMode === "list" ? 140 : 400}
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (!img.dataset.fallback) {
+          img.dataset.fallback = "1";
+          img.src = "/placeholder-tour.svg";
+        }
+      }}
+    />
+  ) : (
+    <div ref={imgRef} aria-hidden="true" className="w-full h-full bg-slate-200 dark:bg-slate-700" />
+  );
+
+  const badges = (
+    <>
+      {tour.nights != null && (
+        <span className="tour-card__nights-badge">{countLabel(t, tour.nights, "nights")}</span>
+      )}
+      {(tour.offersCount ?? 0) > 1 && (
+        <span className="tour-card__offers-badge">
+          {countLabel(t, tour.offersCount ?? 0, "sTermsCount")}
+        </span>
+      )}
+      {departed && <span className="tour-card__status-badge">{t("sDeparted")}</span>}
+    </>
+  );
+
+  const price = hasPrice ? (
+    <>
+      {discount != null && (
+        <s className="tour-card__price-old">
+          <span className="sr-only">{t("sOriginalPrice")}: </span>
+          {formatPrice(tour.originalPrice)}
+        </s>
+      )}
+      <strong>{formatPrice(tour.price)}</strong>
+      <span className="tour-card__price-suffix"> {t("sPerPerson")}</span>
+      {discount != null && <span className="tour-card__discount">−{discount} %</span>}
+    </>
+  ) : (
+    <span className="tour-card__price-request">{t("sPriceOnRequest")}</span>
+  );
+
+  const dates = tour.startDate && (
+    <>
+      <CalendarDays size={12} aria-hidden="true" />
+      {fmtDate(tour.startDate)}
+      {tour.endDate && ` – ${fmtDate(tour.endDate)}`}
+    </>
+  );
+
   if (viewMode === "grid") {
-    const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
-
     return (
-      <article
-        className="tour-card tour-card--grid"
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpenDetail(tour)}
-        onKeyDown={handleCardKeyDown}
-        style={staggerStyle}
-      >
+      <article className={cardClass} style={staggerStyle}>
         <div className="tour-card__image">
-          {imageLoaded ? (
-            <img
-              src={imageSrc}
-              srcSet={srcSet}
-              sizes={
-                srcSet ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" : undefined
-              }
-              alt={tour.title}
-              loading="lazy"
-              decoding="async"
-              width={640}
-              height={400}
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (!img.dataset.fallback) {
-                  img.dataset.fallback = "1";
-                  img.src = "/placeholder-tour.svg";
-                }
-              }}
-            />
-          ) : (
-            <div
-              ref={imgRef}
-              aria-hidden="true"
-              className="w-full h-full bg-slate-200 dark:bg-slate-700"
-            />
-          )}
-
-          {/* Favorite heart button */}
-          <button
-            type="button"
-            className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
-            aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
-            onClick={(event) => stopCardAction(event, () => onToggleFavorite(tour))}
-          >
-            <Heart size={16} aria-hidden="true" />
-          </button>
-
+          {image}
+          {heartButton}
           {onToggleCompare && (
             <button
               type="button"
               className={`tour-card__compare${isCompared ? " is-active" : ""}${!isCompared && compareFull ? " is-disabled" : ""}`}
-              aria-label={isCompared ? "Odebrat z porovnání" : "Přidat k porovnání"}
-              onClick={(event) => stopCardAction(event, () => onToggleCompare?.(tour))}
+              aria-label={isCompared ? t("sCompareRemoveFrom") : t("sCompareAdd")}
+              aria-pressed={isCompared}
+              title={!isCompared && compareFull ? t("sCompareFull") : undefined}
+              onClick={() => onToggleCompare(tour)}
               disabled={!isCompared && compareFull}
             >
-              <Layers size={14} aria-hidden="true" />
+              <Scale size={14} aria-hidden="true" />
             </button>
           )}
-
-          {/* Duration badge (X nocí) */}
-          {tour.nights != null && (
-            <span className="tour-card__nights-badge">
-              {tour.nights} {t("nights")}
-            </span>
-          )}
-
-          {/* Provider label */}
           {providerLabel && <span className="tour-card__provider">{providerLabel}</span>}
-
-          {/* Offers count badge */}
-          {(tour.offersCount ?? 0) > 1 && (
-            <span className="tour-card__offers-badge">
-              {tour.offersCount} {t("sStateTerms")}
-            </span>
-          )}
+          {badges}
         </div>
 
         <div className="tour-card__body">
           <div className="tour-card__destination">{tour.destination}</div>
-          <h3 className="tour-card__title">{tour.title}</h3>
+          <h3 className="tour-card__title">{openButton}</h3>
 
           <div className="tour-card__meta">
             <span className="tour-card__meta-item">
               <TransportIcon size={14} aria-hidden="true" />
               {transportLabels[tour.transport] ?? tour.transport}
             </span>
-            {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
+            {validStars && (
               <span className="tour-card__meta-item tour-card__stars">
                 <StarRating rating={Number(tour.stars)} />
               </span>
             )}
           </div>
 
-          {/* Board with icon */}
           {tour.board && (
             <div className="tour-card__board">
               {BoardIcon && <BoardIcon size={12} aria-hidden="true" />}
@@ -260,101 +282,29 @@ export const PublicTourCard = memo(function PublicTourCard({
             </div>
           )}
 
-          {/* Dates with transport icon */}
-          {tour.startDate && (
-            <div className="tour-card__dates">
-              <TransportIcon size={12} aria-hidden="true" />
-              {fmtDate(tour.startDate)}
-              {tour.endDate && ` – ${fmtDate(tour.endDate)}`}
-            </div>
-          )}
+          {dates && <div className="tour-card__dates">{dates}</div>}
 
           <div className="tour-card__price-row">
-            <div className="tour-card__price">
-              {isPlausibleTourPrice(tour.price) ? (
-                <>
-                  <strong>{formatPrice(tour.price)}</strong>
-                  <span className="tour-card__price-suffix"> / os.</span>
-                </>
-              ) : (
-                <span className="tour-card__price-request">{t("sPriceOnRequest")}</span>
-              )}
-            </div>
+            <div className="tour-card__price">{price}</div>
           </div>
         </div>
       </article>
     );
   }
 
-  // List view
-  const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
-
   return (
-    <article
-      className="tour-card tour-card--list"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpenDetail(tour)}
-      onKeyDown={handleCardKeyDown}
-      style={staggerStyle}
-    >
+    <article className={cardClass} style={staggerStyle}>
       <div className="tour-card__image tour-card__image--list">
-        {imageLoaded ? (
-          <img
-            src={imageSrc}
-            srcSet={srcSet}
-            sizes="200px"
-            alt={tour.title}
-            loading="lazy"
-            decoding="async"
-            width={200}
-            height={140}
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if (!img.dataset.fallback) {
-                img.dataset.fallback = "1";
-                img.src = "/placeholder-tour.svg";
-              }
-            }}
-          />
-        ) : (
-          <div
-            ref={imgRef}
-            aria-hidden="true"
-            className="w-full h-full bg-slate-200 dark:bg-slate-700"
-          />
-        )}
-
-        {/* Favorite heart button on image */}
-        <button
-          type="button"
-          className={`tour-card__heart${isFavorite ? " is-saved" : ""}`}
-          aria-label={isFavorite ? t("sCardUnsave") : t("sCardSave")}
-          onClick={(event) => stopCardAction(event, () => onToggleFavorite(tour))}
-        >
-          <Heart size={16} aria-hidden="true" />
-        </button>
-
-        {/* Duration badge (X nocí) */}
-        {tour.nights != null && (
-          <span className="tour-card__nights-badge">
-            {tour.nights} {t("nights")}
-          </span>
-        )}
-
-        {/* Offers count badge */}
-        {(tour.offersCount ?? 0) > 1 && (
-          <span className="tour-card__offers-badge">
-            {tour.offersCount} {t("sStateTerms")}
-          </span>
-        )}
+        {image}
+        {heartButton}
+        {badges}
       </div>
 
       <div className="tour-card__body tour-card__body--list">
         <div className="tour-card__list-top">
           <div className="tour-card__destination">{tour.destination}</div>
-          <h3 className="tour-card__title">{tour.title}</h3>
-          {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
+          <h3 className="tour-card__title">{openButton}</h3>
+          {validStars && (
             <span className="tour-card__stars">
               <StarRating rating={Number(tour.stars)} />
             </span>
@@ -373,30 +323,27 @@ export const PublicTourCard = memo(function PublicTourCard({
               {boardLabels[tour.board] ?? tour.board}
             </span>
           )}
-          {tour.startDate && (
-            <span className="tour-card__meta-item">
-              <TransportIcon size={12} aria-hidden="true" />
-              {fmtDate(tour.startDate)}
-              {tour.endDate && `–${fmtDate(tour.endDate)}`}
-            </span>
-          )}
+          {dates && <span className="tour-card__meta-item">{dates}</span>}
         </div>
 
         <div className="tour-card__list-actions">
-          <div className="tour-card__price-row">
-            <strong className="tour-card__price-strong">
-              {isPlausibleTourPrice(tour.price) ? formatPrice(tour.price) : t("sPriceOnRequest")}
-            </strong>
-          </div>
-          <button
-            type="button"
-            className="tour-card__detail-btn"
-            onClick={(event) => stopCardAction(event, () => onOpenDetail(tour))}
-          >
-            <Search size={16} aria-hidden="true" />
-          </button>
+          <div className="tour-card__price-row tour-card__price">{price}</div>
+          {/* Visual cue only: the whole card already opens the detail. */}
+          <span className="tour-card__detail-btn" aria-hidden="true">
+            <ChevronRight size={18} />
+          </span>
         </div>
       </div>
     </article>
   );
 });
+
+/** Departure date already in the past (saved tours can outlive their date). */
+function isDeparted(startDate: string | null | undefined): boolean {
+  if (!startDate) return false;
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return start < today;
+}

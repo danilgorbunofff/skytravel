@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
+import { useLanguage } from "../../../hooks/useLanguage";
+import { countLabel } from "../../../lib/formatters";
 
 interface Props {
   tours: UnifiedTour[];
@@ -10,20 +12,15 @@ interface Props {
 
 const MAX_COMPARE = 4;
 
-function pluralize(count: number): string {
-  if (count === 1) return "1 zájezd";
-  if (count >= 2 && count <= 4) return `${count} zájezdy`;
-  return `${count} zájezdů`;
-}
-
 export function CompareTray({ tours, onExpand, onRemove, onClear }: Props) {
+  const { t } = useLanguage();
   if (tours.length === 0) return null;
 
   const isMaxed = tours.length >= MAX_COMPARE;
-  const countText = `${pluralize(tours.length)} k porovnání`;
+  const countText = `${countLabel(t, tours.length, "sCompareTours")} ${t("sCompareTo")}`;
 
   return (
-    <div className="compare-tray" role="region" aria-label="Porovnání zájezdů">
+    <div className="compare-tray" role="region" aria-label={t("sCompareTitle")}>
       <div className="compare-tray__thumbs">
         {tours.map((tour) => {
           const id = `${tour.source}-${tour.externalId}`;
@@ -33,7 +30,7 @@ export function CompareTray({ tours, onExpand, onRemove, onClear }: Props) {
               type="button"
               className="compare-tray__thumb"
               onClick={() => onRemove(id)}
-              aria-label={`Odebrat ${tour.title}`}
+              aria-label={`${t("sCompareRemove")}: ${tour.title}`}
             >
               <img
                 src={tour.image || "/placeholder-tour.svg"}
@@ -42,23 +39,23 @@ export function CompareTray({ tours, onExpand, onRemove, onClear }: Props) {
                   (e.currentTarget as HTMLImageElement).src = "/placeholder-tour.svg";
                 }}
               />
-              <span className="compare-tray__thumb-x"><X size={10} /></span>
+              <span className="compare-tray__thumb-x">
+                <X size={10} aria-hidden="true" />
+              </span>
             </button>
           );
         })}
-        {isMaxed && (
-          <div className="compare-tray__max-badge">max 4</div>
-        )}
+        {isMaxed && <div className="compare-tray__max-badge">max 4</div>}
       </div>
 
       <span className="compare-tray__count">{countText}</span>
 
       <div className="compare-tray__actions">
         <button type="button" className="compare-tray__expand" onClick={onExpand}>
-          Porovnat ▲
+          {t("sCompareExpand")}
         </button>
         <button type="button" className="compare-tray__clear" onClick={onClear}>
-          Vymazat
+          {t("sCompareClearAll")}
         </button>
       </div>
     </div>

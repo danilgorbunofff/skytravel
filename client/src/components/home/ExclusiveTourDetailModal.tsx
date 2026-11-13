@@ -7,6 +7,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { formatPrice } from "../../utils";
 import { createInquiry } from "../../api";
 import { TourGallery } from "../../features/search/components/TourGallery";
+import { useModalHistory } from "../../features/search/hooks/useModalHistory";
 
 interface Props {
   tour: OwnTour;
@@ -16,6 +17,8 @@ interface Props {
 }
 
 export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
+  // Back closes the modal instead of leaving the page.
+  useModalHistory(onClose);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [animateIn, setAnimateIn] = useState(false);
   const [shareToast, setShareToast] = useState<"copied" | "failed" | null>(null);

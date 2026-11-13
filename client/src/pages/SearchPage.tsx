@@ -25,7 +25,7 @@ import { favorites as popularDestinations } from "../data";
 import { isPlausibleTourPrice } from "../lib/prices";
 import { fetchPublicDestinations } from "../api/publicProviders";
 import type { PublicDestinationSummary } from "../types/providers";
-import { fmtDate } from "../lib/formatters";
+import { countLabel, fmtDate } from "../lib/formatters";
 import {
   useSearchFilters,
   useSearchResults,
@@ -96,6 +96,9 @@ export default function SearchPage() {
     const tourId = params.get("tourId");
     if (!tourId) return;
     deepLinkHandled.current = true;
+    // The modal adds its own ?tourId= history entry; keep the page entry clean so Back
+    // lands on the results and later filter changes do not carry the old tourId.
+    filters.updateParams({ tourId: null }, true);
     const [providerId, ...rest] = tourId.split("-");
     const externalId = rest.join("-");
     if (!providerId || !externalId) return;
@@ -108,21 +111,19 @@ export default function SearchPage() {
           /* tour not found, silently ignore */
         });
     });
-  }, [offerGroups]);
+    // Re-runs are no-ops: deepLinkHandled limits this to the first page load.
+  }, [offerGroups, filters]);
 
-  // Update URL with tourId when modal opens/closes
-  useEffect(() => {
+  // The open tour lives in the modal's own history entry (Back closes it).
+  const detailHistoryUrl = (() => {
+    if (!offerGroups.detailTour || typeof window === "undefined") return undefined;
     const url = new URL(window.location.href);
-    if (offerGroups.detailTour) {
-      url.searchParams.set(
-        "tourId",
-        `${offerGroups.detailTour.source}-${offerGroups.detailTour.externalId}`,
-      );
-    } else {
-      url.searchParams.delete("tourId");
-    }
-    window.history.replaceState(null, "", url.toString());
-  }, [offerGroups.detailTour]);
+    url.searchParams.set(
+      "tourId",
+      `${offerGroups.detailTour.source}-${offerGroups.detailTour.externalId}`,
+    );
+    return `${url.pathname}${url.search}`;
+  })();
 
   // ─── Transient UI state ──────────────────────────────────────────────
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -298,7 +299,7 @@ export default function SearchPage() {
     const dest = filters.activeQuery || filters.activeDestinationSlug || "";
     const count = results.result?.filtered;
     if (dest && count != null) {
-      document.title = `${dest} — ${count} ${count === 1 ? "zájezd" : "zájezdy"} | SkyTravel`;
+      document.title = `${dest} — ${countLabel(t, count, "sCompareTours")} | SkyTravel`;
     }
     const metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
@@ -325,7 +326,7 @@ export default function SearchPage() {
       link.href = window.location.href;
       document.head.appendChild(link);
     }
-  }, [filters.activeQuery, filters.activeDestinationSlug, results.result?.filtered]);
+  }, [filters.activeQuery, filters.activeDestinationSlug, results.result?.filtered, t]);
 
   // ─── JSON‑LD structured data for search results ─────────────────────
   useEffect(() => {
@@ -453,13 +454,21 @@ export default function SearchPage() {
     : 0;
   const noResults = !showFavoritesOnly && results.result != null && results.result.filtered === 0;
   const totalText = showFavoritesOnly
-    ? `${results.displayedTours.length.toLocaleString(localeForText())} ${t("sStateSavedHotels")}`
+    ? countLabel(t, results.displayedTours.length, "savedHotels")
     : results.result
       ? noResults
         ? t("sStateNoOffers")
         : !filters.hasUserFilters
           ? t("sBestDealsTitle")
-          : `${t("sStateShown")} ${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())} ${t("sStateOf")} ${results.result.filtered.toLocaleString(localeForText())} ${t("sStateHotels")}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${results.result.rawFilteredOffers.toLocaleString(localeForText())} ${t("sStateTerms")})` : ""}`
+          : `${t("sStateRange")
+              .replace(
+                "{range}",
+                `${visibleFrom.toLocaleString(localeForText())}–${visibleTo.toLocaleString(localeForText())}`,
+              )
+              .replace(
+                "{count}",
+                countLabel(t, results.result.filtered, "hotels"),
+              )}${results.result.rawFilteredOffers && results.result.rawFilteredOffers > results.result.filtered ? ` (${countLabel(t, results.result.rawFilteredOffers, "sTermsCount")})` : ""}`
       : results.resultsLoading
         ? t("sStateLoading")
         : filters.hasUserFilters
@@ -552,6 +561,7 @@ export default function SearchPage() {
           onAdultsChange={(v) => filters.setAdults(v)}
           onChildrenChange={(v) => filters.setChildren(v)}
           onSubmit={filters.submitSearch}
+          compact={filters.hasUserFilters}
           onDestinationSelect={(slug, label) => {
             filters.setQuery(label);
             if (slug) {
@@ -564,7 +574,7 @@ export default function SearchPage() {
           }}
         />
 
-        <TrustBar t={t} />
+        {!filters.hasUserFilters && <TrustBar t={t} />}
 
         {!filters.hasUserFilters && popularDestinations.length > 0 && (
           <section className="popular-destinations">
@@ -751,6 +761,7 @@ export default function SearchPage() {
           relatedTours={results.result?.items ?? []}
           onClose={offerGroups.closeDetail}
           onNavigateToTour={offerGroups.openTourDetail}
+          historyUrl={detailHistoryUrl}
         />
       )}
 

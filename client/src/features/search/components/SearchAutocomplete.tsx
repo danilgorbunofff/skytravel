@@ -6,6 +6,7 @@ import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { favorites as popularDestinations } from "../../../data";
 import { useRecentSearches } from "../hooks/useRecentSearches";
+import { countLabel } from "../../../lib/formatters";
 
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 200;
@@ -277,11 +278,7 @@ export function SearchAutocomplete({
                 </span>
                 {s.type === "destination" && (
                   <span className="search-autocomplete__meta">
-                    {s.count != null && (
-                      <span>
-                        {s.count} {t("sStickyOffers")}
-                      </span>
-                    )}
+                    {s.count != null && <span>{countLabel(t, s.count, "offers")}</span>}
                     {s.minPrice != null && isPlausibleTourPrice(s.minPrice) && (
                       <span className="search-autocomplete__price">
                         {t("from")} {formatPrice(s.minPrice)}
@@ -291,9 +288,7 @@ export function SearchAutocomplete({
                 )}
                 {s.type === "recent" && s.count != null && (
                   <span className="search-autocomplete__meta">
-                    <span>
-                      {s.count} {t("sStateHotels")}
-                    </span>
+                    <span>{countLabel(t, s.count, "hotels")}</span>
                   </span>
                 )}
               </li>

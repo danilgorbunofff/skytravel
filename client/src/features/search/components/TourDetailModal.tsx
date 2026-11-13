@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon, Share2, Bell } from "lucide-react";
+import {
+  X,
+  Calendar,
+  Plane,
+  Bus,
+  Car,
+  Ship,
+  Train,
+  BedDouble,
+  Utensils,
+  Share2,
+} from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
-import { fmtDate, starsDisplay } from "../../../lib/formatters";
+import { countLabel, fmtDate, starsDisplay } from "../../../lib/formatters";
+import { useModalHistory } from "../hooks/useModalHistory";
 import { TourGallery } from "./TourGallery";
 import { TourPriceCard } from "./TourPriceCard";
 import { TourDetailTabs } from "./TourDetailTabs";
@@ -30,6 +42,8 @@ interface Props {
   relatedTours?: UnifiedTour[];
   onClose: () => void;
   onNavigateToTour?: (tour: UnifiedTour) => void;
+  /** URL for the modal's history entry (e.g. `/search?…&tourId=…`); defaults to the current URL. */
+  historyUrl?: string;
 }
 
 export function TourDetailModal({
@@ -41,8 +55,11 @@ export function TourDetailModal({
   relatedTours = [],
   onClose,
   onNavigateToTour,
+  historyUrl,
 }: Props) {
   const { t } = useLanguage();
+  // Back closes the modal (on phones it is full-screen and Back used to leave the site).
+  useModalHistory(onClose, historyUrl);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [selectedOfferId, setSelectedOfferId] = useState(`${tour.source}-${tour.externalId}`);
   const [animateIn, setAnimateIn] = useState(false);
@@ -144,7 +161,11 @@ export function TourDetailModal({
 
   const photos = selectedOffer.photos?.length
     ? selectedOffer.photos.filter(isValidImageUrl)
-    : [isValidImageUrl(selectedOffer.image) ? selectedOffer.image : getTourFallbackImage(selectedOffer.destination)];
+    : [
+        isValidImageUrl(selectedOffer.image)
+          ? selectedOffer.image
+          : getTourFallbackImage(selectedOffer.destination),
+      ];
 
   const nights =
     selectedOffer.nights ??
@@ -162,7 +183,8 @@ export function TourDetailModal({
   }
 
   const handleShare = useCallback(async () => {
-    const url = window.location.href;
+    // Always a link that reopens this tour, whichever page the modal was opened from.
+    const url = `${window.location.origin}/search?tourId=${encodeURIComponent(currentTourId)}`;
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         await navigator.share({ url, title: selectedOffer.title });
@@ -182,7 +204,7 @@ export function TourDetailModal({
       if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
       shareTimeoutRef.current = setTimeout(() => setShareToast(null), 2500);
     }
-  }, [selectedOffer.title]);
+  }, [currentTourId, selectedOffer.title]);
 
   return (
     <div
@@ -198,17 +220,17 @@ export function TourDetailModal({
         {/* Fixed Header (mobile) / Default (desktop) */}
         {isMobile && (
           <div className="tour-detail-modal__mobile-header">
-            <h3 id="tour-detail-modal-title" className="tour-detail-modal__mobile-title">
+            <h2 id="tour-detail-modal-title" className="tour-detail-modal__mobile-title">
               {selectedOffer.title}
-            </h3>
+            </h2>
             <div className="tour-detail-modal__mobile-header-actions">
               <button
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShareTour")}
               >
-                <Share2 size={18} />
+                <Share2 size={18} aria-hidden="true" />
               </button>
               <button
                 ref={closeButtonRef}
@@ -217,7 +239,7 @@ export function TourDetailModal({
                 onClick={onClose}
                 aria-label={t("sModalClose")}
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -228,8 +250,11 @@ export function TourDetailModal({
 
         {/* Share toast */}
         {shareToast && (
-          <div className={`tour-detail-modal__toast ${shareToast === "copied" ? "is-success" : "is-error"}`}>
-            {shareToast === "copied" ? "Odkaz zkopírován" : "Sdílení se nezdařilo"}
+          <div
+            role="status"
+            className={`tour-detail-modal__toast ${shareToast === "copied" ? "is-success" : "is-error"}`}
+          >
+            {shareToast === "copied" ? t("sShareCopied") : t("sShareFailed")}
           </div>
         )}
 
@@ -242,9 +267,9 @@ export function TourDetailModal({
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShareTour")}
               >
-                <Share2 size={18} />
+                <Share2 size={18} aria-hidden="true" />
               </button>
               <button
                 ref={closeButtonRef}
@@ -253,7 +278,7 @@ export function TourDetailModal({
                 onClick={onClose}
                 aria-label={t("sModalClose")}
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
               <div className="tour-detail-modal__header">
                 <h2 id="tour-detail-modal-title">{selectedOffer.title}</h2>
@@ -278,31 +303,31 @@ export function TourDetailModal({
           {/* Key Facts */}
           <div className="tour-detail-modal__facts">
             <div className="tour-detail-modal__fact">
-              <Calendar size={16} />
+              <Calendar size={16} aria-hidden="true" />
               <span>
                 {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
-                {Number.isFinite(nights) && nights > 0 && ` (${nights} nocí)`}
+                {Number.isFinite(nights) && nights > 0 && ` (${countLabel(t, nights, "nights")})`}
               </span>
             </div>
             <div className="tour-detail-modal__fact">
-              <TransportIcon size={16} />
+              <TransportIcon size={16} aria-hidden="true" />
               <span>{transportLabel[selectedOffer.transport] ?? selectedOffer.transport}</span>
             </div>
             {selectedOffer.board && (
               <div className="tour-detail-modal__fact">
-                <Moon size={16} />
+                <Utensils size={16} aria-hidden="true" />
                 <span>{boardLabel[selectedOffer.board] ?? selectedOffer.board}</span>
               </div>
             )}
             {selectedOffer.roomType && (
               <div className="tour-detail-modal__fact">
-                <BedDouble size={16} />
+                <BedDouble size={16} aria-hidden="true" />
                 <span>{selectedOffer.roomType}</span>
               </div>
             )}
           </div>
 
-          {/* Price Card + Price Alert */}
+          {/* Price Card (its button scrolls to the inquiry form) */}
           <div className="tour-detail-modal__price-section">
             <TourPriceCard
               tour={selectedOffer}
@@ -310,19 +335,6 @@ export function TourDetailModal({
               t={t}
               onInquiry={scrollToInquiry}
             />
-
-            {/* Price Alert Bell — scrolls to inquiry form */}
-            <div className="tour-detail-modal__alert">
-              <button
-                type="button"
-                className="tour-detail-modal__alert-btn"
-                onClick={scrollToInquiry}
-                aria-label="Hlídání ceny"
-              >
-                <Bell size={16} />
-                Hlídat cenu
-              </button>
-            </div>
           </div>
 
           {/* Tabs: Description / Offers / Location */}
@@ -361,12 +373,8 @@ export function TourDetailModal({
         {/* Mobile Sticky CTA */}
         {isMobile && (
           <div className="tour-detail-modal__sticky-cta">
-            <button
-              type="button"
-              className="tour-detail-modal__cta-btn"
-              onClick={scrollToInquiry}
-            >
-              Poptat zájezd
+            <button type="button" className="tour-detail-modal__cta-btn" onClick={scrollToInquiry}>
+              {t("sModalSubmit")}
             </button>
           </div>
         )}
