@@ -1,11 +1,10 @@
 import { useId, useState, type FormEvent } from "react";
 import { submitLead, type ContactMethod } from "../../api/leads";
-import { SITE } from "../../config/site";
 import type { PublicLocale } from "../../i18n/locales";
 import { track } from "../../lib/analytics";
 import { getUtm } from "../../lib/utm";
 import { BUDGET_OPTIONS, publicStrings } from "./strings";
-import { TelegramIcon } from "./TelegramIcon";
+import { TelegramTextLink } from "./TelegramTextLink";
 
 interface Props {
   lang: PublicLocale;
@@ -250,16 +249,7 @@ export function LeadForm({ lang, defaultDestination = "", location }: Props) {
         <button type="submit" className="pub-btn pub-btn--primary" disabled={status === "sending"}>
           {status === "sending" ? s.leadSending : s.leadSubmit}
         </button>
-        <a
-          className="pub-btn pub-btn--tg"
-          href={SITE.telegramContactUrl}
-          target="_blank"
-          rel="noopener"
-          data-track-location={`${location}_form`}
-        >
-          <TelegramIcon />
-          {s.writeTelegram}
-        </a>
+        <TelegramTextLink lang={lang} location={`${location}_form`} />
       </div>
     </form>
   );

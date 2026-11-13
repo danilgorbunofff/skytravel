@@ -1,32 +1,18 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import { Link } from "react-router-dom";
-import type { TranslationKey } from "../hooks/useLanguage";
+import { useLanguage, type TranslationKey } from "../hooks/useLanguage";
+import { DEFAULT_LOCALE, isPublicLocale, localePath } from "../i18n/locales";
 
 interface Props {
   t: (key: TranslationKey) => string;
+  /** Where "Send an inquiry" points. Pages with their own lead form pass "#poptavka". */
+  inquiryHref?: string;
 }
 
-function AppFooterComponent({ t }: Props) {
-  const [email, setEmail] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState("");
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!email.trim() || !email.includes("@")) {
-      setError(t("modalEmailPlaceholder") || "Zadejte platný e-mail");
-      return;
-    }
-    if (!consent) {
-      setError("Souhlas se zpracováním je vyžadován.");
-      return;
-    }
-    setError("");
-    setSubmitted(true);
-    setEmail("");
-    setConsent(false);
-  }
+function AppFooterComponent({ t, inquiryHref }: Props) {
+  const { lang } = useLanguage();
+  const href =
+    inquiryHref ?? `${localePath(isPublicLocale(lang) ? lang : DEFAULT_LOCALE)}#poptavka`;
 
   return (
     <footer id="kontakt" className="footer">
@@ -42,29 +28,20 @@ function AppFooterComponent({ t }: Props) {
           <p>{t("footerHours")}</p>
           <p className="footer-note">{t("footerInsured")}</p>
         </div>
-        <form className="newsletter newsletter--wide" onSubmit={handleSubmit}>
-          <h2 className="footer-heading">{t("footerNewsTitle")}</h2>
-          <input
-            type="email"
-            placeholder={t("modalEmailPlaceholder")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />{" "}
-            {t("modalConsentGdpr")} <Link to="/gdpr">{t("modalGdprLink")}.</Link>
-          </label>
-          {error && <p className="newsletter__error">{error}</p>}
-          {submitted ? (
-            <p className="newsletter__success">{t("footerNewsSuccess")}</p>
+        {/* One way to get offers: the inquiry form (the old newsletter box sent nothing). */}
+        <div className="footer-inquiry">
+          <h2 className="footer-heading">{t("footerInquiryTitle")}</h2>
+          <p>{t("footerInquiryText")}</p>
+          {href.startsWith("#") ? (
+            <a className="footer-cta" href={href}>
+              {t("sInquiryCta")}
+            </a>
           ) : (
-            <button type="submit">{t("footerNewsBtn")}</button>
+            <Link className="footer-cta" to={href}>
+              {t("sInquiryCta")}
+            </Link>
           )}
-        </form>
+        </div>
       </div>
 
       <div className="container footer-bottom">

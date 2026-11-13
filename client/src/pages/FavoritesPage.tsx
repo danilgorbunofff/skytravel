@@ -3,6 +3,8 @@ import { useLanguage } from "../hooks/useLanguage";
 import { useFavorites } from "../hooks/useFavorites";
 import { usePageTitle } from "../hooks/usePageTitle";
 import SiteHeader from "../components/SiteHeader";
+import { AppFooter } from "../components/AppFooter";
+import { SkipToContent } from "../components/SkipToContent";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import "../site.css";
 
@@ -14,8 +16,9 @@ export default function FavoritesPage() {
 
   return (
     <>
+      <SkipToContent />
       <SiteHeader />
-      <div className="favorites-page">
+      <main id="main-content" className="favorites-page">
         <div className="favorites-page__header">
           <h1>{t("favoritesPageTitle")}</h1>
           {favoriteTours.length > 0 && (
@@ -31,7 +34,7 @@ export default function FavoritesPage() {
             <button
               type="button"
               className="favorites-page__back-btn"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/search")}
             >
               {t("favoritesPageBack")}
             </button>
@@ -54,7 +57,8 @@ export default function FavoritesPage() {
             })}
           </div>
         )}
-      </div>
+      </main>
+      <AppFooter t={t} />
     </>
   );
 }

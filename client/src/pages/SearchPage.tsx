@@ -67,15 +67,7 @@ export default function SearchPage() {
   const bootstrap = useBootstrap();
 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [topQuery, setTopQuery] = useState(filters.query);
   const { save: saveRecent } = useRecentSearches();
-
-  // Keep the header box in step with the committed query. Previously it was
-  // seeded once from `filters.query` and never updated, so the header and the
-  // hero could show different text.
-  useEffect(() => {
-    setTopQuery(filters.activeQuery);
-  }, [filters.activeQuery]);
 
   const results = useSearchResults(
     filters.searchFilterKey,
@@ -526,32 +518,8 @@ export default function SearchPage() {
         filteredCount={results.result?.filtered ?? null}
       />
 
-      <SiteHeader
-        topSearch={
-          <form
-            className="top-search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              filters.setValidationError(null);
-              filters.updateParams({ q: topQuery.trim() || null, page: 1 });
-            }}
-          >
-            <input
-              type="text"
-              value={topQuery}
-              onChange={(event) => {
-                filters.setValidationError(null);
-                setTopQuery(event.target.value);
-              }}
-              placeholder={t("searchPlaceholder")}
-              aria-label={t("sFormSearch")}
-            />
-            <button type="submit" aria-label={t("sFormSearch")}>
-              GO
-            </button>
-          </form>
-        }
-      />
+      {/* The hero holds the search; StickySearchBar takes over once it scrolls away. */}
+      <SiteHeader />
 
       <main id="main-content" className="search-page">
         <SearchHero

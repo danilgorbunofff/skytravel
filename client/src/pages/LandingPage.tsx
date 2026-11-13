@@ -8,10 +8,9 @@ import { useLanguage } from "../hooks/useLanguage";
 import { StickyTelegram } from "../components/public/StickyTelegram";
 import { TelegramChannelBlock } from "../components/public/TelegramChannelBlock";
 import { TrustBlock } from "../components/public/TrustBlock";
-import { TelegramIcon } from "../components/public/TelegramIcon";
+import { TelegramTextLink } from "../components/public/TelegramTextLink";
 import { publicStrings } from "../components/public/strings";
 import { SkipToContent } from "../components/SkipToContent";
-import { SITE } from "../config/site";
 import { localeFromPath, slugFromPath, DEFAULT_LOCALE, type PublicLocale } from "../i18n/locales";
 import { useSsrData } from "../ssr/SsrDataContext";
 import type { LandingPageData } from "../ssr/types";
@@ -117,16 +116,7 @@ function LandingView({ page, deals }: { page: LandingPageData; deals?: UnifiedTo
               <a href="#poptavka" className="pub-btn pub-btn--primary">
                 {s.leadSubmit}
               </a>
-              <a
-                className="pub-btn pub-btn--tg"
-                href={SITE.telegramContactUrl}
-                target="_blank"
-                rel="noopener"
-                data-track-location="landing_hero"
-              >
-                <TelegramIcon />
-                {s.writeTelegram}
-              </a>
+              <TelegramTextLink lang={lang} location="landing_hero" />
             </div>
           </div>
         </section>
@@ -198,7 +188,7 @@ function LandingView({ page, deals }: { page: LandingPageData; deals?: UnifiedTo
         )}
       </main>
 
-      <AppFooter t={t} />
+      <AppFooter t={t} inquiryHref="#poptavka" />
       <StickyTelegram lang={lang} />
     </div>
   );

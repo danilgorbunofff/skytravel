@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchPublicAllProviderTours } from "../../api/publicProviders";
-import { SITE } from "../../config/site";
 import { TourDetailModal } from "../../features/search/components/TourDetailModal";
 import type { PublicLocale } from "../../i18n/locales";
 import { track } from "../../lib/analytics";
 import { dealFilters, type DealQuery } from "../../lib/dealFilters";
 import type { UnifiedTour } from "../../types/providers";
 import { publicStrings } from "./strings";
-import { TelegramIcon } from "./TelegramIcon";
+import { TelegramTextLink } from "./TelegramTextLink";
 
 interface Props {
   lang: PublicLocale;
@@ -84,16 +83,12 @@ export function DealsBlock({ lang, query, searchHref, initialDeals, title }: Pro
         ) : deals.length === 0 ? (
           <div className="pub-deals__empty">
             <p>{s.dealsEmpty}</p>
-            <a
-              className="pub-btn pub-btn--tg"
-              href={SITE.telegramContactUrl}
-              target="_blank"
-              rel="noopener"
-              data-track-location="deals_empty"
-            >
-              <TelegramIcon />
-              {s.writeTelegram}
-            </a>
+            <div className="pub-deals__empty-actions">
+              <a href="#poptavka" className="pub-btn pub-btn--primary">
+                {s.leadSubmit}
+              </a>
+              <TelegramTextLink lang={lang} location="deals_empty" />
+            </div>
           </div>
         ) : (
           <ul className="pub-deals__grid">

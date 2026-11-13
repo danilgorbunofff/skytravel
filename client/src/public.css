@@ -93,32 +93,6 @@
   background: #1b8bc0;
 }
 
-/* ── Language switcher ──────────────────────────────── */
-.pub-lang {
-  display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.2rem;
-  border-radius: 999px;
-  background: rgba(18, 61, 140, 0.08);
-}
-
-.pub-lang__link {
-  min-width: 40px;
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: var(--blue-900);
-}
-
-.pub-lang__link.is-active {
-  background: var(--blue-900);
-  color: #fff;
-}
-
 /* ── Landing hero ───────────────────────────────────── */
 .pub-hero {
   background: linear-gradient(180deg, #e3ecf9, var(--bg));
@@ -271,6 +245,29 @@
   padding: 1.25rem;
   background: #fff;
   border-radius: 14px;
+}
+
+.pub-deals__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+
+/* Secondary Telegram option next to a primary CTA: a link, not a second button. */
+.pub-tg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  color: #1b7fb0;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pub-tg-link:hover {
+  color: #13628a;
 }
 
 .pub-deals__empty p {
@@ -592,10 +589,20 @@
   color: #fff;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
 }
 
 .pub-sticky-tg:hover {
   background: #1b8bc0;
+}
+
+/* Out of the way while the inquiry form or the Telegram band is on screen. */
+.pub-sticky-tg.is-hidden {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {
@@ -622,9 +629,11 @@
   }
 }
 
-/* Keep the back-to-top button clear of the sticky Telegram button. */
-.back-to-top {
+/* Stack back-to-top above the sticky Telegram button (they are siblings), centred on it.
+   Sibling selector outranks the generic mobile .back-to-top rules in site.css. */
+.pub-sticky-tg ~ .back-to-top {
   bottom: 80px;
+  right: 20px;
 }
 
 /* Shown on home when the live catalog (last minute + all inclusive) is empty. */

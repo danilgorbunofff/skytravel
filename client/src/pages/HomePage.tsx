@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import { favorites, heroImages, type OwnTour } from "../data";
 import { fetchAlexandriaLastMinute, type AlexandriaLastMinuteItem } from "../api";
@@ -374,6 +375,19 @@ export default function HomePage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // The header search duplicates the hero search; show it only once the hero search has
+  // scrolled out of view (one search entry point on screen at a time).
+  const [heroSearchInView, setHeroSearchInView] = useState(true);
+  useEffect(() => {
+    const target = document.getElementById("heroSearch");
+    if (!target || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setHeroSearchInView(entry.isIntersecting),
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
   function handleDateToggle() {
     setIsDatePickerOpen((prev) => !prev);
   }
@@ -388,17 +402,25 @@ export default function HomePage() {
       <SkipToContent />
       <SiteHeader
         topSearch={
-          <form id="topSearch" className="top-search" onSubmit={handleTopSearchSubmit}>
-            <input
-              id="topSearchInput"
-              ref={topSearchInputRef}
-              type="text"
-              placeholder={t("searchPlaceholder")}
-            />
-            <button type="submit" aria-label={t("sAriaSearch")}>
-              GO
-            </button>
-          </form>
+          heroSearchInView ? null : (
+            <form
+              id="topSearch"
+              className="top-search"
+              role="search"
+              onSubmit={handleTopSearchSubmit}
+            >
+              <input
+                id="topSearchInput"
+                ref={topSearchInputRef}
+                type="text"
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchWhere")}
+              />
+              <button type="submit" aria-label={t("sAriaSearch")}>
+                <Search size={20} aria-hidden="true" />
+              </button>
+            </form>
+          )
         }
       />
 
@@ -650,7 +672,7 @@ export default function HomePage() {
         <TelegramChannelBlock lang={pageLang} />
       </main>
 
-      <AppFooter t={t} />
+      <AppFooter t={t} inquiryHref="#poptavka" />
 
       {exclusiveTour && (
         <ExclusiveTourDetailModal tour={exclusiveTour} lang={lang} t={t} onClose={closeModal} />

@@ -10,6 +10,7 @@ const STRINGS = {
     lastMinutePath: "/cs/last-minute/",
     writeTelegram: "Napsat na Telegram",
     writeTelegramShort: "Telegram",
+    orTelegram: "nebo napište na Telegram",
     languageLabel: "Jazyk",
 
     trustTitle: "Proč SkyTravel",
@@ -87,6 +88,7 @@ const STRINGS = {
     lastMinutePath: "/ru/goryashchie-tury/",
     writeTelegram: "Написать в Telegram",
     writeTelegramShort: "Telegram",
+    orTelegram: "или напишите в Telegram",
     languageLabel: "Язык",
 
     trustTitle: "Почему SkyTravel",

@@ -160,45 +160,49 @@ html[lang="ru"] .logo {
 }
 
 .header-contact-wrap {
+  grid-column: 3;
   display: flex;
   align-items: center;
   gap: 0.8rem;
 }
 
-.lang-toggle {
+.pub-lang {
   display: inline-flex;
-  align-items: center;
   gap: 0.25rem;
   padding: 0.2rem;
   border-radius: 999px;
-  background: #edf3fe;
+  background: rgba(18, 61, 140, 0.08);
 }
 
-.lang-btn {
+.pub-lang__link {
+  min-width: 40px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   border: 0;
-  background: transparent;
   border-radius: 999px;
-  width: 34px;
-  height: 34px;
-  font-size: 1rem;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--blue-900);
   cursor: pointer;
-  transition:
-    transform 220ms ease,
-    background-color 220ms ease,
-    box-shadow 220ms ease;
 }
 
-.lang-btn:hover {
-  transform: translateY(-1px);
+.pub-lang__link:hover {
+  background: rgba(18, 61, 140, 0.1);
 }
 
-.lang-btn.is-active {
-  background: #d6e5ff;
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(37, 79, 153, 0.18);
+.pub-lang__link.is-active {
+  background: var(--blue-900);
+  color: #fff;
+}
+
+.pub-lang__link:focus-visible {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 2px;
 }
 
 .main-nav {
@@ -227,6 +231,24 @@ html[lang="ru"] .logo {
 
 .main-nav a.is-active {
   color: var(--blue-700);
+}
+
+/* Saved-tours count next to "Uložené". */
+.main-nav__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  height: 1.4em;
+  margin-left: 0.35em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--blue-900);
+  font-family: inherit;
+  font-size: 0.6em;
+  font-weight: 800;
+  vertical-align: 0.2em;
 }
 
 .hero {
@@ -1428,10 +1450,6 @@ html[lang="ru"] .logo {
   gap: 1rem 3rem;
 }
 
-.newsletter--wide {
-  max-width: 560px;
-}
-
 .footer-main h4,
 .footer-main .footer-heading,
 .footer-main h5 {
@@ -1449,60 +1467,29 @@ html[lang="ru"] .logo {
   display: block;
 }
 
-.newsletter input[type="email"] {
-  width: 100%;
-  border: 1px solid #fff;
-  border-radius: 12px;
-  min-height: 46px;
-  padding: 0 0.9rem;
-  font: inherit;
-  margin-bottom: 0.6rem;
-  background: #fff;
-  color: var(--blue-900);
+.footer-inquiry {
+  max-width: 560px;
 }
 
-.newsletter input[type="email"]::placeholder {
-  color: #8ea0bf;
-}
-
-.newsletter input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-top: 0.2rem;
-  accent-color: var(--blue-700);
-  flex-shrink: 0;
-}
-
-.newsletter label {
-  display: flex;
-  gap: 0.5rem;
-  min-height: 44px;
+.footer-cta {
+  display: inline-flex;
   align-items: center;
-  padding: 0.4rem 0;
-}
-
-.newsletter button {
+  min-height: 44px;
   margin-top: 0.6rem;
-  border: 0;
+  padding: 0.62rem 1.1rem;
   border-radius: 12px;
   background: var(--yellow);
   color: var(--blue-900);
-  font: inherit;
   font-weight: 800;
-  padding: 0.62rem 0.95rem;
-  cursor: pointer;
 }
 
-.newsletter__error {
-  color: var(--color-destructive, #dc2626);
-  font-size: 0.85rem;
-  margin-top: 0.3rem;
+.footer-cta:hover {
+  filter: brightness(0.96);
 }
 
-.newsletter__success {
-  color: var(--color-success, #22c55e);
-  font-weight: 700;
-  margin-top: 0.5rem;
+.footer-cta:focus-visible {
+  outline: 3px solid var(--blue-700);
+  outline-offset: 2px;
 }
 
 .footer-bottom {
@@ -2195,16 +2182,14 @@ html[lang="ru"] .logo {
 }
 
 .gdpr-page {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 2rem 1.2rem 3rem;
+  padding: 2rem 1rem 3rem;
   background: linear-gradient(180deg, #eef3fb 0%, #f8faff 60%);
   display: grid;
   place-items: start center;
 }
 
 .gdpr-card {
-  width: min(840px, 94vw);
+  width: min(840px, 100%);
   background: #ffffff;
   border-radius: 18px;
   padding: 1.8rem 2rem;
@@ -2212,19 +2197,6 @@ html[lang="ru"] .logo {
   border: 1px solid #d9e3f3;
   display: grid;
   gap: 1.2rem;
-}
-
-.gdpr-header {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.gdpr-header p {
-  margin: 0;
-  color: #5c6f8b;
-  font-weight: 600;
 }
 
 .gdpr-card h1 {
@@ -2251,6 +2223,53 @@ html[lang="ru"] .logo {
   line-height: 1.5;
 }
 
+.legal-doc {
+  display: grid;
+  gap: 1.2rem;
+}
+
+/* Section anchors land below the sticky header (on top of the global 90px scroll-padding). */
+.legal-doc h2 {
+  scroll-margin-top: 4.5rem;
+}
+
+.legal-toc {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #e2e9f6;
+  border-radius: 12px;
+  background: #f6f9ff;
+}
+
+.gdpr-card .legal-toc__title {
+  margin: 0 0 0.4rem;
+  color: #1f3f73;
+  font-weight: 800;
+}
+
+.legal-toc ol {
+  margin: 0;
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.legal-toc a {
+  color: var(--blue-700);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .legal-doc h2 {
+    scroll-margin-top: 0.5rem;
+  }
+
+  .gdpr-card {
+    padding: 1.2rem 1rem;
+  }
+}
+
 .gdpr-cookie-list {
   display: grid;
   gap: 0.6rem;
@@ -2264,16 +2283,6 @@ html[lang="ru"] .logo {
   padding: 0.7rem 0.9rem;
   display: grid;
   gap: 0.2rem;
-}
-
-.gdpr-footer {
-  border-top: 1px solid #e2e9f6;
-  padding-top: 1rem;
-}
-
-.gdpr-footer a {
-  color: var(--blue-700);
-  font-weight: 700;
 }
 
 .lead-modal__form button {
@@ -8279,11 +8288,6 @@ html[lang="ru"] .logo {
   font-size: 1.05rem;
 }
 
-/* Newsletter submit: 44px tap target */
-.newsletter button {
-  min-height: 44px;
-}
-
 /* ===== Mobile UX pass (P3): tablet sidebar breakpoint, scroll padding ===== */
 
 /* 769–1100px tablets: sidebar is visible, so the mobile FAB/drawer is redundant.
@@ -8294,17 +8298,6 @@ html[lang="ru"] .logo {
   }
   .search-sidebar {
     display: grid;
-  }
-}
-
-/* Compact lang switcher on phones (44px touch target, slimmer header row) */
-@media (max-width: 768px) {
-  .lang-toggle {
-    padding: 0.1rem;
-  }
-  .lang-btn {
-    min-height: 42px;
-    padding: 0.25rem 0.7rem;
   }
 }
 
@@ -8406,24 +8399,8 @@ html[lang="ru"] .logo {
     gap: 0.55rem;
   }
 
-  .lang-toggle {
-    gap: 0.15rem;
-    padding: 0.18rem;
-    background: #eef3ff;
-    border: 1px solid #dde8ff;
-  }
-
-  .lang-btn {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-    font-size: 0.95rem;
-    padding: 0;
-  }
-
-  .lang-btn.is-active {
-    background: #fff;
-    box-shadow: 0 4px 12px rgba(37, 79, 153, 0.16);
+  .pub-lang__link {
+    min-width: 34px;
   }
 
   .hamburger {
@@ -8518,11 +8495,6 @@ html[lang="ru"] .logo {
 @media (max-width: 390px) {
   .logo {
     font-size: 1.7rem;
-  }
-
-  .lang-btn {
-    width: 30px;
-    height: 30px;
   }
 
   .hamburger {
@@ -9114,62 +9086,6 @@ html[lang="ru"] .logo {
     font-weight: 800;
     text-decoration: underline;
     text-underline-offset: 0.18em;
-  }
-
-  .newsletter--wide {
-    max-width: none;
-  }
-
-  .newsletter input[type="email"] {
-    min-height: 48px;
-    border-radius: 12px;
-    border: 1px solid #d7e0ee;
-    padding: 0 0.9rem;
-    font-size: 16px;
-    box-shadow: 0 2px 10px rgba(18, 44, 94, 0.06);
-  }
-
-  .newsletter label {
-    align-items: flex-start;
-    gap: 0.6rem;
-    min-height: auto;
-    padding: 0.2rem 0 0.15rem;
-    font-size: 0.88rem;
-    line-height: 1.4;
-    flex-wrap: nowrap;
-  }
-
-  .newsletter label a {
-    color: #123d8c;
-    text-decoration: underline;
-    text-underline-offset: 0.16em;
-    font-weight: 700;
-  }
-
-  .newsletter input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    margin-top: 0.18rem;
-    flex-shrink: 0;
-  }
-
-  .newsletter button {
-    width: auto;
-    min-width: 118px;
-    min-height: 44px;
-    margin-top: 0.7rem;
-    padding: 0.62rem 1rem;
-    border-radius: 12px;
-    font-size: 0.98rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    box-shadow: 0 6px 14px rgba(18, 44, 94, 0.14);
-  }
-
-  .newsletter__error,
-  .newsletter__success {
-    font-size: 0.86rem;
-    line-height: 1.35;
   }
 
   .footer-bottom {

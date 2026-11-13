@@ -1,38 +1,76 @@
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { UnifiedTour } from "../types/providers";
 
 const KEY = "skytravel:favorites";
+const EMPTY: Record<string, UnifiedTour> = {};
 
-function load(): Record<string, UnifiedTour> {
+// One store shared by every useFavorites() consumer (header count, cards, favorites page),
+// so saving a tour anywhere updates all of them. Backed by localStorage; the parsed map is
+// cached by its raw string so the snapshot stays referentially stable between renders.
+let cachedRaw: string | null | undefined;
+let cachedMap: Record<string, UnifiedTour> = EMPTY;
+// Storage blocked or full: keep favourites in memory for this page view.
+let memoryOnly = false;
+const listeners = new Set<() => void>();
+
+function readMap(): Record<string, UnifiedTour> {
+  if (memoryOnly) return cachedMap;
+  let raw: string | null = null;
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
+    raw = localStorage.getItem(KEY);
   } catch {
-    return {};
+    return cachedMap;
   }
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    try {
+      cachedMap = raw ? (JSON.parse(raw) as Record<string, UnifiedTour>) : EMPTY;
+    } catch {
+      cachedMap = EMPTY;
+    }
+  }
+  return cachedMap;
 }
 
+function writeMap(next: Record<string, UnifiedTour>) {
+  try {
+    const raw = JSON.stringify(next);
+    localStorage.setItem(KEY, raw);
+    cachedRaw = raw;
+  } catch {
+    memoryOnly = true;
+  }
+  cachedMap = next;
+  listeners.forEach((fn) => fn());
+}
+
+function subscribe(fn: () => void) {
+  listeners.add(fn);
+  // Another tab changed favourites.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === KEY || event.key === null) fn();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(fn);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+// Server render and hydration see no favourites; the client snapshot follows right after.
+const getServerSnapshot = () => EMPTY;
+
 export function useFavorites() {
-  const [map, setMap] = useState<Record<string, UnifiedTour>>(load);
+  const map = useSyncExternalStore(subscribe, readMap, getServerSnapshot);
 
   const toggle = useCallback((tour: UnifiedTour) => {
     const id = `${tour.source}-${tour.externalId}`;
-    setMap((prev) => {
-      const isFav = id in prev;
-      const { [id]: _removed, ...rest } = prev;
-      const next = isFav ? rest : { ...prev, [id]: tour };
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        // storage full or blocked
-      }
-      return next;
-    });
+    const prev = readMap();
+    const { [id]: _removed, ...rest } = prev;
+    writeMap(id in prev ? rest : { ...prev, [id]: tour });
   }, []);
 
-  const isFavorite = useCallback(
-    (id: string) => id in map,
-    [map],
-  );
+  const isFavorite = useCallback((id: string) => id in map, [map]);
 
   const favorites = useMemo<string[]>(() => Object.keys(map), [map]);
   const favoriteTours = useMemo<UnifiedTour[]>(() => Object.values(map), [map]);

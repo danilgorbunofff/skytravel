@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
 import { logoutAdmin } from "../features/admin/services/adminApi";
+import { setAdminHint } from "../lib/adminHint";
 
 const navItems = [
   { to: "/admin", label: "Nabídky", icon: LayoutDashboard, end: true },
@@ -26,6 +27,8 @@ export default function AdminLayout({
 
   // Prevent admin pages from being indexed
   useEffect(() => {
+    // Rendered only behind RequireAdmin: lets the public header show the Admin link.
+    setAdminHint(true);
     const meta = document.createElement("meta");
     meta.name = "robots";
     meta.content = "noindex, nofollow";
@@ -102,6 +105,7 @@ export default function AdminLayout({
             try {
               await logoutAdmin();
             } finally {
+              setAdminHint(false);
               navigate("/admin-login", { replace: true });
             }
           }}
@@ -139,6 +143,7 @@ export default function AdminLayout({
                 try {
                   await logoutAdmin();
                 } finally {
+                  setAdminHint(false);
                   navigate("/admin-login", { replace: true });
                 }
               }}

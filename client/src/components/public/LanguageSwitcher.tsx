@@ -1,3 +1,4 @@
+import { useLanguage, type LanguageKey } from "../../hooks/useLanguage";
 import { LOCALE_LABELS, PUBLIC_LOCALES, localePath, type PublicLocale } from "../../i18n/locales";
 
 interface Props {
@@ -29,5 +30,45 @@ export function LanguageSwitcher({ lang, alternates = {}, className }: Props) {
         );
       })}
     </nav>
+  );
+}
+
+// Same order as the localized switcher (CZ, RU first). "UA", not "UK": "UK" reads as English.
+const APP_LANGUAGES: { code: LanguageKey; short: string; name: string }[] = [
+  { code: "cs", short: "CZ", name: "Čeština" },
+  { code: "ru", short: "RU", name: "Русский" },
+  { code: "uk", short: "UA", name: "Українська" },
+  { code: "en", short: "EN", name: "English" },
+];
+
+/**
+ * Switcher for pages without a language in the URL (/search, /favorites, legal pages).
+ * Same look as `LanguageSwitcher`; switches the UI language in place.
+ */
+export function AppLanguageSwitcher({ className }: { className?: string }) {
+  const { lang, setLang } = useLanguage();
+  return (
+    <div
+      className={`pub-lang ${className ?? ""}`}
+      role="group"
+      aria-label="Language / Язык / Jazyk"
+    >
+      {APP_LANGUAGES.map((item) => {
+        const active = item.code === lang;
+        return (
+          <button
+            key={item.code}
+            type="button"
+            lang={item.code}
+            className={`pub-lang__link${active ? " is-active" : ""}`}
+            aria-pressed={active}
+            title={item.name}
+            onClick={() => setLang(item.code)}
+          >
+            {item.short}
+          </button>
+        );
+      })}
+    </div>
   );
 }

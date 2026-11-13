@@ -22,7 +22,12 @@ export default function ScrollToTop() {
       // scroll started during the first render gets cancelled by later layout work.
       // Keep re-checking briefly because sections above can still change height.
       if (target) target.scrollIntoView({ block: "start", behavior: "instant" });
-      const settled = target != null && Math.abs(target.getBoundingClientRect().top) < 120;
+      // Page scroll-padding and the target's scroll-margin keep it clear of the sticky header.
+      const margin = target
+        ? (parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0) +
+          (parseFloat(getComputedStyle(target).scrollMarginTop) || 0)
+        : 0;
+      const settled = target != null && Math.abs(target.getBoundingClientRect().top - margin) < 120;
       if (!settled && attempts++ < 20) timer = window.setTimeout(tryScroll, 50);
     };
     tryScroll();

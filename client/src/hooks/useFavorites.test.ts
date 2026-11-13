@@ -71,4 +71,11 @@ describe("useFavorites", () => {
     expect(result.current.favorites).toEqual(["alexandria-tour-a"]);
     expect(result.current.favoriteTours).toHaveLength(1);
   });
+
+  it("shares saved tours between components (header count follows a card toggle)", () => {
+    const header = renderHook(() => useFavorites());
+    const card = renderHook(() => useFavorites());
+    act(() => card.result.current.toggle(makeTour("tour-1")));
+    expect(header.result.current.favorites).toEqual(["alexandria-tour-1"]);
+  });
 });

@@ -1,14 +1,11 @@
-import { Link } from "react-router-dom";
-import "../site.css";
-
-import { useLanguage } from "../hooks/useLanguage";
+import { LegalPage } from "../components/LegalPage";
+import { useLanguage, type LanguageKey } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 function RenderCs() {
   return (
     <>
       <section>
-        <h1>Obchodní podmínky cestovní agentury</h1>
         <p>Sky-travel.tours</p>
       </section>
 
@@ -155,7 +152,6 @@ function RenderEn() {
   return (
     <>
       <section>
-        <h1>Terms and Conditions of the Travel Agency</h1>
         <p>Sky-travel.tours</p>
       </section>
 
@@ -309,7 +305,6 @@ function RenderUk() {
   return (
     <>
       <section>
-        <h1>Умови та Положення туристичного агентства</h1>
         <p>Sky-travel.tours</p>
       </section>
 
@@ -460,7 +455,6 @@ function RenderRu() {
   return (
     <>
       <section>
-        <h1>Условия и Положения туристического агентства</h1>
         <p>Sky-travel.tours</p>
       </section>
 
@@ -609,30 +603,23 @@ function RenderRu() {
   );
 }
 
+const TITLES: Record<LanguageKey, string> = {
+  cs: "Obchodní podmínky cestovní agentury",
+  en: "Terms and Conditions of the Travel Agency",
+  uk: "Умови та Положення туристичного агентства",
+  ru: "Условия и Положения туристического агентства",
+};
+
 export default function TermsPage() {
-  const { lang, t } = useLanguage();
-  usePageTitle("Obchodní podmínky");
+  const { lang } = useLanguage();
+  usePageTitle(TITLES[lang]);
 
   return (
-    <main className="gdpr-page">
-      <div className="gdpr-card">
-        <header className="gdpr-header">
-          <Link to="/" className="logo">
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </Link>
-          <p>{t("footerTerms")}</p>
-        </header>
-
-        {lang === "en" && <RenderEn />}
-        {lang === "uk" && <RenderUk />}
-        {lang === "ru" && <RenderRu />}
-        {lang === "cs" && <RenderCs />}
-
-        <footer className="gdpr-footer">
-          <Link to="/">{t("navContact") === "Kontakt" ? "Zpět na web" : "Back to web"}</Link>
-        </footer>
-      </div>
-    </main>
+    <LegalPage title={TITLES[lang]}>
+      {lang === "en" && <RenderEn />}
+      {lang === "uk" && <RenderUk />}
+      {lang === "ru" && <RenderRu />}
+      {lang === "cs" && <RenderCs />}
+    </LegalPage>
   );
 }

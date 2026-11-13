@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginAdmin } from "../features/admin/services/adminApi";
+import { setAdminHint } from "../lib/adminHint";
 import {
   Card,
   CardContent,
@@ -30,6 +31,7 @@ export default function AdminLoginPage() {
     setError("");
     loginAdmin(login.trim(), password)
       .then(() => {
+        setAdminHint(true);
         navigate("/admin");
       })
       .catch(() => {

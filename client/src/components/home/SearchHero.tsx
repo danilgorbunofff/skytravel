@@ -16,7 +16,6 @@ interface Props {
   onSearchSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onDateToggle: () => void;
   onDateChange: (field: "start" | "end", value: string) => void;
-  onNavClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   /** SEO H1 (target query). Falls back to the marketing hero title. */
   h1?: string;
 }
@@ -33,7 +32,6 @@ export default function SearchHero({
   onSearchSubmit,
   onDateToggle,
   onDateChange,
-  onNavClick,
   h1,
 }: Props) {
   // Dates are opt-in: an untouched field means "any time", not a hidden 14-day filter.
@@ -65,13 +63,6 @@ export default function SearchHero({
       <div className="container hero__content">
         <h1>{h1 ?? t("heroTitle")}</h1>
         <p>{t("heroSubtitle")}</p>
-        <a
-          className="hero__btn"
-          href="#vlastni"
-          onClick={onNavClick ? (e) => onNavClick(e) : undefined}
-        >
-          {t("heroBtn")}
-        </a>
       </div>
 
       <div className="container hero-search-wrap">

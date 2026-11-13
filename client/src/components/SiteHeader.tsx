@@ -1,51 +1,48 @@
 import { useContext, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { useLanguage, type LanguageKey } from "../hooks/useLanguage";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useLanguage } from "../hooks/useLanguage";
 import { useAdminAuth } from "../hooks/useAdminAuth";
+import { useFavorites } from "../hooks/useFavorites";
 import { LocaleContext } from "../i18n/localeContextValue";
-import { localePath, type PublicLocale } from "../i18n/locales";
-import { LanguageSwitcher } from "./public/LanguageSwitcher";
+import { DEFAULT_LOCALE, isPublicLocale, localePath, type PublicLocale } from "../i18n/locales";
+import { AppLanguageSwitcher, LanguageSwitcher } from "./public/LanguageSwitcher";
 import { publicStrings } from "./public/strings";
 import "../site.css";
 
-const LANGS: { code: LanguageKey; flag: string; label: string }[] = [
-  { code: "cs", flag: "🇨🇿", label: "Přepnout do češtiny" },
-  { code: "uk", flag: "🇺🇦", label: "Перейти на українську" },
-  { code: "en", flag: "🇬🇧", label: "Switch to English" },
-  { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
-];
-
 interface SiteHeaderProps {
-  /** Top-search form rendered inside header-top; pass null to show placeholder slot. */
+  /** Optional search form shown in the header row (home, once the hero search is out of view). */
   topSearch?: React.ReactNode;
   /** On /cs/… and /ru/… pages: the same page in the other language (for the switcher). */
   alternates?: Partial<Record<PublicLocale, string>>;
 }
 
+const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : undefined);
+
+function lastMinuteSearchHref(): string {
+  const day = 86_400_000;
+  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  return `/search?dateStart=${iso(Date.now())}&dateEnd=${iso(Date.now() + 14 * day)}`;
+}
+
 export default function SiteHeader({ topSearch, alternates }: SiteHeaderProps) {
-  const { lang, setLang, t } = useLanguage();
-  // URL-localized pages get crawlable CZ/RU links instead of the flag buttons.
+  const { lang, t } = useLanguage();
+  const { pathname } = useLocation();
+  // URL-localized pages switch language by URL (crawlable links); the rest switch in place.
   const locale = useContext(LocaleContext)?.lang ?? null;
-  const homePath = locale ? localePath(locale) : "/";
+  const siteLocale: PublicLocale = locale ?? (isPublicLocale(lang) ? lang : DEFAULT_LOCALE);
+  const homePath = localePath(siteLocale);
+  // Czech and Russian have a Last minute landing page; Ukrainian and English stay in their
+  // own language on the search page, using the same "next 14 days" window as its preset.
+  const lastMinutePage = publicStrings(siteLocale).lastMinutePath;
+  const lastMinuteHref = locale || isPublicLocale(lang) ? lastMinutePage : lastMinuteSearchHref();
+  const lastMinuteActive = pathname.replace(/\/?$/, "/") === lastMinutePage;
   const langToggle = locale ? (
     <LanguageSwitcher lang={locale} alternates={alternates} />
   ) : (
-    <div className="lang-toggle" aria-label="Language switcher">
-      {LANGS.map((item) => (
-        <button
-          key={item.code}
-          type="button"
-          className={`lang-btn${lang === item.code ? " is-active" : ""}`}
-          onClick={() => setLang(item.code)}
-          aria-label={item.label}
-          aria-pressed={lang === item.code}
-        >
-          {item.flag}
-        </button>
-      ))}
-    </div>
+    <AppLanguageSwitcher />
   );
   const { isAdmin } = useAdminAuth();
+  const { favorites } = useFavorites();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   function closeMenu() {
@@ -60,9 +57,7 @@ export default function SiteHeader({ topSearch, alternates }: SiteHeaderProps) {
           <span className="logo__travel">Travel</span>
         </Link>
 
-        {topSearch ?? (
-          <div className="top-search" aria-hidden="true" style={{ visibility: "hidden" }} />
-        )}
+        {topSearch}
 
         {/* Desktop Right Side */}
         <div className="header-contact-wrap desktop-only">
@@ -79,8 +74,9 @@ export default function SiteHeader({ topSearch, alternates }: SiteHeaderProps) {
             className="hamburger"
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Toggle mobile menu"
+            aria-label={t("navMenu")}
             aria-expanded={mobileMenuOpen}
+            aria-controls="site-nav"
           >
             {mobileMenuOpen ? (
               <svg
@@ -115,36 +111,32 @@ export default function SiteHeader({ topSearch, alternates }: SiteHeaderProps) {
       </div>
 
       {/* Nav bar / Mobile Drawer */}
-      <div className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
+      <div id="site-nav" className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
         <div className="container site-nav-inner">
           <div className="header-contact mobile-only mobile-contact">
             <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
           </div>
-          <nav className="main-nav" aria-label="Hlavní navigace">
-            <NavLink
-              to={homePath}
-              end
-              onClick={closeMenu}
-              className={({ isActive }) => (isActive ? "is-active" : undefined)}
-            >
+          <nav className="main-nav" aria-label={t("navMainLabel")}>
+            <NavLink to={homePath} end onClick={closeMenu} className={navClass}>
               {t("navHome")}
             </NavLink>
-            {locale && (
-              <a href={publicStrings(locale).lastMinutePath}>{publicStrings(locale).lastMinute}</a>
-            )}
-            <NavLink
-              to="/search"
+            <a
+              href={lastMinuteHref}
               onClick={closeMenu}
-              className={({ isActive }) => (isActive ? "is-active" : undefined)}
+              className={lastMinuteActive ? "is-active" : undefined}
+              aria-current={lastMinuteActive ? "page" : undefined}
             >
+              {t("navLastMinute")}
+            </a>
+            <NavLink to="/search" end onClick={closeMenu} className={navClass}>
               {t("navSearch")}
             </NavLink>
+            <NavLink to="/favorites" onClick={closeMenu} className={navClass}>
+              {t("navFavorites")}
+              {favorites.length > 0 && <span className="main-nav__count">{favorites.length}</span>}
+            </NavLink>
             {isAdmin && (
-              <NavLink
-                to="/admin"
-                onClick={closeMenu}
-                className={({ isActive }) => (isActive ? "is-active" : undefined)}
-              >
+              <NavLink to="/admin" onClick={closeMenu} className={navClass}>
                 {t("navAdmin")}
               </NavLink>
             )}

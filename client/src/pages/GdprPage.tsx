@@ -1,14 +1,11 @@
-import { Link } from "react-router-dom";
-import "../site.css";
-
-import { useLanguage } from "../hooks/useLanguage";
+import { LegalPage } from "../components/LegalPage";
+import { useLanguage, type LanguageKey } from "../hooks/useLanguage";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 function RenderCs() {
   return (
     <>
       <section>
-        <h1>Zásady ochrany osobních údajů (GDPR)</h1>
         <p>
           V Sky-travel.tours (provozovatel Irina Terenteva, IČO: 23973099, se sídlem Křižíkova 6,
           Praha), věnujeme ochraně vašich osobních údajů maximální pozornost. Jako cestovní agentura
@@ -148,7 +145,6 @@ function RenderEn() {
   return (
     <>
       <section>
-        <h1>Privacy Policy (GDPR)</h1>
         <p>
           At Sky-travel.tours (operated by Irina Terenteva, ID: 23973099, based in Křižíkova 6,
           Prague), we pay maximum attention to the protection of your personal data. As a travel
@@ -292,7 +288,6 @@ function RenderUk() {
   return (
     <>
       <section>
-        <h1>Політика конфіденційності (GDPR)</h1>
         <p>
           У Sky-travel.tours (оператор Ірина Терентьєва, IČO: 23973099, юридична адреса: Křižíkova
           6, Прага) ми приділяємо максимальну увагу захисту ваших персональних даних. Як туристичне
@@ -440,7 +435,6 @@ function RenderRu() {
   return (
     <>
       <section>
-        <h1>Политика конфиденциальности (GDPR)</h1>
         <p>
           В Sky-travel.tours (оператор Ирина Терентьева, IČO: 23973099, юридический адрес: Křižíkova
           6, Прага) мы уделяем максимальное внимание защите ваших персональных данных. Как
@@ -584,30 +578,23 @@ function RenderRu() {
   );
 }
 
+const TITLES: Record<LanguageKey, string> = {
+  cs: "Zásady ochrany osobních údajů (GDPR)",
+  en: "Privacy Policy (GDPR)",
+  uk: "Політика конфіденційності (GDPR)",
+  ru: "Политика конфиденциальности (GDPR)",
+};
+
 export default function GdprPage() {
-  const { lang, t } = useLanguage();
-  usePageTitle("Ochrana osobních údajů");
+  const { lang } = useLanguage();
+  usePageTitle(TITLES[lang]);
 
   return (
-    <main className="gdpr-page">
-      <div className="gdpr-card">
-        <header className="gdpr-header">
-          <Link to="/" className="logo">
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </Link>
-          <p>{t("footerGdpr")}</p>
-        </header>
-
-        {lang === "en" && <RenderEn />}
-        {lang === "uk" && <RenderUk />}
-        {lang === "ru" && <RenderRu />}
-        {lang === "cs" && <RenderCs />}
-
-        <footer className="gdpr-footer">
-          <Link to="/">{t("navContact") === "Kontakt" ? "Zpět na web" : "Back to web"}</Link>
-        </footer>
-      </div>
-    </main>
+    <LegalPage title={TITLES[lang]}>
+      {lang === "en" && <RenderEn />}
+      {lang === "uk" && <RenderUk />}
+      {lang === "ru" && <RenderRu />}
+      {lang === "cs" && <RenderCs />}
+    </LegalPage>
   );
 }
