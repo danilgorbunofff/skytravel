@@ -83,34 +83,51 @@ export default function SearchHero({
               className="hero-search__item"
               style={{ position: "relative", cursor: "pointer" }}
               onClick={onDateToggle}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && isDatePickerOpen) onDateToggle();
+              }}
             >
-              <label style={{ pointerEvents: "none" }}>{t("searchDate")}</label>
+              <label htmlFor="searchDate">{t("searchDate")}</label>
               <div className="hero-search__control">
                 <input
                   id="searchDate"
                   type="text"
                   value={displayDate}
                   readOnly
-                  style={{ pointerEvents: "none" }}
+                  style={{ cursor: "pointer" }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onDateToggle();
+                    }
+                  }}
                 />
                 <span className="hero-search__icon" aria-hidden="true">
                   <CalendarDays size={18} />
                 </span>
               </div>
               {isDatePickerOpen && (
-                <div className="search-popover" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="search-popover"
+                  role="dialog"
+                  aria-label={t("searchDate")}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="popover-row">
-                    <label>{t("searchDeparture")}</label>
+                    <label htmlFor="searchDateStart">{t("searchDeparture")}</label>
                     <input
+                      id="searchDateStart"
                       type="date"
                       value={searchDateStart}
                       onChange={(e) => onDateChange("start", e.target.value)}
                     />
                   </div>
                   <div className="popover-row">
-                    <label>{t("searchReturn")}</label>
+                    <label htmlFor="searchDateEnd">{t("searchReturn")}</label>
                     <input
+                      id="searchDateEnd"
                       type="date"
+                      min={searchDateStart}
                       value={searchDateEnd}
                       onChange={(e) => onDateChange("end", e.target.value)}
                     />

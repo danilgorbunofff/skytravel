@@ -27,8 +27,13 @@ export default function FavoriteDestinations({ favorites, destinationCounts, onC
               <article
                 key={item.destination}
                 className="favorite-card"
+                role="link"
+                tabIndex={0}
                 style={{ backgroundImage: `url('${item.image}')` }}
                 onClick={() => onClick(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onClick(item);
+                }}
               >
                 <div className="favorite-card__body">
                   <h3>{item.destination}</h3>

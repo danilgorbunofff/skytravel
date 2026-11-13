@@ -9,7 +9,7 @@ const t: Record<string, string> = {
   navContact: "Kontakt",
   heroTitle: "EXOTIKA ZA KAŽDÉHO POČASÍ",
   heroSubtitle: "SkyTravel exkluzivní nabídky + ověřené partnerské zájezdy.",
-  heroBtn: "ZOBRAZIT VÍCE",
+  heroBtn: "EXKLUZIVNÍ NABÍDKY",
   searchWhere: "Kam pojedeme",
   searchPlaceholder: "Místo nebo hotel",
   searchDate: "Odjezd od / návrat do",

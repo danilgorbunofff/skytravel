@@ -9,7 +9,7 @@ const t: Record<string, string> = {
   navContact: "Contact",
   heroTitle: "EXOTIC TRAVEL IN ANY WEATHER",
   heroSubtitle: "SkyTravel exclusive offers + verified partner tours.",
-  heroBtn: "SHOW MORE",
+  heroBtn: "EXCLUSIVE OFFERS",
   searchWhere: "Where to",
   searchPlaceholder: "Destination or hotel",
   searchDate: "Departure / Return",

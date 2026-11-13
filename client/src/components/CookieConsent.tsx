@@ -24,7 +24,7 @@ export default function CookieConsent({
 
   return (
     <>
-      <div className="cookie-banner" role="dialog" aria-live="polite" aria-label="Cookie consent">
+      <div className="cookie-banner" role="dialog" aria-live="polite" aria-label={t("cookieTitle")}>
         <div className="cookie-banner__content">
           <div className="cookie-banner__text">
             <strong>{t("cookieTitle")}</strong>
@@ -71,8 +71,12 @@ export default function CookieConsent({
           <div className="cookie-modal__card">
             <div className="cookie-modal__head">
               <strong>{t("cookieSettingsTitle")}</strong>
-              <button type="button" onClick={() => setCookieSettingsOpen(false)}>
-                ✕
+              <button
+                type="button"
+                aria-label={t("sAriaClose")}
+                onClick={() => setCookieSettingsOpen(false)}
+              >
+                <span aria-hidden="true">✕</span>
               </button>
             </div>
             <p className="cookie-modal__intro">{t("cookieSettingsIntro")}</p>

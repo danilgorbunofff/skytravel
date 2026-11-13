@@ -30,7 +30,18 @@ export default memo(function TourCard({ tour, onClick }: Props) {
   }, []);
 
   return (
-    <article className="destination-card" onClick={onClick}>
+    <article
+      className="destination-card"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       {imageLoaded ? (
         <img
           className="destination-card__bg"
