@@ -2672,16 +2672,14 @@ html[lang="ru"] .logo {
   display: grid;
   gap: 0.9rem;
   position: sticky;
-  top: 165px;
-  max-height: calc(100vh - 185px);
-  max-height: calc(100dvh - 185px);
+  top: calc(var(--header-h) + 16px);
+  max-height: calc(100vh - var(--header-h) - 32px);
+  max-height: calc(100dvh - var(--header-h) - 32px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.search-sidebar::-webkit-scrollbar {
-  display: none;
+  /* a visible thin scrollbar: the panel scrolls on its own and that must be discoverable */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 .search-filter-block,
@@ -3231,7 +3229,6 @@ html[lang="ru"] .logo {
 /* Region count badge */
 .region-count {
   font-size: 0.75rem;
-  opacity: 0.85;
   margin-left: 4px;
   font-weight: 400;
   background: none !important;
@@ -9497,4 +9494,102 @@ html[lang="ru"] .logo {
     width: 280px;
     margin: 0;
   }
+}
+
+/* ===== Result cards ===== */
+.tour-card--grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px rgba(15, 29, 46, 0.06);
+}
+
+.tour-card--grid:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.tour-card--list {
+  position: relative;
+}
+
+.tour-card__image {
+  aspect-ratio: 3 / 2;
+  background: var(--blue-50);
+}
+
+/* Body is a column so the price always sits on the bottom edge of the card */
+.tour-card--grid .tour-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.tour-card--grid .tour-card__price-row {
+  margin-top: auto;
+}
+
+.tour-card__title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* The title is the card's one control; its hit area is stretched over the whole card */
+.tour-card__title-btn {
+  all: unset;
+  cursor: pointer;
+}
+
+.tour-card__title-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.tour-card:has(.tour-card__title-btn:focus-visible) {
+  outline: 2px solid var(--blue-700);
+  outline-offset: 2px;
+}
+
+.tour-card__heart,
+.tour-card__compare {
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+}
+
+.tour-card__compare {
+  right: 58px;
+}
+
+.tour-card__compare:focus-visible {
+  opacity: 1;
+}
+
+/* Tablet: two All Inclusive cards per view instead of one oversized card */
+@media (min-width: 600px) and (max-width: 768px) {
+  .allinc-carousel__track > .tour-card--grid,
+  .allinc-carousel__skeleton {
+    flex: 0 0 calc((100% - 1rem) / 2);
+    width: calc((100% - 1rem) / 2);
+    max-width: none;
+  }
+}
+
+.search-region-list button .region-count {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.search-region-list button.is-active .region-count {
+  color: inherit;
+}
+
+/* The input box is the pointer target, so give it a 24px hit area; the visible track stays 4px */
+.price-slider__track input[type="range"] {
+  height: 24px;
 }

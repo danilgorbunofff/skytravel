@@ -221,7 +221,7 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Zrušit všechny filtry",
   sNoResultsTipDates: "Rozšířit datum odjezdu o ±1–2 týdny",
-  sNoResultsTipRegion: "Vybrat jiný cílový region v záložce Oblast",
+  sNoResultsTipRegion: "Vybrat jinou zemi ve filtru Destinace",
   sPagePrev: "Předchozí",
   sPageNext: "Další",
   sPageLabel: "Strana",
@@ -368,6 +368,11 @@ const t: Record<string, string> = {
   sAriaAdultsLess: "Ubrat dospělého",
   sAriaChildrenMore: "Přidat dítě",
   sAriaChildrenLess: "Ubrat dítě",
+  sCompareAdd: "Přidat k porovnání",
+  sCompareRemoveFrom: "Odebrat z porovnání",
+  sSearchError: "Nabídky se nepodařilo načíst. Zkuste to prosím znovu.",
+  sAriaPriceFrom: "Cena od",
+  sAriaPriceTo: "Cena do",
 };
 
 export default t;

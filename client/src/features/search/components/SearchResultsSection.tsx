@@ -200,7 +200,7 @@ export function SearchResultsSection({
 
       {error && (
         <div className="search-error" role="alert">
-          <span>{error}</span>
+          <span>{t("sSearchError")}</span>
           <button type="button" className="search-error__retry" onClick={onRetry}>
             {t("sRetry")}
           </button>

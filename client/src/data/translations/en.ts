@@ -220,7 +220,7 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Clear all filters",
   sNoResultsTipDates: "Extending the departure date by ±1–2 weeks",
-  sNoResultsTipRegion: "Picking a different region under Area",
+  sNoResultsTipRegion: "Pick another country in the Destination filter",
   sPagePrev: "Previous",
   sPageNext: "Next",
   sPageLabel: "Page",
@@ -366,6 +366,11 @@ const t: Record<string, string> = {
   sAriaAdultsLess: "Remove an adult",
   sAriaChildrenMore: "Add a child",
   sAriaChildrenLess: "Remove a child",
+  sCompareAdd: "Add to comparison",
+  sCompareRemoveFrom: "Remove from comparison",
+  sSearchError: "We couldn't load the offers. Please try again.",
+  sAriaPriceFrom: "Price from",
+  sAriaPriceTo: "Price to",
 };
 
 export default t;

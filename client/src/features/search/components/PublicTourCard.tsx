@@ -116,12 +116,6 @@ export const PublicTourCard = memo(function PublicTourCard({
     action();
   }
 
-  function handleCardKeyDown(event: React.KeyboardEvent<HTMLElement>) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onOpenDetail(tour);
-  }
-
   const imageSrc = isValidImageUrl(tour.image)
     ? tour.image
     : getTourFallbackImage(tour.destination);
@@ -159,14 +153,7 @@ export const PublicTourCard = memo(function PublicTourCard({
     const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
 
     return (
-      <article
-        className="tour-card tour-card--grid"
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpenDetail(tour)}
-        onKeyDown={handleCardKeyDown}
-        style={staggerStyle}
-      >
+      <article className="tour-card tour-card--grid" style={staggerStyle}>
         <div className="tour-card__image">
           {imageLoaded ? (
             <img
@@ -210,7 +197,7 @@ export const PublicTourCard = memo(function PublicTourCard({
             <button
               type="button"
               className={`tour-card__compare${isCompared ? " is-active" : ""}${!isCompared && compareFull ? " is-disabled" : ""}`}
-              aria-label={isCompared ? "Odebrat z porovnání" : "Přidat k porovnání"}
+              aria-label={isCompared ? t("sCompareRemoveFrom") : t("sCompareAdd")}
               onClick={(event) => stopCardAction(event, () => onToggleCompare?.(tour))}
               disabled={!isCompared && compareFull}
             >
@@ -238,7 +225,15 @@ export const PublicTourCard = memo(function PublicTourCard({
 
         <div className="tour-card__body">
           <div className="tour-card__destination">{tour.destination}</div>
-          <h3 className="tour-card__title">{tour.title}</h3>
+          <h3 className="tour-card__title">
+            <button
+              type="button"
+              className="tour-card__title-btn"
+              onClick={() => onOpenDetail(tour)}
+            >
+              {tour.title}
+            </button>
+          </h3>
 
           <div className="tour-card__meta">
             <span className="tour-card__meta-item">
@@ -290,14 +285,7 @@ export const PublicTourCard = memo(function PublicTourCard({
   const BoardIcon = tour.board ? (BOARD_ICONS[tour.board] ?? null) : null;
 
   return (
-    <article
-      className="tour-card tour-card--list"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpenDetail(tour)}
-      onKeyDown={handleCardKeyDown}
-      style={staggerStyle}
-    >
+    <article className="tour-card tour-card--list" style={staggerStyle}>
       <div className="tour-card__image tour-card__image--list">
         {imageLoaded ? (
           <img
@@ -353,7 +341,15 @@ export const PublicTourCard = memo(function PublicTourCard({
       <div className="tour-card__body tour-card__body--list">
         <div className="tour-card__list-top">
           <div className="tour-card__destination">{tour.destination}</div>
-          <h3 className="tour-card__title">{tour.title}</h3>
+          <h3 className="tour-card__title">
+            <button
+              type="button"
+              className="tour-card__title-btn"
+              onClick={() => onOpenDetail(tour)}
+            >
+              {tour.title}
+            </button>
+          </h3>
           {tour.stars && Number(tour.stars) >= 1 && Number(tour.stars) <= 5 && (
             <span className="tour-card__stars">
               <StarRating rating={Number(tour.stars)} />

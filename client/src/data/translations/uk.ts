@@ -223,7 +223,7 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Скасувати всі фільтри",
   sNoResultsTipDates: "Розширити дату виїзду на ±1–2 тижні",
-  sNoResultsTipRegion: "Обрати інший регіон у розділі Область",
+  sNoResultsTipRegion: "Обрати іншу країну у фільтрі «Напрямок»",
   sPagePrev: "Назад",
   sPageNext: "Далі",
   sPageLabel: "Сторінка",
@@ -370,6 +370,11 @@ const t: Record<string, string> = {
   sAriaAdultsLess: "Прибрати дорослого",
   sAriaChildrenMore: "Додати дитину",
   sAriaChildrenLess: "Прибрати дитину",
+  sCompareAdd: "Додати до порівняння",
+  sCompareRemoveFrom: "Прибрати з порівняння",
+  sSearchError: "Не вдалося завантажити пропозиції. Спробуйте, будь ласка, ще раз.",
+  sAriaPriceFrom: "Ціна від",
+  sAriaPriceTo: "Ціна до",
 };
 
 export default t;

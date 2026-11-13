@@ -223,7 +223,7 @@ const t: Record<string, string> = {
 
   sNoResultsTipReset: "Снять все фильтры",
   sNoResultsTipDates: "Расширить дату выезда на ±1–2 недели",
-  sNoResultsTipRegion: "Выбрать другой регион в разделе Область",
+  sNoResultsTipRegion: "Выбрать другую страну в фильтре «Направление»",
   sPagePrev: "Назад",
   sPageNext: "Далее",
   sPageLabel: "Страница",
@@ -370,6 +370,11 @@ const t: Record<string, string> = {
   sAriaAdultsLess: "Убрать взрослого",
   sAriaChildrenMore: "Добавить ребёнка",
   sAriaChildrenLess: "Убрать ребёнка",
+  sCompareAdd: "Добавить к сравнению",
+  sCompareRemoveFrom: "Убрать из сравнения",
+  sSearchError: "Не удалось загрузить предложения. Пожалуйста, попробуйте ещё раз.",
+  sAriaPriceFrom: "Цена от",
+  sAriaPriceTo: "Цена до",
 };
 
 export default t;
