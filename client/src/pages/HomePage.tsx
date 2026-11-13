@@ -17,6 +17,7 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { useTours } from "../hooks/useTours";
 import { useLeadPopup } from "../hooks/useLeadPopup";
 import { useCookieConsent } from "../hooks/useCookieConsent";
+import { useFavorites } from "../hooks/useFavorites";
 import { SkipToContent } from "../components/SkipToContent";
 import LeadPopup from "../components/LeadPopup";
 import CookieConsent from "../components/CookieConsent";
@@ -35,6 +36,7 @@ export default function HomePage() {
   const ownTours = useTours();
   const leadPopup = useLeadPopup();
   const cookies = useCookieConsent();
+  const { toggle: toggleFavorite, isFavorite } = useFavorites();
 
   const budgetOptions = [
     { value: 0, label: "Do 20 000 Kč" },
@@ -439,8 +441,8 @@ export default function HomePage() {
                       t={t}
                       tour={tour}
                       viewMode="grid"
-                      isFavorite={false}
-                      onToggleFavorite={() => {}}
+                      isFavorite={isFavorite(`${tour.source}-${tour.externalId}`)}
+                      onToggleFavorite={() => toggleFavorite(tour)}
                       onOpenDetail={() => openAllIncDetail(tour)}
                       providerLabel="Alexandria"
                     />

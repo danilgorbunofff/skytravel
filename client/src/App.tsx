@@ -11,6 +11,7 @@ const TermsPage = lazy(() => import("./pages/TermsPage"));
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
 const AdminRoutes = lazy(() => import("./features/admin/AdminRoutes"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/admin-login" element={<AdminLoginPage />} />
             <Route path="/admin/*" element={<AdminRoutes />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

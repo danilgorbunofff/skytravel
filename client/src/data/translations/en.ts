@@ -350,6 +350,16 @@ const t: Record<string, string> = {
   sTermsCountFew: "terms",
   sTermsCountMany: "terms",
   sTermsCountOne: "term",
+  newsletterEmailLabel: "Your email",
+  newsletterEmailError: "Enter a valid email address.",
+  newsletterConsentError:
+    "We can't send you offers without your consent to personal data processing.",
+  formSendError: "Sending failed. Please try again.",
+  formSending: "Sending…",
+  notFoundTitle: "We couldn't find that page",
+  notFoundText:
+    "The address doesn't exist or has changed. Try searching for a trip, or go back to the home page.",
+  notFoundHome: "Back to home",
 };
 
 export default t;

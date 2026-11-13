@@ -352,6 +352,16 @@ const t: Record<string, string> = {
   sTermsCountFew: "termíny",
   sTermsCountMany: "termínů",
   sTermsCountOne: "termín",
+  newsletterEmailLabel: "Váš e-mail",
+  newsletterEmailError: "Zadejte platnou e-mailovou adresu.",
+  newsletterConsentError:
+    "Bez souhlasu se zpracováním osobních údajů vám nabídky posílat nemůžeme.",
+  formSendError: "Odeslání se nepodařilo. Zkuste to prosím znovu.",
+  formSending: "Odesílám…",
+  notFoundTitle: "Stránku jsme nenašli",
+  notFoundText:
+    "Adresa neexistuje nebo se změnila. Zkuste vyhledat zájezd, nebo se vraťte na úvodní stránku.",
+  notFoundHome: "Zpět na úvod",
 };
 
 export default t;

@@ -354,6 +354,16 @@ const t: Record<string, string> = {
   sTermsCountFew: "даты",
   sTermsCountMany: "дат",
   sTermsCountOne: "дата",
+  newsletterEmailLabel: "Ваш e-mail",
+  newsletterEmailError: "Введите корректный адрес электронной почты.",
+  newsletterConsentError:
+    "Без вашего согласия на обработку персональных данных мы не можем присылать предложения.",
+  formSendError: "Не удалось отправить. Пожалуйста, попробуйте ещё раз.",
+  formSending: "Отправляем…",
+  notFoundTitle: "Страница не найдена",
+  notFoundText:
+    "Адрес не существует или изменился. Попробуйте найти тур или вернитесь на главную страницу.",
+  notFoundHome: "На главную",
 };
 
 export default t;

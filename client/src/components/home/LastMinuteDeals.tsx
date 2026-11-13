@@ -3,7 +3,6 @@ import type { AlexandriaLastMinuteItem } from "../../api";
 import type { TranslationKey } from "../../hooks/useLanguage";
 import { getBoardLabel, getTransportLabel } from "../../features/search/constants";
 import { formatPrice } from "../../utils";
-import { EmptyState } from "../EmptyState";
 import { Skeleton } from "../Skeleton";
 import StarRating from "../StarRating";
 import { formatDate } from "../../lib/locale";
@@ -293,18 +292,8 @@ export default function LastMinuteDeals({ lastMinuteItems, loading, onItemClick,
     );
   }
 
-  if (pairs.length === 0) {
-    return (
-      <section id="lastminute" className="section section-soft">
-        <div className="container">
-          <article className="last-minute-card">
-            <h3>{t("sectionLastMinute")}</h3>
-            <EmptyState title={t("emptyState")} />
-          </article>
-        </div>
-      </section>
-    );
-  }
+  // No last-minute offers right now: leave the section out instead of showing an empty box.
+  if (pairs.length === 0) return null;
 
   const showArrows = pairs.length > 1;
 

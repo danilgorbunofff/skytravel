@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon, Share2, Bell } from "lucide-react";
+import { X, Calendar, Plane, Bus, Car, Ship, Train, BedDouble, Moon, Share2 } from "lucide-react";
 import type { UnifiedTour } from "../../../types/providers";
 import { useLanguage } from "../../../hooks/useLanguage";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
@@ -144,7 +144,11 @@ export function TourDetailModal({
 
   const photos = selectedOffer.photos?.length
     ? selectedOffer.photos.filter(isValidImageUrl)
-    : [isValidImageUrl(selectedOffer.image) ? selectedOffer.image : getTourFallbackImage(selectedOffer.destination)];
+    : [
+        isValidImageUrl(selectedOffer.image)
+          ? selectedOffer.image
+          : getTourFallbackImage(selectedOffer.destination),
+      ];
 
   const nights =
     selectedOffer.nights ??
@@ -228,7 +232,9 @@ export function TourDetailModal({
 
         {/* Share toast */}
         {shareToast && (
-          <div className={`tour-detail-modal__toast ${shareToast === "copied" ? "is-success" : "is-error"}`}>
+          <div
+            className={`tour-detail-modal__toast ${shareToast === "copied" ? "is-success" : "is-error"}`}
+          >
             {shareToast === "copied" ? "Odkaz zkopírován" : "Sdílení se nezdařilo"}
           </div>
         )}
@@ -310,19 +316,6 @@ export function TourDetailModal({
               t={t}
               onInquiry={scrollToInquiry}
             />
-
-            {/* Price Alert Bell — scrolls to inquiry form */}
-            <div className="tour-detail-modal__alert">
-              <button
-                type="button"
-                className="tour-detail-modal__alert-btn"
-                onClick={scrollToInquiry}
-                aria-label="Hlídání ceny"
-              >
-                <Bell size={16} />
-                Hlídat cenu
-              </button>
-            </div>
           </div>
 
           {/* Tabs: Description / Offers / Location */}
@@ -361,11 +354,7 @@ export function TourDetailModal({
         {/* Mobile Sticky CTA */}
         {isMobile && (
           <div className="tour-detail-modal__sticky-cta">
-            <button
-              type="button"
-              className="tour-detail-modal__cta-btn"
-              onClick={scrollToInquiry}
-            >
+            <button type="button" className="tour-detail-modal__cta-btn" onClick={scrollToInquiry}>
               Poptat zájezd
             </button>
           </div>
