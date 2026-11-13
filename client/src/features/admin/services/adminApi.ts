@@ -3,6 +3,42 @@ import { csrfFetch } from "../../../lib/csrf";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
+// ── Errors ────────────────────────────────────────────────────────────────
+
+/** Czech messages for the machine-readable codes the admin API returns. */
+const ERROR_MESSAGES: Record<string, string> = {
+  NO_RECIPIENTS: "Žádný kontakt nemá marketingový souhlas.",
+  FORBIDDEN_SEGMENT: "Kampaně lze posílat pouze kontaktům se souhlasem.",
+  SMTP_NOT_CONFIGURED: "Odesílání e-mailů není na serveru nastavené (SMTP).",
+  INVALID_FROM: "Adresa odesílatele chybí nebo je neplatná.",
+  VALIDATION_ERROR: "Formulář obsahuje neplatné údaje.",
+  RATE_LIMITED: "Příliš mnoho požadavků. Zkuste to za chvíli znovu.",
+  CSRF_INVALID: "Platnost relace vypršela. Obnovte stránku a zkuste to znovu.",
+  UNAUTHORIZED: "Nejste přihlášeni. Přihlaste se prosím znovu.",
+  NOT_FOUND: "Položka nebyla nalezena.",
+};
+
+/**
+ * Turns an admin API error body (`{ ok: false, error: { code, message } }`)
+ * into a Czech message for the UI. Unknown codes fall back to `fallback`
+ * rather than showing raw English server text.
+ */
+export function apiErrorMessage(body: unknown, fallback: string): string {
+  const error = (body as { error?: unknown } | null)?.error;
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code: unknown }).code)
+      : typeof error === "string"
+        ? error
+        : "";
+  return ERROR_MESSAGES[code] ?? fallback;
+}
+
+async function failWith(res: Response, fallback: string): Promise<never> {
+  const body = await res.json().catch(() => null);
+  throw new Error(apiErrorMessage(body, fallback));
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 
 export async function fetchAdminMe() {
@@ -30,7 +66,7 @@ export async function logoutAdmin() {
 
 export async function fetchAdminTours() {
   const res = await fetch(`${API_URL}/api/admin/tours`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to load tours");
+  if (!res.ok) await failWith(res, "Nepodařilo se načíst nabídky.");
   const body = (await res.json()) as { data?: { items?: OwnTour[] } };
   return body.data?.items ?? [];
 }
@@ -42,7 +78,7 @@ export async function createTour(payload: OwnTour) {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to create tour");
+  if (!res.ok) await failWith(res, "Nabídku se nepodařilo vytvořit.");
   const body = (await res.json()) as { data?: { item?: OwnTour } };
   return body.data?.item as OwnTour;
 }
@@ -54,7 +90,7 @@ export async function updateTour(id: number, payload: OwnTour) {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to update tour");
+  if (!res.ok) await failWith(res, "Nabídku se nepodařilo uložit.");
   const body = (await res.json()) as { data?: { item?: OwnTour } };
   return body.data?.item as OwnTour;
 }
@@ -64,7 +100,7 @@ export async function deleteTour(id: number) {
     method: "DELETE",
     credentials: "include",
   });
-  if (!res.ok && res.status !== 204) throw new Error("Failed to delete tour");
+  if (!res.ok && res.status !== 204) await failWith(res, "Nabídku se nepodařilo smazat.");
 }
 
 export async function updateTourOrder(ids: number[]) {
@@ -74,7 +110,7 @@ export async function updateTourOrder(ids: number[]) {
     credentials: "include",
     body: JSON.stringify({ ids }),
   });
-  if (!res.ok) throw new Error("Failed to update order");
+  if (!res.ok) await failWith(res, "Pořadí se nepodařilo uložit.");
   return res.json();
 }
 
@@ -88,7 +124,7 @@ export async function uploadAdminImages(files: FileList | File[]) {
     body: formData,
     credentials: "include",
   });
-  if (!res.ok) throw new Error("Failed to upload images");
+  if (!res.ok) await failWith(res, "Nahrání obrázků se nezdařilo.");
   const body = (await res.json()) as { data?: { urls?: string[] } };
   return { urls: body.data?.urls ?? [] };
 }
@@ -108,7 +144,7 @@ export async function fetchLeads(params?: {
   if (params?.offset != null) qs.set("offset", String(params.offset));
   const suffix = qs.toString() ? `?${qs}` : "";
   const res = await fetch(`${API_URL}/api/admin/leads${suffix}`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch leads");
+  if (!res.ok) await failWith(res, "Nepodařilo se načíst kontakty.");
   return res.json() as Promise<
     | { ok: boolean; data: { items: Lead[]; total: number; limit: number; offset: number } }
     | { ok: boolean; data: { items: unknown[] } }
@@ -119,7 +155,19 @@ export async function deleteLead(id: number) {
   const res = await csrfFetch(`${API_URL}/api/admin/leads/${id}`, {
     method: "DELETE",
   });
-  if (!res.ok && res.status !== 204) throw new Error("Failed to delete lead");
+  if (!res.ok && res.status !== 204) await failWith(res, "Kontakt se nepodařilo smazat.");
+}
+
+/**
+ * Exact number of leads in a segment, counted by the server. The campaign
+ * send endpoint targets `segment` without any search query, so this is the
+ * number of recipients a campaign really reaches.
+ */
+export async function fetchLeadCount(segment: "all" | "consented" | "pending"): Promise<number> {
+  const body = await fetchLeads({ segment, limit: 1, offset: 0 });
+  const total = (body.data as { total?: unknown }).total;
+  if (typeof total !== "number") throw new Error("Nepodařilo se zjistit počet kontaktů.");
+  return total;
 }
 
 export async function sendCampaign(payload: {
@@ -135,10 +183,7 @@ export async function sendCampaign(payload: {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || "Failed to send campaign");
-  }
+  if (!res.ok) await failWith(res, "Odeslání kampaně se nezdařilo.");
   return res.json();
 }
 
@@ -155,10 +200,7 @@ export async function sendTestCampaign(payload: {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error || "Failed to send test email");
-  }
+  if (!res.ok) await failWith(res, "Testovací e-mail se nepodařilo odeslat.");
   return res.json();
 }
 
@@ -185,7 +227,31 @@ export async function fetchStatistics(period: string): Promise<StatisticsData> {
   const res = await fetch(`${API_URL}/api/admin/statistics?period=${period}`, {
     credentials: "include",
   });
-  if (!res.ok) throw new Error("Failed to load statistics");
+  if (!res.ok) await failWith(res, "Nepodařilo se načíst statistiky.");
   const body = await res.json();
   return body.data as StatisticsData;
+}
+
+// ── Site settings ─────────────────────────────────────────────────────────
+
+export interface SiteSettings {
+  leadPopupEnabled: boolean;
+}
+
+export async function fetchSiteSettings(): Promise<SiteSettings> {
+  const res = await fetch(`${API_URL}/api/admin/site-settings`, { credentials: "include" });
+  if (!res.ok) await failWith(res, "Nepodařilo se načíst nastavení.");
+  const body = (await res.json()) as { data: SiteSettings };
+  return body.data;
+}
+
+export async function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings> {
+  const res = await csrfFetch(`${API_URL}/api/admin/site-settings`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) await failWith(res, "Uložení nastavení se nezdařilo.");
+  const body = (await res.json()) as { data: SiteSettings };
+  return body.data;
 }

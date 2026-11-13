@@ -46,6 +46,8 @@ function ToolbarBtn({
       size="icon"
       className={cn("h-8 w-8", active && "bg-accent text-accent-foreground")}
       title={title}
+      aria-label={title}
+      aria-pressed={active === undefined ? undefined : active}
       onClick={onClick}
     >
       {children}
@@ -81,10 +83,7 @@ export default function EmailEditor({ editor, fileInputRef, onUploadImage, onPre
         <div className="flex flex-wrap items-center gap-px border-b border-input bg-muted/60 px-1.5 py-1">
           {/* History */}
           <div className="flex items-center gap-px">
-            <ToolbarBtn
-              title="Zpět (Ctrl+Z)"
-              onClick={() => editor?.chain().focus().undo().run()}
-            >
+            <ToolbarBtn title="Zpět (Ctrl+Z)" onClick={() => editor?.chain().focus().undo().run()}>
               <Undo2 className="h-4 w-4" />
             </ToolbarBtn>
             <ToolbarBtn
@@ -164,10 +163,7 @@ export default function EmailEditor({ editor, fileInputRef, onUploadImage, onPre
             <ToolbarBtn title="Vložit obrázek (URL)" onClick={handleInsertImageUrl}>
               <ImageIcon className="h-4 w-4" />
             </ToolbarBtn>
-            <ToolbarBtn
-              title="Nahrát obrázek"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <ToolbarBtn title="Nahrát obrázek" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4" />
             </ToolbarBtn>
           </div>

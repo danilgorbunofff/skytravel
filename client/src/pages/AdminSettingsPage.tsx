@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../components/AdminLayout";
+import AdminToastViewport from "../components/admin/AdminToastViewport";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
-import { csrfFetch } from "../lib/csrf";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { fetchSiteSettings, updateSiteSettings } from "../features/admin/services/adminApi";
+import { useAdminToast } from "../features/admin/hooks/useAdminToast";
 
 export default function AdminSettingsPage() {
   const [leadPopupEnabled, setLeadPopupEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toasts, showToast, dismissToast } = useAdminToast();
 
   useEffect(() => {
-    fetch(`${API_URL}/api/admin/site-settings`, { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((body: { data: { leadPopupEnabled: boolean } }) =>
-        setLeadPopupEnabled(body.data.leadPopupEnabled),
+    fetchSiteSettings()
+      .then((settings) => setLeadPopupEnabled(settings.leadPopupEnabled))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Nepodařilo se načíst nastavení."),
       )
-      .catch(() => setError("Nepodařilo se načíst nastavení."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -27,22 +27,23 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setError(null);
     try {
-      const r = await csrfFetch(`${API_URL}/api/admin/site-settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadPopupEnabled: checked }),
-      });
-      if (!r.ok) throw new Error();
-      const body = (await r.json()) as { data: { leadPopupEnabled: boolean } };
-      setLeadPopupEnabled(body.data.leadPopupEnabled);
+      const settings = await updateSiteSettings({ leadPopupEnabled: checked });
+      setLeadPopupEnabled(settings.leadPopupEnabled);
       // Keep localStorage in sync for legacy clients (best-effort)
       try {
-        localStorage.setItem("leadPopupEnabled", String(body.data.leadPopupEnabled));
+        localStorage.setItem("leadPopupEnabled", String(settings.leadPopupEnabled));
       } catch {
         // ignore
       }
-    } catch {
-      setError("Uložení se nezdařilo.");
+      showToast(
+        settings.leadPopupEnabled
+          ? "Uloženo: marketingový popup je zapnutý."
+          : "Uloženo: marketingový popup je vypnutý.",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Uložení se nezdařilo.";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -50,6 +51,7 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminLayout title="Nastavení adminu">
+      <AdminToastViewport toasts={toasts} onDismiss={dismissToast} />
       <Card>
         <CardHeader>
           <CardTitle>Nastavení</CardTitle>
@@ -77,7 +79,9 @@ export default function AdminSettingsPage() {
               aria-busy={loading || saving}
             />
           </div>
-          <p className="text-xs text-muted-foreground">Uložení probíhá okamžitě pro celý web.</p>
+          <p className="text-xs text-muted-foreground">
+            {saving ? "Ukládám…" : "Uložení probíhá okamžitě pro celý web."}
+          </p>
         </CardContent>
       </Card>
     </AdminLayout>

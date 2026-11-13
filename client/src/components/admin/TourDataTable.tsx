@@ -134,7 +134,7 @@ export default function TourDataTable({
 
       {/* Error */}
       {error && (
-        <p className="note" style={{ color: "#d32f2f" }}>
+        <p className="note error" role="alert">
           {error}
         </p>
       )}
@@ -173,6 +173,7 @@ export default function TourDataTable({
                 type="checkbox"
                 checked={selected.size === tours.length && tours.length > 0}
                 onChange={onToggleSelectAll}
+                aria-label="Vybrat všechny zájezdy na stránce"
               />
             </span>
             <span className="alex-col-img">Foto</span>
@@ -229,7 +230,7 @@ export default function TourDataTable({
                         className={`alex-table-row${selected.has(tour.externalId) ? " is-selected" : ""}`}
                         onClick={(e) => {
                           const target = e.target as HTMLElement;
-                          if (target.closest("input, a")) return;
+                          if (target.closest("input, a, button")) return;
                           onTourClick(tour);
                         }}
                         style={{ cursor: "pointer" }}
@@ -239,6 +240,7 @@ export default function TourDataTable({
                             type="checkbox"
                             checked={selected.has(tour.externalId)}
                             onChange={() => onToggleSelect(tour.externalId)}
+                            aria-label={`Vybrat ${tour.destination}`}
                           />
                         </span>
                         <span className="alex-col-img">
@@ -261,7 +263,13 @@ export default function TourDataTable({
                           )}
                         </span>
                         <span className="alex-col-dest">
-                          <strong>{tour.destination}</strong>
+                          <button
+                            type="button"
+                            className="alex-row-open"
+                            onClick={() => onTourClick(tour)}
+                          >
+                            {tour.destination}
+                          </button>
                           <small>{tour.title}</small>
                           <span className="alex-row-meta">
                             <span
@@ -294,7 +302,9 @@ export default function TourDataTable({
                         <span className="alex-col-price">
                           <strong>{formatPrice(tour.price)}</strong>
                           {tour.originalPrice > tour.price && (
-                            <small className="alex-price-orig">{formatPrice(tour.originalPrice)}</small>
+                            <small className="alex-price-orig">
+                              {formatPrice(tour.originalPrice)}
+                            </small>
                           )}
                         </span>
                         <span className="alex-col-dates">
@@ -305,7 +315,9 @@ export default function TourDataTable({
                         )}
                         {visibleColumns.pax && (
                           <span className="alex-col-people">
-                            {tour.adults !== undefined ? `${tour.adults}+${tour.children ?? 0}` : "–"}
+                            {tour.adults !== undefined
+                              ? `${tour.adults}+${tour.children ?? 0}`
+                              : "–"}
                           </span>
                         )}
                         {visibleColumns.board && (
@@ -314,7 +326,9 @@ export default function TourDataTable({
                           </span>
                         )}
                         {visibleColumns.stars && (
-                          <span className="alex-col-transport">{starsDisplay(tour.stars) || "–"}</span>
+                          <span className="alex-col-transport">
+                            {starsDisplay(tour.stars) || "–"}
+                          </span>
                         )}
                         <span className="alex-col-transport">
                           {transportLabel[tour.transport] ?? tour.transport}
@@ -327,6 +341,7 @@ export default function TourDataTable({
                               rel="noopener noreferrer"
                               className="alex-link-btn"
                               title="Otevřít nabídku"
+                              aria-label={`Otevřít nabídku ${tour.destination} u poskytovatele (nové okno)`}
                             >
                               ↗
                             </a>
@@ -345,7 +360,7 @@ export default function TourDataTable({
                 className={`alex-table-row${selected.has(tour.externalId) ? " is-selected" : ""}`}
                 onClick={(e) => {
                   const target = e.target as HTMLElement;
-                  if (target.closest("input, a")) return;
+                  if (target.closest("input, a, button")) return;
                   onTourClick(tour);
                 }}
                 style={{ cursor: "pointer" }}
@@ -355,6 +370,7 @@ export default function TourDataTable({
                     type="checkbox"
                     checked={selected.has(tour.externalId)}
                     onChange={() => onToggleSelect(tour.externalId)}
+                    aria-label={`Vybrat ${tour.destination}`}
                   />
                 </span>
                 <span className="alex-col-img">
@@ -377,7 +393,9 @@ export default function TourDataTable({
                   )}
                 </span>
                 <span className="alex-col-dest">
-                  <strong>{tour.destination}</strong>
+                  <button type="button" className="alex-row-open" onClick={() => onTourClick(tour)}>
+                    {tour.destination}
+                  </button>
                   <small>{tour.title}</small>
                   <span className="alex-row-meta">
                     <span
@@ -443,6 +461,7 @@ export default function TourDataTable({
                       rel="noopener noreferrer"
                       className="alex-link-btn"
                       title="Otevřít nabídku"
+                      aria-label={`Otevřít nabídku ${tour.destination} u poskytovatele (nové okno)`}
                     >
                       ↗
                     </a>

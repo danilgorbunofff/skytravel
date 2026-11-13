@@ -3,35 +3,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { Download, Search, XCircle } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import LeadsTable from "./LeadsTable";
 
+export type LeadCounts = { all: number; consented: number; pending: number };
+
 type Props = {
+  /** Rows loaded for the table (capped by the list limit). */
   leads: Lead[];
+  /** Server total for the current table filter (segment + search). */
+  listTotal: number;
+  /** Server totals per segment, independent of the search box. */
+  counts: LeadCounts | null;
   loading: boolean;
   error: string | null;
   segment: "all" | "consented" | "pending";
   searchQuery: string;
-  filtered: Lead[];
   onSegmentChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onDelete: (id: number) => void;
   onExportCsv: () => void;
+  onRetry: () => void;
 };
 
 export default function RecipientSelector({
   leads,
+  listTotal,
+  counts,
   loading,
   error,
   segment,
   searchQuery,
-  filtered,
   onSegmentChange,
   onSearchChange,
   onDelete,
   onExportCsv,
+  onRetry,
 }: Props) {
-  const consentedCount = leads.filter((l) => l.marketingConsent).length;
+  const fmt = (value: number | undefined) => (value === undefined ? "…" : value);
+  const truncated = !loading && !error && listTotal > leads.length;
 
   return (
     <Card>
@@ -39,53 +49,53 @@ export default function RecipientSelector({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <CardTitle>Správa kontaktů</CardTitle>
-            <CardDescription>
-              Filtrace, správa a export poptávek od návštěvníků.
-            </CardDescription>
+            <CardDescription>Filtrace, správa a export poptávek od návštěvníků.</CardDescription>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={onExportCsv}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onExportCsv}
+            disabled={loading || leads.length === 0}
+          >
             <Download className="mr-1.5 h-3.5 w-3.5" />
-            Export CSV ({filtered.length})
+            Export CSV ({leads.length})
           </Button>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Tabs
-            value={segment}
-            onValueChange={onSegmentChange}
-            className="w-full sm:w-auto"
-          >
+          <Tabs value={segment} onValueChange={onSegmentChange} className="w-full sm:w-auto">
             <TabsList>
-              <TabsTrigger value="all">Vše ({leads.length})</TabsTrigger>
-              <TabsTrigger value="consented">Souhlas ({consentedCount})</TabsTrigger>
-              <TabsTrigger value="pending">
-                Bez souhlasu ({leads.length - consentedCount})
-              </TabsTrigger>
+              <TabsTrigger value="all">Vše ({fmt(counts?.all)})</TabsTrigger>
+              <TabsTrigger value="consented">Souhlas ({fmt(counts?.consented)})</TabsTrigger>
+              <TabsTrigger value="pending">Bez souhlasu ({fmt(counts?.pending)})</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              type="search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Hledat e-mail nebo destinaci…"
+              aria-label="Hledat v kontaktech"
               className="pl-9"
             />
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
-            <XCircle className="h-4 w-4 shrink-0" />
-            {error}
-          </div>
+        {truncated && (
+          <p className="mb-3 text-xs text-muted-foreground">
+            Zobrazeno prvních {leads.length} z {listTotal} kontaktů. Upřesněte hledání.
+          </p>
         )}
         <LeadsTable
-          leads={filtered}
+          leads={leads}
           loading={loading}
           error={error}
           searchQuery={searchQuery}
           onDelete={onDelete}
+          onRetry={onRetry}
         />
       </CardContent>
     </Card>

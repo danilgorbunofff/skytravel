@@ -1,30 +1,29 @@
 import type { OwnTour } from "../types";
-import type { TranslationKey } from "../../../hooks/useLanguage";
 import { Button } from "../../../components/ui/button";
 import { formatPrice } from "../../../utils";
-import { ArrowUp, ArrowDown, Pencil, Trash2, GripVertical, Save, PackagePlus } from "lucide-react";
+import { ArrowUp, ArrowDown, Pencil, Trash2, Save, PackagePlus, Loader2 } from "lucide-react";
 import { cn } from "../../../lib/utils";
 
 type Props = {
   ordering: OwnTour[];
   loading: boolean;
   orderDirty: boolean;
+  savingOrder: boolean;
   onSaveOrder: () => void;
   onMoveOrder: (index: number, direction: number) => void;
   onEdit: (tour: OwnTour) => void;
   onDelete: (id?: number) => void;
-  t: (key: TranslationKey) => string;
 };
 
 export default function AdminTourOrderList({
   ordering,
   loading,
   orderDirty,
+  savingOrder,
   onSaveOrder,
   onMoveOrder,
   onEdit,
   onDelete,
-  t: _t,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -39,11 +38,15 @@ export default function AdminTourOrderList({
         <Button
           size="sm"
           onClick={onSaveOrder}
-          disabled={!orderDirty}
-          className={cn("gap-2 transition-all", orderDirty && "animate-pulse")}
+          disabled={!orderDirty || savingOrder}
+          className={cn("gap-2 transition-all", orderDirty && !savingOrder && "animate-pulse")}
         >
-          <Save className="h-3.5 w-3.5" />
-          Uložit pořadí
+          {savingOrder ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5" />
+          )}
+          {savingOrder ? "Ukládám…" : "Uložit pořadí"}
         </Button>
       </div>
 
@@ -81,11 +84,11 @@ export default function AdminTourOrderList({
               key={tour.id}
               className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition-all hover:border-primary/20 hover:shadow-sm sm:gap-4"
             >
-              {/* Grip handle */}
-              <div className="flex flex-col items-center text-muted-foreground/40">
-                <GripVertical className="h-5 w-5" />
-                <span className="mt-0.5 text-[10px] font-bold">{index + 1}</span>
-              </div>
+              {/* Position (reorder with the arrow buttons) */}
+              <span className="w-5 shrink-0 text-center text-xs font-bold text-muted-foreground">
+                <span className="sr-only">Pozice </span>
+                {index + 1}
+              </span>
 
               {/* Thumbnail */}
               <img
@@ -113,8 +116,8 @@ export default function AdminTourOrderList({
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
                   onClick={() => onMoveOrder(index, -1)}
-                  disabled={index === 0}
-                  aria-label="Posunout nahoru"
+                  disabled={index === 0 || savingOrder}
+                  aria-label={`Posunout ${tour.destination} nahoru`}
                 >
                   <ArrowUp className="h-4 w-4" />
                 </Button>
@@ -124,8 +127,8 @@ export default function AdminTourOrderList({
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
                   onClick={() => onMoveOrder(index, 1)}
-                  disabled={index === ordering.length - 1}
-                  aria-label="Posunout dolů"
+                  disabled={index === ordering.length - 1 || savingOrder}
+                  aria-label={`Posunout ${tour.destination} dolů`}
                 >
                   <ArrowDown className="h-4 w-4" />
                 </Button>
@@ -138,7 +141,7 @@ export default function AdminTourOrderList({
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                   onClick={() => onEdit(tour)}
-                  aria-label="Upravit nabídku"
+                  aria-label={`Upravit nabídku ${tour.destination}`}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -147,7 +150,7 @@ export default function AdminTourOrderList({
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => onDelete(tour.id)}
-                  aria-label="Smazat nabídku"
+                  aria-label={`Smazat nabídku ${tour.destination}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

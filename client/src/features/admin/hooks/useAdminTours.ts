@@ -34,6 +34,8 @@ export function useAdminTours() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   useEffect(() => {
     fetchAdminMe()
@@ -60,6 +62,7 @@ export function useAdminTours() {
 
   const handleSubmit = useCallback(
     async (photos: string[]) => {
+      if (submitting) return false;
       setError(null);
 
       if (
@@ -89,6 +92,7 @@ export function useAdminTours() {
         image: photos[0],
       };
 
+      setSubmitting(true);
       try {
         if (editingId) {
           const updated = await updateTour(editingId, payload);
@@ -99,19 +103,21 @@ export function useAdminTours() {
         }
         resetForm();
         return true;
-      } catch {
-        setError("Uložení se nezdařilo.");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Uložení se nezdařilo.");
         return false;
+      } finally {
+        setSubmitting(false);
       }
     },
-    [form, editingId, resetForm],
+    [form, editingId, resetForm, submitting],
   );
 
-  const handleEdit = useCallback((tour: OwnTour): string[] => {
+  /** Loads a tour into the form. Returns the form and photos it was loaded with. */
+  const handleEdit = useCallback((tour: OwnTour): { form: OwnTour; photos: string[] } => {
     const start = tour.startDate ? new Date(tour.startDate) : null;
     const end = tour.endDate ? new Date(tour.endDate) : null;
-    setEditingId(tour.id ?? null);
-    setForm({
+    const nextForm: OwnTour = {
       destination: tour.destination,
       title: tour.title,
       price: tour.price,
@@ -121,12 +127,14 @@ export function useAdminTours() {
       transport: tour.transport,
       image: tour.image,
       i18n: tour.i18n ?? {},
-    });
+    };
+    setEditingId(tour.id ?? null);
+    setForm(nextForm);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    if (tour.photos && tour.photos.length > 0) return tour.photos;
-    if (tour.image) return [tour.image];
-    return [];
+    const photos =
+      tour.photos && tour.photos.length > 0 ? tour.photos : tour.image ? [tour.image] : [];
+    return { form: nextForm, photos };
   }, []);
 
   const handleDelete = useCallback((id?: number) => {
@@ -134,15 +142,15 @@ export function useAdminTours() {
     setConfirmDeleteId(id);
   }, []);
 
+  /** Deletes the tour awaiting confirmation. Throws on failure so the caller can report it. */
   const performDelete = useCallback(async () => {
     if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
     try {
-      await deleteTour(confirmDeleteId);
-      setTours((prev) => prev.filter((item) => item.id !== confirmDeleteId));
-      if (editingId === confirmDeleteId) resetForm();
-      setConfirmDeleteId(null);
-    } catch {
-      setError("Smazání se nezdařilo.");
+      await deleteTour(id);
+      setTours((prev) => prev.filter((item) => item.id !== id));
+      if (editingId === id) resetForm();
+    } finally {
       setConfirmDeleteId(null);
     }
   }, [confirmDeleteId, editingId, resetForm]);
@@ -158,20 +166,24 @@ export function useAdminTours() {
     setOrderDirty(true);
   }, []);
 
+  /** Persists the current order. Throws on failure so the caller can report it. */
   const saveOrder = useCallback(async () => {
     const ids = ordering
       .map((item) => item.id)
       .filter((id): id is number => typeof id === "number" && Number.isFinite(id));
-    if (ids.length === 0) return;
+    if (ids.length === 0 || savingOrder) return;
+    setSavingOrder(true);
     try {
       await updateTourOrder(ids);
       setOrderDirty(false);
-      const refreshed = await fetchAdminTours();
-      setTours(refreshed);
-    } catch {
-      setError("Uložení pořadí se nezdařilo.");
+      // The order is saved at this point; a failed refresh only means the list
+      // keeps the locally reordered copy, which already matches the server.
+      const refreshed = await fetchAdminTours().catch(() => null);
+      if (refreshed) setTours(refreshed);
+    } finally {
+      setSavingOrder(false);
     }
-  }, [ordering]);
+  }, [ordering, savingOrder]);
 
   const updateI18n = useCallback(
     (langKey: string, field: "destination" | "title" | "description", value: string) => {
@@ -197,6 +209,8 @@ export function useAdminTours() {
     ordering,
     orderDirty,
     loading,
+    submitting,
+    savingOrder,
     error,
     setError,
     confirmDeleteId,

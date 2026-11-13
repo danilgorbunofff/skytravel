@@ -1,5 +1,5 @@
+import { useState } from "react";
 import type { OwnTour } from "../types";
-import type { TranslationKey } from "../../../hooks/useLanguage";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -12,13 +12,23 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { cn } from "../../../lib/utils";
-import { Upload, X, ChevronLeft, ChevronRight, ImagePlus, Save, RotateCcw } from "lucide-react";
+import {
+  Upload,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
+  Save,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 
 type Props = {
   form: OwnTour;
   setForm: React.Dispatch<React.SetStateAction<OwnTour>>;
   editingId: number | null;
   error: string | null;
+  submitting: boolean;
   photos: string[];
   uploading: boolean;
   dragIndex: number | null;
@@ -26,6 +36,7 @@ type Props = {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onReset: () => void;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDropFiles: (files: File[]) => void;
   onMovePhoto: (index: number, direction: "left" | "right") => void;
   onRemovePhoto: (index: number) => void;
   onDragStart: (index: number, e: React.DragEvent<HTMLDivElement>) => void;
@@ -39,14 +50,24 @@ type Props = {
     field: "destination" | "title" | "description",
     value: string,
   ) => void;
-  t: (key: TranslationKey) => string;
 };
+
+// Photo action buttons: always visible on touch screens, revealed on hover or
+// keyboard focus where a mouse is available.
+const PHOTO_ACTIONS_VISIBILITY =
+  "transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100";
+
+/** True when a drag carries files from the OS (not a photo being reordered). */
+function isFileDrag(e: React.DragEvent) {
+  return Array.from(e.dataTransfer.types).includes("Files");
+}
 
 export default function AdminTourForm({
   form,
   setForm,
   editingId,
   error,
+  submitting,
   photos,
   uploading,
   dragIndex,
@@ -54,6 +75,7 @@ export default function AdminTourForm({
   onSubmit,
   onReset,
   onUpload,
+  onDropFiles,
   onMovePhoto,
   onRemovePhoto,
   onDragStart,
@@ -63,8 +85,9 @@ export default function AdminTourForm({
   onDragLeave,
   onDrop,
   onUpdateI18n,
-  t,
 }: Props) {
+  const [dropActive, setDropActive] = useState(false);
+
   return (
     <form id="tourForm" className="space-y-6" onSubmit={onSubmit}>
       <input id="tourId" type="hidden" value={editingId ?? ""} readOnly />
@@ -78,7 +101,7 @@ export default function AdminTourForm({
         </legend>
 
         <div className="space-y-1.5">
-          <Label htmlFor="destination">{t("labelDestination")}</Label>
+          <Label htmlFor="destination">Destinace</Label>
           <Input
             id="destination"
             placeholder="např. Řecko – Korfu"
@@ -89,7 +112,7 @@ export default function AdminTourForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="title">{t("labelBadge")}</Label>
+          <Label htmlFor="title">Text štítku</Label>
           <Input
             id="title"
             placeholder="SkyTravel Signature"
@@ -101,7 +124,7 @@ export default function AdminTourForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="price">{t("labelPrice")}</Label>
+          <Label htmlFor="price">Cena od (Kč)</Label>
           <div className="relative">
             <Input
               id="price"
@@ -203,7 +226,27 @@ export default function AdminTourForm({
           <span className="h-px flex-1 bg-border" />
         </legend>
 
-        <div className="rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 text-center transition-colors hover:border-primary/40 hover:bg-muted/50">
+        <div
+          className={cn(
+            "rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-6 text-center transition-colors hover:border-primary/40 hover:bg-muted/50 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            dropActive && "border-primary bg-primary/5",
+          )}
+          onDragOver={(e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            setDropActive(true);
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropActive(false);
+          }}
+          onDrop={(e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            setDropActive(false);
+            onDropFiles(Array.from(e.dataTransfer.files));
+          }}
+        >
           <ImagePlus className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
           <Button type="button" variant="outline" size="sm" asChild>
             <label htmlFor="upload" className="cursor-pointer">
@@ -225,9 +268,9 @@ export default function AdminTourForm({
         </div>
 
         {uploading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            Nahrávám fotky...
+            Nahrávám fotky…
           </div>
         )}
 
@@ -265,7 +308,7 @@ export default function AdminTourForm({
                 >
                   <img
                     src={photo}
-                    alt={`Photo ${index + 1}`}
+                    alt={`Fotka ${index + 1}`}
                     className="h-full w-full cursor-grab object-cover active:cursor-grabbing"
                   />
                   {index === 0 && (
@@ -275,14 +318,22 @@ export default function AdminTourForm({
                   )}
                   <button
                     type="button"
-                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    className={cn(
+                      "absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white",
+                      PHOTO_ACTIONS_VISIBILITY,
+                    )}
                     onClick={() => onRemovePhoto(index)}
                     onPointerDown={(e) => e.stopPropagation()}
                     aria-label="Odebrat fotku"
                   >
                     <X className="h-3 w-3" />
                   </button>
-                  <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div
+                    className={cn(
+                      "absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-1",
+                      PHOTO_ACTIONS_VISIBILITY,
+                    )}
+                  >
                     <Button
                       type="button"
                       variant="secondary"
@@ -362,19 +413,28 @@ export default function AdminTourForm({
 
       {/* ── Error & Actions ──────────────────────────── */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
           {error}
         </div>
       )}
 
       <div className="flex items-center gap-3 border-t pt-4">
-        <Button type="submit" className="gap-2">
-          <Save className="h-4 w-4" />
-          {editingId ? "Aktualizovat nabídku" : t("save")}
+        <Button type="submit" className="gap-2" disabled={submitting || uploading}>
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {submitting ? "Ukládám…" : editingId ? "Aktualizovat nabídku" : "Uložit nabídku"}
         </Button>
-        <Button type="button" variant="outline" onClick={onReset} className="gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onReset}
+          className="gap-2"
+          disabled={submitting}
+        >
           <RotateCcw className="h-4 w-4" />
-          {t("new")}
+          Nová
         </Button>
       </div>
     </form>
