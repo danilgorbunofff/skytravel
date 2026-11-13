@@ -52,7 +52,7 @@ describe("TourCard", () => {
   it("triggers onClick when clicked", async () => {
     const onClick = vi.fn();
     render(<TourCard tour={mockTour as OwnTour} onClick={onClick} />);
-    const card = screen.getByRole("article");
+    const card = screen.getByRole("button");
     card.click();
     expect(onClick).toHaveBeenCalledTimes(1);
   });
