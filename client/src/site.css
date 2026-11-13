@@ -9612,3 +9612,10 @@ html[lang="ru"] .logo {
 .compare-view__diff {
   color: #b91c1c;
 }
+
+/* Phones: stack the date and people fields so their placeholders are not cut off in longer languages */
+@media (max-width: 480px) {
+  .exclusive-detail__row {
+    grid-template-columns: 1fr;
+  }
+}
