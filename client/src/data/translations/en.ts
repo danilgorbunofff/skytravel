@@ -362,6 +362,10 @@ const t: Record<string, string> = {
   notFoundHome: "Back to home",
   navMenu: "Menu",
   navLanguage: "Language",
+  sAriaAdultsMore: "Add an adult",
+  sAriaAdultsLess: "Remove an adult",
+  sAriaChildrenMore: "Add a child",
+  sAriaChildrenLess: "Remove a child",
 };
 
 export default t;

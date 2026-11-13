@@ -364,6 +364,10 @@ const t: Record<string, string> = {
   notFoundHome: "Zpět na úvod",
   navMenu: "Menu",
   navLanguage: "Jazyk",
+  sAriaAdultsMore: "Přidat dospělého",
+  sAriaAdultsLess: "Ubrat dospělého",
+  sAriaChildrenMore: "Přidat dítě",
+  sAriaChildrenLess: "Ubrat dítě",
 };
 
 export default t;

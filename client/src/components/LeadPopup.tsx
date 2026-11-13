@@ -94,15 +94,17 @@ export default function LeadPopup({
           <p>{t("leadDesc")}</p>
           {!leadSubmitted ? (
             <form className="lead-modal__form" onSubmit={handleLeadSubmit}>
-              <input
-                type="email"
-                autoComplete="email"
-                aria-label={t("newsletterEmailLabel")}
-                placeholder={t("modalEmailPlaceholder")}
-                value={leadEmail}
-                onChange={(event) => setLeadEmail(event.target.value)}
-                required
-              />
+              <label className="form-field">
+                <span className="form-field__label">{t("newsletterEmailLabel")}</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  placeholder={t("modalEmailPlaceholder")}
+                  value={leadEmail}
+                  onChange={(event) => setLeadEmail(event.target.value)}
+                  required
+                />
+              </label>
               <label className="lead-modal__consent">
                 <input
                   type="checkbox"

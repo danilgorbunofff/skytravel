@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Plane, Bus, Car, Train, Ship, Search, Users, Plus, Minus } from "lucide-react";
+import {
+  CalendarDays,
+  Plane,
+  Bus,
+  Car,
+  Train,
+  Ship,
+  Search,
+  Users,
+  Plus,
+  Minus,
+} from "lucide-react";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import type { PublicDestinationSummary } from "../../../types/providers";
 import { getTransportOptions, DEFAULT_ADULTS, DEFAULT_CHILDREN } from "../constants";
@@ -60,8 +71,12 @@ export function SearchHero({
   // Raw string state for editable number inputs (allows empty while typing)
   const [adultsRaw, setAdultsRaw] = useState(String(adults));
   const [childrenRaw, setChildrenRaw] = useState(String(children));
-  useEffect(() => { setAdultsRaw(String(adults)); }, [adults]);
-  useEffect(() => { setChildrenRaw(String(children)); }, [children]);
+  useEffect(() => {
+    setAdultsRaw(String(adults));
+  }, [adults]);
+  useEffect(() => {
+    setChildrenRaw(String(children));
+  }, [children]);
 
   const clampAdults = (v: number) => Math.min(9, Math.max(1, Math.round(v)));
   const clampChildren = (v: number) => Math.min(6, Math.max(0, Math.round(v)));
@@ -83,22 +98,26 @@ export function SearchHero({
   };
 
   const handleAdultsStep = (delta: number) => {
-    const base = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+    const base =
+      adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
     const next = clampAdults(base + delta);
     setAdultsRaw(String(next));
     onAdultsChange(next);
   };
 
   const handleChildrenStep = (delta: number) => {
-    const base = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
+    const base =
+      childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
     const next = clampChildren(base + delta);
     setChildrenRaw(String(next));
     onChildrenChange(next);
   };
 
   // Derived values for stepper disabled state
-  const currentAdults = adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
-  const currentChildren = childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
+  const currentAdults =
+    adultsRaw === "" ? DEFAULT_ADULTS : Math.round(Number(adultsRaw)) || DEFAULT_ADULTS;
+  const currentChildren =
+    childrenRaw === "" ? DEFAULT_CHILDREN : Math.round(Number(childrenRaw)) || DEFAULT_CHILDREN;
 
   return (
     <section className="search-hero-section">
@@ -134,11 +153,9 @@ export function SearchHero({
                 onChange={(e) => onDateStartChange(e.target.value)}
                 min={new Date().toISOString().slice(0, 10)}
                 aria-invalid={!!dateError}
+                aria-describedby={dateError ? "search-date-error" : undefined}
               />
             </div>
-            {dateError && (
-              <span className="search-field-error" role="alert">{dateError}</span>
-            )}
           </label>
           <label className="search-field-end">
             <span>{t("sFormReturn")}</span>
@@ -150,10 +167,13 @@ export function SearchHero({
                 onChange={(e) => onDateEndChange(e.target.value)}
                 min={dateStart || new Date().toISOString().slice(0, 10)}
                 aria-invalid={!!dateError}
+                aria-describedby={dateError ? "search-date-error" : undefined}
               />
             </div>
             {dateError && (
-              <span className="search-field-error" role="alert">{dateError}</span>
+              <span id="search-date-error" className="search-field-error" role="alert">
+                {dateError}
+              </span>
             )}
           </label>
 
@@ -172,11 +192,21 @@ export function SearchHero({
                   onBlur={handleAdultsBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleAdultsStep(1)} disabled={currentAdults >= 9} aria-label="Increase adults">
-                    <Plus size={12} />
+                  <button
+                    type="button"
+                    onClick={() => handleAdultsStep(1)}
+                    disabled={currentAdults >= 9}
+                    aria-label={t("sAriaAdultsMore")}
+                  >
+                    <Plus size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => handleAdultsStep(-1)} disabled={currentAdults <= 1} aria-label="Decrease adults">
-                    <Minus size={12} />
+                  <button
+                    type="button"
+                    onClick={() => handleAdultsStep(-1)}
+                    disabled={currentAdults <= 1}
+                    aria-label={t("sAriaAdultsLess")}
+                  >
+                    <Minus size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -194,11 +224,21 @@ export function SearchHero({
                   onBlur={handleChildrenBlur}
                 />
                 <div className="people-stepper">
-                  <button type="button" onClick={() => handleChildrenStep(1)} disabled={currentChildren >= 6} aria-label="Increase children">
-                    <Plus size={12} />
+                  <button
+                    type="button"
+                    onClick={() => handleChildrenStep(1)}
+                    disabled={currentChildren >= 6}
+                    aria-label={t("sAriaChildrenMore")}
+                  >
+                    <Plus size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => handleChildrenStep(-1)} disabled={currentChildren <= 0} aria-label="Decrease children">
-                    <Minus size={12} />
+                  <button
+                    type="button"
+                    onClick={() => handleChildrenStep(-1)}
+                    disabled={currentChildren <= 0}
+                    aria-label={t("sAriaChildrenLess")}
+                  >
+                    <Minus size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -230,9 +270,9 @@ export function SearchHero({
             {t("sFormSearch")}
           </button>
         </form>
-        {(dateError || validationError) && (
-          <p id="search-date-error" role="alert" className="search-validation">
-            {dateError ?? validationError}
+        {!dateError && validationError && (
+          <p role="alert" className="search-validation">
+            {validationError}
           </p>
         )}
       </div>

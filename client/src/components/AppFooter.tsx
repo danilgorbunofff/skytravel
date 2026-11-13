@@ -67,10 +67,13 @@ function AppFooterComponent({ t }: Props) {
             </p>
           ) : (
             <>
+              <label className="form-field" htmlFor="newsletter-email">
+                <span className="form-field__label">{t("newsletterEmailLabel")}</span>
+              </label>
               <input
+                id="newsletter-email"
                 type="email"
                 autoComplete="email"
-                aria-label={t("newsletterEmailLabel")}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? "newsletter-error" : undefined}
                 placeholder={t("modalEmailPlaceholder")}

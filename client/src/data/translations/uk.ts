@@ -366,6 +366,10 @@ const t: Record<string, string> = {
   notFoundHome: "На головну",
   navMenu: "Меню",
   navLanguage: "Мова",
+  sAriaAdultsMore: "Додати дорослого",
+  sAriaAdultsLess: "Прибрати дорослого",
+  sAriaChildrenMore: "Додати дитину",
+  sAriaChildrenLess: "Прибрати дитину",
 };
 
 export default t;

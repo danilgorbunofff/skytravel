@@ -76,28 +76,37 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
       </div>
 
       <div className="tour-inquiry-form__fields">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("sModalEmailPlaceholder")}
-          required
-          className="tour-inquiry-form__input"
-        />
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={t("sFormPhonePlaceholder")}
-          className="tour-inquiry-form__input"
-        />
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={t("sFormNotePlaceholder")}
-          className="tour-inquiry-form__textarea"
-          rows={3}
-        />
+        <label className="form-field">
+          <span className="form-field__label">{t("newsletterEmailLabel")}</span>
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("sModalEmailPlaceholder")}
+            required
+            className="tour-inquiry-form__input"
+          />
+        </label>
+        <label className="form-field">
+          <span className="form-field__label">{t("sInquiryPhone")}</span>
+          <input
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="tour-inquiry-form__input"
+          />
+        </label>
+        <label className="form-field">
+          <span className="form-field__label">{t("sInquiryNote")}</span>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="tour-inquiry-form__textarea"
+            rows={3}
+          />
+        </label>
       </div>
 
       <label className="tour-inquiry-form__consent">
@@ -112,12 +121,16 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
         </span>
       </label>
 
-      {errorMsg && <p className="tour-inquiry-form__error">{errorMsg}</p>}
+      {errorMsg && (
+        <p className="tour-inquiry-form__error" role="alert">
+          {errorMsg}
+        </p>
+      )}
 
       <button type="submit" className="tour-inquiry-form__submit" disabled={status === "sending"}>
         {status === "sending" ? (
           <>
-            <Loader2 size={16} className="animate-spin" /> Odesílám...
+            <Loader2 size={16} className="animate-spin" aria-hidden="true" /> {t("formSending")}
           </>
         ) : (
           t("sModalSubmit")
