@@ -360,6 +360,8 @@ const t: Record<string, string> = {
   notFoundText:
     "The address doesn't exist or has changed. Try searching for a trip, or go back to the home page.",
   notFoundHome: "Back to home",
+  navMenu: "Menu",
+  navLanguage: "Language",
 };
 
 export default t;

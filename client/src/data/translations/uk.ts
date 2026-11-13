@@ -364,6 +364,8 @@ const t: Record<string, string> = {
   notFoundText:
     "Адреса не існує або змінилася. Спробуйте знайти тур або поверніться на головну сторінку.",
   notFoundHome: "На головну",
+  navMenu: "Меню",
+  navLanguage: "Мова",
 };
 
 export default t;

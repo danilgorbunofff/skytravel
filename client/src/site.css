@@ -6,9 +6,50 @@
   --yellow: #f3d43b;
   --bg: #eef3fa;
   --text: #223147;
-  --muted: #6b778b;
+  /* 6.4:1 on white, 5.6:1 on --bg (was #6b778b, which failed AA on --bg) */
+  --muted: #526173;
   --white: #ffffff;
   --line: #d7e0ee;
+
+  /* Shared with the blog tokens (blog/styles/tokens.css) */
+  --blue-100: #d3e2f5;
+  --blue-50: #eaf1fb;
+  --ink: #0f1d2e;
+  --line-strong: #b9c7dc;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 18px 34px -22px rgba(15, 29, 46, 0.4);
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+
+  /* Layout: one container, fixed gutters */
+  --container: 1200px;
+  --gutter: 16px;
+  --header-h: 60px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+@media (min-width: 1101px) {
+  :root {
+    --gutter: 32px;
+    --header-h: 72px;
+  }
 }
 
 * {
@@ -23,7 +64,7 @@ body {
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 90px;
+  scroll-padding-top: calc(var(--header-h) + 16px);
 }
 
 body {
@@ -78,7 +119,7 @@ html[lang="ru"] .logo {
 }
 
 .container {
-  width: min(1340px, 92vw);
+  width: min(var(--container), 100% - 2 * var(--gutter));
   margin: 0 auto;
 }
 
@@ -99,16 +140,29 @@ html[lang="ru"] .logo {
 }
 
 .header-top {
-  min-height: 84px;
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) auto;
+  min-height: var(--header-h);
+  display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: var(--space-8);
+}
+
+.site-nav-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.site-nav-inner.container {
+  width: auto;
+  margin: 0;
+}
+
+.header-contact-wrap {
+  margin-left: auto;
 }
 
 .logo {
   font-family: "Barlow Condensed", sans-serif;
-  font-size: 2.8rem;
+  font-size: 2.25rem;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -122,41 +176,13 @@ html[lang="ru"] .logo {
   color: #e6a11c;
 }
 
-.top-search {
-  border: 2px solid #dae5f4;
-  border-radius: 16px;
-  background: #f3f8ff;
-  display: grid;
-  grid-template-columns: 1fr 52px;
-  min-height: 52px;
-  overflow: hidden;
-}
-
-.top-search input {
-  border: 0;
-  background: transparent;
-  padding: 0 1rem;
-  font: inherit;
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.top-search button {
-  border: 0;
-  background: transparent;
-  font-size: 0.95rem;
-  font-weight: 800;
-  cursor: pointer;
-  color: var(--blue-900);
-}
-
 .header-contact {
   display: flex;
   align-items: center;
   gap: 1rem;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #7a8697;
+  color: var(--muted);
 }
 
 .header-contact-wrap {
@@ -202,13 +228,11 @@ html[lang="ru"] .logo {
 }
 
 .main-nav {
-  min-height: 64px;
-  border-top: 1px solid var(--line);
   display: flex;
   align-items: center;
-  gap: 1.7rem;
+  gap: var(--space-6);
   font-weight: 800;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-family: "Barlow Condensed", sans-serif;
   color: var(--blue-900);
 }
@@ -2192,23 +2216,28 @@ html[lang="ru"] .logo {
 }
 
 .gdpr-page {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 2rem 1.2rem 3rem;
-  background: linear-gradient(180deg, #eef3fb 0%, #f8faff 60%);
-  display: grid;
-  place-items: start center;
+  padding: var(--space-8) 0 var(--space-12);
 }
 
 .gdpr-card {
-  width: min(840px, 94vw);
+  width: min(840px, 100% - 2 * var(--gutter));
+  margin: 0 auto;
   background: #ffffff;
-  border-radius: 18px;
-  padding: 1.8rem 2rem;
-  box-shadow: 0 24px 44px rgba(20, 38, 66, 0.18);
-  border: 1px solid #d9e3f3;
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
   display: grid;
   gap: 1.2rem;
+}
+
+.gdpr-eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .gdpr-header {
@@ -4808,11 +4837,6 @@ html[lang="ru"] .logo {
 }
 
 @media (max-width: 1400px) {
-  .main-nav {
-    font-size: 1.34rem;
-    gap: 1.3rem;
-  }
-
   .hero-search__fields {
     grid-template-columns: 1fr 1fr;
   }
@@ -4914,12 +4938,12 @@ html[lang="ru"] .logo {
   }
 
   .header-top {
-    display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
-    align-items: center;
-    padding: 0.55rem 0;
-    min-height: 0;
+    gap: var(--space-3);
+  }
+
+  .site-nav-wrapper {
+    flex: none;
   }
 
   .logo {
@@ -4932,24 +4956,6 @@ html[lang="ru"] .logo {
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-
-  .top-search {
-    order: 3;
-    width: 100%;
-    margin-top: 1rem;
-  }
-
-  /* Home hero has the full search panel — the header copy is redundant on phones.
-     Header precedes the hero in DOM, so key off the page containing a hero. */
-  body:has(.hero) .top-search {
-    display: none;
-  }
-
-  .top-search input,
-  .top-search select,
-  .top-search button {
-    min-height: 44px;
   }
 
   .hamburger {
@@ -4985,7 +4991,9 @@ html[lang="ru"] .logo {
     display: block;
   }
 
-  .site-nav-inner {
+  .site-nav-inner.container {
+    width: min(var(--container), 100% - 2 * var(--gutter));
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -8114,9 +8122,7 @@ html[lang="ru"] .logo {
 
 /* ── Favorites Page ── */
 .favorites-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--space-8) 0 var(--space-12);
   min-height: 60vh;
 }
 
@@ -8412,10 +8418,6 @@ html[lang="ru"] .logo {
 
 /* ── 0. Fluid container & section rhythm on phones ── */
 @media (max-width: 768px) {
-  .container {
-    width: min(1340px, 94vw);
-  }
-
   .section {
     padding: 1.35rem 0;
   }
@@ -8446,8 +8448,6 @@ html[lang="ru"] .logo {
   }
 
   .header-top {
-    min-height: 56px;
-    padding: 0.45rem 0;
     gap: 0.5rem;
   }
 
@@ -8500,8 +8500,8 @@ html[lang="ru"] .logo {
       0 2px 10px rgba(15, 35, 80, 0.08);
     border: 1px solid #e6eefb;
     border-top: 0;
-    max-height: calc(100dvh - 56px);
-    max-height: calc(100vh - 56px);
+    max-height: calc(100vh - var(--header-h));
+    max-height: calc(100dvh - var(--header-h));
     animation: drawer-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
@@ -8509,7 +8509,7 @@ html[lang="ru"] .logo {
     content: "";
     position: fixed;
     inset: 0;
-    top: 56px;
+    top: var(--header-h);
     background: rgba(11, 23, 52, 0.36);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);

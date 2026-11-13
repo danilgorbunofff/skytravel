@@ -11,12 +11,7 @@ const LANGS: { code: LanguageKey; flag: string; label: string }[] = [
   { code: "ru", flag: "🇷🇺", label: "Переключить на русский" },
 ];
 
-interface SiteHeaderProps {
-  /** Top-search form rendered inside header-top; pass null to show placeholder slot. */
-  topSearch?: React.ReactNode;
-}
-
-export default function SiteHeader({ topSearch }: SiteHeaderProps) {
+export default function SiteHeader() {
   const { lang, setLang, t } = useLanguage();
   const { isAdmin } = useAdminAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,16 +28,46 @@ export default function SiteHeader({ topSearch }: SiteHeaderProps) {
           <span className="logo__travel">Travel</span>
         </Link>
 
-        {topSearch ?? (
-          <div className="top-search" aria-hidden="true" style={{ visibility: "hidden" }} />
-        )}
-
+        {/* Nav bar / Mobile Drawer */}
+        <div id="site-nav" className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
+          <div className="container site-nav-inner">
+            <div className="header-contact mobile-only mobile-contact">
+              <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
+            </div>
+            <nav className="main-nav" aria-label="Hlavní navigace">
+              <NavLink
+                to="/"
+                end
+                onClick={closeMenu}
+                className={({ isActive }) => (isActive ? "is-active" : undefined)}
+              >
+                {t("navHome")}
+              </NavLink>
+              <NavLink
+                to="/search"
+                onClick={closeMenu}
+                className={({ isActive }) => (isActive ? "is-active" : undefined)}
+              >
+                {t("navSearch")}
+              </NavLink>
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  onClick={closeMenu}
+                  className={({ isActive }) => (isActive ? "is-active" : undefined)}
+                >
+                  {t("navAdmin")}
+                </NavLink>
+              )}
+            </nav>
+          </div>
+        </div>
         {/* Desktop Right Side */}
         <div className="header-contact-wrap desktop-only">
           <div className="header-contact">
             <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
           </div>
-          <div className="lang-toggle" aria-label="Language switcher">
+          <div className="lang-toggle" role="group" aria-label={t("navLanguage")}>
             {LANGS.map((item) => (
               <button
                 key={item.code}
@@ -60,7 +85,7 @@ export default function SiteHeader({ topSearch }: SiteHeaderProps) {
 
         {/* Mobile Right Side */}
         <div className="mobile-header-actions mobile-only">
-          <div className="lang-toggle" aria-label="Language switcher">
+          <div className="lang-toggle" role="group" aria-label={t("navLanguage")}>
             {LANGS.map((item) => (
               <button
                 key={item.code}
@@ -78,7 +103,8 @@ export default function SiteHeader({ topSearch }: SiteHeaderProps) {
             className="hamburger"
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Toggle mobile menu"
+            aria-label={t("navMenu")}
+            aria-controls="site-nav"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
@@ -110,41 +136,6 @@ export default function SiteHeader({ topSearch }: SiteHeaderProps) {
               </svg>
             )}
           </button>
-        </div>
-      </div>
-
-      {/* Nav bar / Mobile Drawer */}
-      <div className={`site-nav-wrapper ${mobileMenuOpen ? "is-open" : ""}`}>
-        <div className="container site-nav-inner">
-          <div className="header-contact mobile-only mobile-contact">
-            <a href="mailto:info@skytravel.cz">info@skytravel.cz</a>
-          </div>
-          <nav className="main-nav" aria-label="Hlavní navigace">
-            <NavLink
-              to="/"
-              end
-              onClick={closeMenu}
-              className={({ isActive }) => (isActive ? "is-active" : undefined)}
-            >
-              {t("navHome")}
-            </NavLink>
-            <NavLink
-              to="/search"
-              onClick={closeMenu}
-              className={({ isActive }) => (isActive ? "is-active" : undefined)}
-            >
-              {t("navSearch")}
-            </NavLink>
-            {isAdmin && (
-              <NavLink
-                to="/admin"
-                onClick={closeMenu}
-                className={({ isActive }) => (isActive ? "is-active" : undefined)}
-              >
-                {t("navAdmin")}
-              </NavLink>
-            )}
-          </nav>
         </div>
       </div>
     </header>

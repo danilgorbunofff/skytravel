@@ -362,6 +362,8 @@ const t: Record<string, string> = {
   notFoundText:
     "Adresa neexistuje nebo se změnila. Zkuste vyhledat zájezd, nebo se vraťte na úvodní stránku.",
   notFoundHome: "Zpět na úvod",
+  navMenu: "Menu",
+  navLanguage: "Jazyk",
 };
 
 export default t;

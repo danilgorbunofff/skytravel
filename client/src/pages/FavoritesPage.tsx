@@ -3,6 +3,8 @@ import { useLanguage } from "../hooks/useLanguage";
 import { useFavorites } from "../hooks/useFavorites";
 import { usePageTitle } from "../hooks/usePageTitle";
 import SiteHeader from "../components/SiteHeader";
+import { SkipToContent } from "../components/SkipToContent";
+import { AppFooter } from "../components/AppFooter";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import "../site.css";
 
@@ -14,8 +16,9 @@ export default function FavoritesPage() {
 
   return (
     <>
+      <SkipToContent />
       <SiteHeader />
-      <div className="favorites-page">
+      <main id="main-content" className="container favorites-page">
         <div className="favorites-page__header">
           <h1>{t("favoritesPageTitle")}</h1>
           {favoriteTours.length > 0 && (
@@ -54,7 +57,8 @@ export default function FavoritesPage() {
             })}
           </div>
         )}
-      </div>
+      </main>
+      <AppFooter t={t} />
     </>
   );
 }

@@ -64,7 +64,6 @@ export default function HomePage() {
   const [destinationCounts, setDestinationCounts] = useState<
     Record<string, PublicDestinationSummary>
   >({});
-  const topSearchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDestinationRef = useRef<HTMLInputElement | null>(null);
   const searchTransportRef = useRef<HTMLSelectElement | null>(null);
   const budgetRef = useRef<HTMLDivElement | null>(null);
@@ -266,17 +265,6 @@ export default function HomePage() {
     navigate(`/search${params.toString() ? `?${params}` : ""}`);
   }
 
-  function handleTopSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = topSearchInputRef.current?.value ?? "";
-    if (searchDestinationRef.current) {
-      searchDestinationRef.current.value = value;
-    }
-    const params = new URLSearchParams();
-    if (value.trim()) params.set("q", value.trim());
-    navigate(`/search${params.toString() ? `?${params}` : ""}`);
-  }
-
   function openOwnTourModal(tour: OwnTour) {
     setExclusiveTour(tour);
   }
@@ -351,21 +339,7 @@ export default function HomePage() {
   return (
     <div>
       <SkipToContent />
-      <SiteHeader
-        topSearch={
-          <form id="topSearch" className="top-search" onSubmit={handleTopSearchSubmit}>
-            <input
-              id="topSearchInput"
-              ref={topSearchInputRef}
-              type="text"
-              placeholder={t("searchPlaceholder")}
-            />
-            <button type="submit" aria-label={t("sAriaSearch")}>
-              GO
-            </button>
-          </form>
-        }
-      />
+      <SiteHeader />
 
       <main id="main-content">
         <SearchHero

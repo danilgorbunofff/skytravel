@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom";
 import "../site.css";
 
 import { useLanguage } from "../hooks/useLanguage";
+import SiteHeader from "../components/SiteHeader";
+import { SkipToContent } from "../components/SkipToContent";
+import { AppFooter } from "../components/AppFooter";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 function RenderCs() {
@@ -589,25 +591,19 @@ export default function GdprPage() {
   usePageTitle("Ochrana osobních údajů");
 
   return (
-    <main className="gdpr-page">
-      <div className="gdpr-card">
-        <header className="gdpr-header">
-          <Link to="/" className="logo">
-            <span className="logo__sky">Sky</span>
-            <span className="logo__travel">Travel</span>
-          </Link>
-          <p>{t("footerGdpr")}</p>
-        </header>
-
-        {lang === "en" && <RenderEn />}
-        {lang === "uk" && <RenderUk />}
-        {lang === "ru" && <RenderRu />}
-        {lang === "cs" && <RenderCs />}
-
-        <footer className="gdpr-footer">
-          <Link to="/">{t("navContact") === "Kontakt" ? "Zpět na web" : "Back to web"}</Link>
-        </footer>
-      </div>
-    </main>
+    <>
+      <SkipToContent />
+      <SiteHeader />
+      <main id="main-content" className="gdpr-page">
+        <div className="gdpr-card">
+          <p className="gdpr-eyebrow">{t("footerGdpr")}</p>
+          {lang === "en" && <RenderEn />}
+          {lang === "uk" && <RenderUk />}
+          {lang === "ru" && <RenderRu />}
+          {lang === "cs" && <RenderCs />}
+        </div>
+      </main>
+      <AppFooter t={t} />
+    </>
   );
 }
