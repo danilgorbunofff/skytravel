@@ -309,7 +309,7 @@ export default function LastMinuteDeals({ lastMinuteItems, loading, onItemClick,
                 type="button"
                 className="lm-nav lm-nav--prev"
                 onClick={goPrev}
-                aria-label="Previous"
+                aria-label={t("sAriaPrev")}
               >
                 ‹
               </button>
@@ -352,7 +352,7 @@ export default function LastMinuteDeals({ lastMinuteItems, loading, onItemClick,
                 type="button"
                 className="lm-nav lm-nav--next"
                 onClick={goNext}
-                aria-label="Next"
+                aria-label={t("sAriaNext")}
               >
                 ›
               </button>

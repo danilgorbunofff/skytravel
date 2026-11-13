@@ -60,9 +60,9 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
     return (
       <div className="tour-inquiry-form tour-inquiry-form--success">
         <CheckCircle size={32} />
-        <h4>Děkujeme za Váš zájem!</h4>
+        <h4>{t("inquiryThanks")}</h4>
         <p>
-          Odpovíme Vám do 24 hodin na <strong>{email}</strong>.
+          {t("inquiryReplyTo")} <strong>{email}</strong>.
         </p>
       </div>
     );
@@ -72,7 +72,7 @@ export function TourInquiryForm({ tour, providerLabel, t }: Props) {
     <form className="tour-inquiry-form" onSubmit={handleSubmit}>
       <div className="tour-inquiry-form__header">
         <Star size={16} />
-        <span>Nezávazná poptávka</span>
+        <span>{t("inquiryTitle")}</span>
       </div>
 
       <div className="tour-inquiry-form__fields">

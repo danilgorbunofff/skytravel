@@ -6,6 +6,7 @@ import type { PublicDestinationSummary } from "../../../types/providers";
 import { SearchFilters } from "./SearchFilters";
 import { useFocusTrap, useEscapeKey } from "../hooks/useFocusTrap";
 import { localeForText } from "../../../lib/locale";
+import { plural } from "../../../lib/plural";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -150,7 +151,7 @@ export function MobileFilterDrawer({
             <button type="button" className="btn-primary" onClick={onClose}>
               {t("sDrawerApplyPrefix")}{" "}
               {filteredCount != null ? filteredCount.toLocaleString(localeForText()) : ""}{" "}
-              {t("sStickyOffers")}
+              {plural(filteredCount ?? 0, "pOffers", t)}
             </button>
           </div>
         </div>

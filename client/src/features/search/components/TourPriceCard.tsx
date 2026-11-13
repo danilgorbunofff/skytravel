@@ -3,6 +3,7 @@ import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
+import { plural } from "../../../lib/plural";
 
 interface Props {
   tour: UnifiedTour;
@@ -29,7 +30,8 @@ export function TourPriceCard({ tour, providerLabel, t, onInquiry }: Props) {
       {totalPrice && (
         <div className="tour-price-card__total">
           <Users size={14} />
-          Celkem za {tour.adults} osoby: <strong>{formatPrice(totalPrice)}</strong>
+          {t("priceTotalFor")} {tour.adults} {plural(tour.adults ?? 0, "pPersons", t)}:{" "}
+          <strong>{formatPrice(totalPrice)}</strong>
         </div>
       )}
 

@@ -2,6 +2,7 @@ import type { UnifiedTour } from "../../../types/providers";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 interface Props {
   tours: UnifiedTour[];
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function RelatedTours({ tours, currentTourId, onSelect }: Props) {
+  const { t } = useLanguage();
   const related = tours
     .filter((tour) => `${tour.source}-${tour.externalId}` !== currentTourId)
     .slice(0, 4);
@@ -19,7 +21,7 @@ export function RelatedTours({ tours, currentTourId, onSelect }: Props) {
 
   return (
     <section className="related-tours">
-      <h3 className="related-tours__title">Podobné zájezdy</h3>
+      <h3 className="related-tours__title">{t("relatedTitle")}</h3>
       <div className="related-tours__grid">
         {related.map((tour) => (
           <button

@@ -3,6 +3,7 @@ import type { PublicDestinationSummary } from "../../types/providers";
 import type { TranslationKey } from "../../hooks/useLanguage";
 import { formatPrice } from "../../utils";
 import { localeForText } from "../../lib/locale";
+import { plural } from "../../lib/plural";
 
 interface Props {
   favorites: Favorite[];
@@ -42,12 +43,7 @@ export default function FavoriteDestinations({ favorites, destinationCounts, onC
                   </span>
                   {liveCount > 0 && (
                     <span className="favorite-card__count">
-                      {liveCount.toLocaleString(localeForText())}{" "}
-                      {liveCount === 1
-                        ? t("sTermsCountOne")
-                        : liveCount < 5
-                          ? t("sTermsCountFew")
-                          : t("sTermsCountMany")}
+                      {liveCount.toLocaleString(localeForText())} {plural(liveCount, "pTerms", t)}
                     </span>
                   )}
                 </div>

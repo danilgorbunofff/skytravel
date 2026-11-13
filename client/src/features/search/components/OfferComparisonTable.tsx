@@ -64,7 +64,7 @@ export function OfferComparisonTable({
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="offer-table__skeleton-row shimmer" />
         ))}
-        <p className="offer-table__loading-text">Načítáme dostupné termíny...</p>
+        <p className="offer-table__loading-text">{t("offersLoading")}</p>
       </div>
     );
   }
@@ -141,7 +141,7 @@ export function OfferComparisonTable({
 
       {!showAll && hiddenCount > 0 && (
         <button type="button" className="offer-table__show-all" onClick={() => setShowAll(true)}>
-          Zobrazit všech {sorted.length} termínů
+          {t("offersShowAll")} ({sorted.length})
         </button>
       )}
     </div>

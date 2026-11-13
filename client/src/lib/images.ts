@@ -7,10 +7,7 @@ export function isResizableImage(url: string): boolean {
   return /images\.unsplash\.com/.test(url);
 }
 
-const KNOWN_IMAGE_HOSTS = [
-  "images.alexandria.cz",
-  "images.unsplash.com",
-];
+const KNOWN_IMAGE_HOSTS = ["images.alexandria.cz", "images.unsplash.com"];
 
 export function isValidImageUrl(url: string | null | undefined): boolean {
   if (!url) return false;

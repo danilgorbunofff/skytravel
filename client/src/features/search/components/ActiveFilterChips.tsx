@@ -1,4 +1,5 @@
 import { RotateCcw, X } from "lucide-react";
+import { useLanguage } from "../../../hooks/useLanguage";
 
 /**
  * Chip data for an active filter.
@@ -35,6 +36,7 @@ interface Props {
  * ```
  */
 export function ActiveFilterChips({ chips, onResetAll }: Props) {
+  const { t } = useLanguage();
   if (chips.length === 0) return null;
 
   return (
@@ -54,7 +56,7 @@ export function ActiveFilterChips({ chips, onResetAll }: Props) {
         type="button"
         className="active-chip active-chip--reset"
         onClick={onResetAll}
-        aria-label="Resetovat všechny filtry"
+        aria-label={t("sAriaResetFilters")}
       >
         <RotateCcw size={12} aria-hidden="true" />
         Resetovat

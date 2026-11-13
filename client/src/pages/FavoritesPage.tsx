@@ -7,6 +7,7 @@ import { SkipToContent } from "../components/SkipToContent";
 import { AppFooter } from "../components/AppFooter";
 import { PublicTourCard } from "../features/search/components/PublicTourCard";
 import "../site.css";
+import { plural } from "../lib/plural";
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function FavoritesPage() {
           <h1>{t("favoritesPageTitle")}</h1>
           {favoriteTours.length > 0 && (
             <p className="favorites-page__count">
-              {favoriteTours.length} {t("favoritesPageCount")}
+              {favoriteTours.length} {plural(favoriteTours.length, "pSavedTours", t)}
             </p>
           )}
         </div>

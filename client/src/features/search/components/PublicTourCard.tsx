@@ -21,6 +21,7 @@ import { isPlausibleTourPrice } from "../../../lib/prices";
 import { fmtDate } from "../../../lib/formatters";
 import { favorites as popularDestinations } from "../../../data";
 import { fallbackDestinationAliases, getTransportLabel, getBoardLabel } from "../constants";
+import { plural } from "../../../lib/plural";
 
 const fallbackImageCache = new Map<string, string>();
 
@@ -208,7 +209,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           {/* Duration badge (X nocí) */}
           {tour.nights != null && (
             <span className="tour-card__nights-badge">
-              {tour.nights} {t("nights")}
+              {tour.nights} {plural(tour.nights, "pNights", t)}
             </span>
           )}
 
@@ -218,7 +219,7 @@ export const PublicTourCard = memo(function PublicTourCard({
           {/* Offers count badge */}
           {(tour.offersCount ?? 0) > 1 && (
             <span className="tour-card__offers-badge">
-              {tour.offersCount} {t("sStateTerms")}
+              {tour.offersCount} {plural(tour.offersCount ?? 0, "pTerms", t)}
             </span>
           )}
         </div>
@@ -269,7 +270,7 @@ export const PublicTourCard = memo(function PublicTourCard({
               {isPlausibleTourPrice(tour.price) ? (
                 <>
                   <strong>{formatPrice(tour.price)}</strong>
-                  <span className="tour-card__price-suffix"> / os.</span>
+                  <span className="tour-card__price-suffix"> {t("perPersonShort")}</span>
                 </>
               ) : (
                 <span className="tour-card__price-request">{t("sPriceOnRequest")}</span>
@@ -326,14 +327,14 @@ export const PublicTourCard = memo(function PublicTourCard({
         {/* Duration badge (X nocí) */}
         {tour.nights != null && (
           <span className="tour-card__nights-badge">
-            {tour.nights} {t("nights")}
+            {tour.nights} {plural(tour.nights, "pNights", t)}
           </span>
         )}
 
         {/* Offers count badge */}
         {(tour.offersCount ?? 0) > 1 && (
           <span className="tour-card__offers-badge">
-            {tour.offersCount} {t("sStateTerms")}
+            {tour.offersCount} {plural(tour.offersCount ?? 0, "pTerms", t)}
           </span>
         )}
       </div>

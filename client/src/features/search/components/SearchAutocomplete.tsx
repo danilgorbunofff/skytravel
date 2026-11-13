@@ -6,6 +6,7 @@ import { formatPrice } from "../../../utils";
 import { isPlausibleTourPrice } from "../../../lib/prices";
 import { favorites as popularDestinations } from "../../../data";
 import { useRecentSearches } from "../hooks/useRecentSearches";
+import { plural } from "../../../lib/plural";
 
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 200;
@@ -279,7 +280,7 @@ export function SearchAutocomplete({
                   <span className="search-autocomplete__meta">
                     {s.count != null && (
                       <span>
-                        {s.count} {t("sStickyOffers")}
+                        {s.count} {plural(s.count ?? 0, "pOffers", t)}
                       </span>
                     )}
                     {s.minPrice != null && isPlausibleTourPrice(s.minPrice) && (

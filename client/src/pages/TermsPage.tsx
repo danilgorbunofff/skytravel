@@ -613,7 +613,7 @@ function RenderRu() {
 
 export default function TermsPage() {
   const { lang, t } = useLanguage();
-  usePageTitle("Obchodní podmínky");
+  usePageTitle(t("footerTerms"));
 
   return (
     <>

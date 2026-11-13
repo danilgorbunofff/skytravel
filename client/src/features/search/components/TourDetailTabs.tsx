@@ -13,7 +13,7 @@ export function TourDetailTabs({ description, offers, t }: Props) {
   const [active, setActive] = useState<Tab>(description ? "description" : "dates");
 
   const tabs: { id: Tab; label: string }[] = [
-    ...(description ? [{ id: "description" as Tab, label: "Popis" }] : []),
+    ...(description ? [{ id: "description" as Tab, label: t("tabDescription") }] : []),
     { id: "dates", label: t("sModalAvailableDates") },
   ];
 

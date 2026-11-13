@@ -588,7 +588,7 @@ function RenderRu() {
 
 export default function GdprPage() {
   const { lang, t } = useLanguage();
-  usePageTitle("Ochrana osobních údajů");
+  usePageTitle(t("footerGdpr"));
 
   return (
     <>

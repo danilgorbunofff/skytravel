@@ -123,7 +123,7 @@ export function SearchHero({
     <section className="search-hero-section">
       <div className="container search-hero-grid">
         <div>
-          <p className="search-eyebrow">SkyTravel search</p>
+          <p className="search-eyebrow">{t("searchEyebrow")}</p>
           <h1>{t("sHeroTitle")}</h1>
           <p>{t("sHeroSubtitle")}</p>
         </div>

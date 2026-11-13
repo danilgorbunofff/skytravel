@@ -53,10 +53,11 @@ import { SkipToContent } from "../components/SkipToContent";
 import { useCompare } from "../features/search/hooks/useCompare";
 import "../site.css";
 import { localeForText } from "../lib/locale";
+import { plural } from "../lib/plural";
 
 export default function SearchPage() {
   const { t } = useLanguage();
-  usePageTitle("Vyhledávání zájezdů");
+  usePageTitle(t("searchEyebrow"));
   const isMobile = useMediaQuery("(max-width: 767px)");
 
   // ─── Hooks ───────────────────────────────────────────────────────────
@@ -297,7 +298,7 @@ export default function SearchPage() {
     const dest = filters.activeQuery || filters.activeDestinationSlug || "";
     const count = results.result?.filtered;
     if (dest && count != null) {
-      document.title = `${dest} — ${count} ${count === 1 ? "zájezd" : "zájezdy"} | SkyTravel`;
+      document.title = `${dest} — ${count} ${plural(count, "pTours", t)} | SkyTravel`;
     }
     const metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
@@ -324,7 +325,7 @@ export default function SearchPage() {
       link.href = window.location.href;
       document.head.appendChild(link);
     }
-  }, [filters.activeQuery, filters.activeDestinationSlug, results.result?.filtered]);
+  }, [filters.activeQuery, filters.activeDestinationSlug, results.result?.filtered, t]);
 
   // ─── JSON‑LD structured data for search results ─────────────────────
   useEffect(() => {

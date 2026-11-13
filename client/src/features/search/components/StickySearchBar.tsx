@@ -1,6 +1,7 @@
 import { fmtDate } from "../../../lib/formatters";
 import type { TranslationKey } from "../../../hooks/useLanguage";
 import { localeForText } from "../../../lib/locale";
+import { plural } from "../../../lib/plural";
 
 interface Props {
   t: (key: TranslationKey) => string;
@@ -33,7 +34,7 @@ export function StickySearchBar({
         </button>
         {filteredCount !== null && (
           <span className="sticky-search-bar__count">
-            {filteredCount.toLocaleString(localeForText())} {t("sStickyOffers")}
+            {filteredCount.toLocaleString(localeForText())} {plural(filteredCount, "pOffers", t)}
           </span>
         )}
       </div>

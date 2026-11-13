@@ -12,6 +12,7 @@ import { TourInquiryForm } from "./TourInquiryForm";
 import { RelatedTours } from "./RelatedTours";
 import { getTourFallbackImage } from "./PublicTourCard";
 import { isValidImageUrl } from "../../../lib/images";
+import { plural } from "../../../lib/plural";
 
 const TRANSPORT_ICONS: Record<string, typeof Plane> = {
   plane: Plane,
@@ -210,7 +211,7 @@ export function TourDetailModal({
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShare")}
               >
                 <Share2 size={18} />
               </button>
@@ -249,7 +250,7 @@ export function TourDetailModal({
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShare")}
               >
                 <Share2 size={18} />
               </button>
@@ -288,7 +289,9 @@ export function TourDetailModal({
               <Calendar size={16} />
               <span>
                 {fmtDate(selectedOffer.startDate)} – {fmtDate(selectedOffer.endDate)}
-                {Number.isFinite(nights) && nights > 0 && ` (${nights} nocí)`}
+                {Number.isFinite(nights) &&
+                  nights > 0 &&
+                  ` (${nights} ${plural(nights, "pNights", t)})`}
               </span>
             </div>
             <div className="tour-detail-modal__fact">
@@ -356,7 +359,7 @@ export function TourDetailModal({
         {isMobile && (
           <div className="tour-detail-modal__sticky-cta">
             <button type="button" className="tour-detail-modal__cta-btn" onClick={scrollToInquiry}>
-              Poptat zájezd
+              {t("sModalSubmit")}
             </button>
           </div>
         )}

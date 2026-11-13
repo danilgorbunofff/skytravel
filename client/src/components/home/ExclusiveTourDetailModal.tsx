@@ -178,7 +178,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShare")}
               >
                 <Share2 size={18} />
               </button>
@@ -213,7 +213,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                 type="button"
                 className="tour-detail-modal__share"
                 onClick={handleShare}
-                aria-label="Sdílet"
+                aria-label={t("sShare")}
               >
                 <Share2 size={18} />
               </button>
@@ -227,7 +227,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                 <X size={20} />
               </button>
               <div className="tour-detail-modal__header">
-                <span className="exclusive-detail__badge">SkyTravel Signature · exkluzivně</span>
+                <span className="exclusive-detail__badge">{t("xBadge")}</span>
                 <h2 id="exclusive-detail-title">{destination}</h2>
                 <p className="tour-detail-modal__subtitle">{title}</p>
               </div>
@@ -236,7 +236,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
 
           {isMobile && (
             <div className="tour-detail-modal__header">
-              <span className="exclusive-detail__badge">SkyTravel Signature · exkluzivně</span>
+              <span className="exclusive-detail__badge">{t("xBadge")}</span>
               <p className="tour-detail-modal__subtitle">{title}</p>
             </div>
           )}
@@ -244,49 +244,48 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
           <div className="tour-detail-modal__facts">
             <div className="tour-detail-modal__fact">
               <Calendar size={16} />
-              <span>Flexibilní termín — na dotaz</span>
+              <span>{t("xFlexibleDate")}</span>
             </div>
             {tour.transport && (
               <div className="tour-detail-modal__fact">
                 <Plane size={16} />
                 <span>
                   {tour.transport === "plane"
-                    ? "Letecky"
+                    ? t("transportFlight")
                     : tour.transport === "bus"
-                      ? "Autobusem"
+                      ? t("transportBus")
                       : tour.transport}
                 </span>
               </div>
             )}
             <div className="tour-detail-modal__fact">
               <Star size={16} />
-              <span>od {formatPrice(tour.price)} / os.</span>
+              <span>
+                {t("from")} {formatPrice(tour.price)} {t("perPersonShort")}
+              </span>
             </div>
           </div>
 
           <div className="exclusive-detail__layout">
             <div className="exclusive-detail__main">
               <section className="exclusive-detail__section">
-                <h3>O zájezdu</h3>
+                <h3>{t("xAbout")}</h3>
                 <p className="exclusive-detail__desc">{description}</p>
               </section>
 
               <section className="exclusive-detail__section">
-                <h3>Proč si vybrat</h3>
+                <h3>{t("xWhy")}</h3>
                 <ul className="exclusive-detail__bullets">
-                  <li>Pečlivě vybrané ubytování v nejlepší poloze</li>
-                  <li>Doprava a transfery přesně podle vašeho přání</li>
-                  <li>Asistence SkyTravel před odletem i na místě</li>
-                  <li>Program na míru — výlety a zážitky dle vás</li>
+                  <li>{t("xWhy1")}</li>
+                  <li>{t("xWhy2")}</li>
+                  <li>{t("xWhy3")}</li>
+                  <li>{t("xWhy4")}</li>
                 </ul>
               </section>
 
               <section className="exclusive-detail__section exclusive-detail__section--muted">
-                <h3>Co je typicky v ceně</h3>
-                <p>
-                  Ubytování, vybraná doprava, základní servis agentury a doporučený program. Přesný
-                  rozsah ladíme při nezávazné poptávce — podle termínu a počtu osob.
-                </p>
+                <h3>{t("xIncludedTitle")}</h3>
+                <p>{t("xIncludedText")}</p>
               </section>
             </div>
 
@@ -295,23 +294,23 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                 <CheckCircle size={18} className="exclusive-detail__price-icon" />
                 <div>
                   <div className="exclusive-detail__price-amount">{formatPrice(tour.price)}</div>
-                  <div className="exclusive-detail__price-note">od / os. · nezávazně</div>
+                  <div className="exclusive-detail__price-note">{t("xPriceNote")}</div>
                 </div>
               </div>
 
               {status === "sent" ? (
                 <div className="tour-inquiry-form tour-inquiry-form--success">
                   <CheckCircle size={32} />
-                  <h4>Děkujeme za zájem!</h4>
+                  <h4>{t("inquiryThanks")}</h4>
                   <p>
-                    Ozveme se do 24 hodin na <strong>{email}</strong>.
+                    {t("inquiryReplyTo")} <strong>{email}</strong>.
                   </p>
                 </div>
               ) : (
                 <form className="exclusive-detail__form" onSubmit={handleSubmit}>
                   <div className="exclusive-detail__form-head">
                     <Star size={14} />
-                    <span>Nezávazná poptávka</span>
+                    <span>{t("inquiryTitle")}</span>
                   </div>
 
                   <input
@@ -327,7 +326,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Telefon (volitelný)"
+                    placeholder={t("sInquiryPhone")}
                     className="tour-inquiry-form__input"
                   />
                   <div className="exclusive-detail__row">
@@ -335,7 +334,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                       type="text"
                       value={term}
                       onChange={(e) => setTerm(e.target.value)}
-                      placeholder="Preferovaný termín (např. 12.–19. 7.)"
+                      placeholder={t("xTermPlaceholder")}
                       className="tour-inquiry-form__input"
                     />
                     <input
@@ -343,14 +342,14 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                       inputMode="numeric"
                       value={persons}
                       onChange={(e) => setPersons(e.target.value)}
-                      placeholder="Osob (např. 2+1)"
+                      placeholder={t("xPersonsPlaceholder")}
                       className="tour-inquiry-form__input"
                     />
                   </div>
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Vaše přání — odlet z, strava, poznámky…"
+                    placeholder={t("xMessagePlaceholder")}
                     className="tour-inquiry-form__textarea"
                     rows={3}
                   />
@@ -376,14 +375,15 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
                   >
                     {status === "sending" ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> Odesílám…
+                        <Loader2 size={16} className="animate-spin" aria-hidden="true" />{" "}
+                        {t("formSending")}
                       </>
                     ) : (
-                      "Nezávazně poptat"
+                      t("xSubmit")
                     )}
                   </button>
                   <p className="exclusive-detail__trust">
-                    Odpovíme do 24 h · tel. +420 721 163 860
+                    {t("xReplyNote")} · tel. +420 721 163 860
                   </p>
                 </form>
               )}
@@ -394,7 +394,7 @@ export function ExclusiveTourDetailModal({ tour, lang, t, onClose }: Props) {
         {isMobile && (
           <div className="tour-detail-modal__sticky-cta">
             <button type="button" className="tour-detail-modal__cta-btn" onClick={scrollToInquiry}>
-              Nezávazně poptat
+              {t("xSubmit")}
             </button>
           </div>
         )}

@@ -89,7 +89,7 @@ export default function LeadPopup({
         <div className="lead-modal__content">
           <div className="lead-modal__badge">{t("leadBadge")}</div>
           <h3 id="lead-modal-title">
-            {prefilledQuery ? `Nenašli jste vhodný zájezd do ${prefilledQuery}?` : t("leadTitle")}
+            {prefilledQuery ? `${t("leadTitleFor")} ${prefilledQuery}?` : t("leadTitle")}
           </h3>
           <p>{t("leadDesc")}</p>
           {!leadSubmitted ? (

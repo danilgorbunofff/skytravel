@@ -260,7 +260,7 @@ export function SearchResultsSection({
         className={viewMode === "grid" ? "tour-grid" : "tour-list"}
         aria-busy={loading}
         role="region"
-        aria-label="Seznam zájezdů"
+        aria-label={t("sAriaTourList")}
         style={
           loading && result
             ? { opacity: 0.6, pointerEvents: "none", position: "relative" }
@@ -323,7 +323,7 @@ export function SearchResultsSection({
       )}
 
       {(!isMobile || mobileShowAll) && !showFavoritesOnly && result && totalPages > 1 && (
-        <nav className="search-pagination" aria-label="Stránkování">
+        <nav className="search-pagination" aria-label={t("sAriaPagination")}>
           <button
             type="button"
             className="search-pagination__arrow"
