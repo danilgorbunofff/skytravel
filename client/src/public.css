@@ -1,14 +1,6 @@
 /* Styles for the server-rendered public blocks (landing pages, trust, lead form,
    Telegram). Builds on the tokens from site.css. Prefix: .pub- */
 
-.hero-slide__img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .pub-main {
   min-height: 40vh;
 }
@@ -25,17 +17,19 @@
   margin: 0.5rem 0 0.75rem;
 }
 
+/* Same section-title style as .section-head h2 in site.css. */
 .pub-h2 {
   color: var(--blue-900);
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-size: clamp(1.9rem, 3.4vw, 3rem);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.05;
+  text-transform: uppercase;
   margin-bottom: 1rem;
 }
 
 .pub-muted {
   /* --muted is 3.9:1 on the tinted lead section; this is 5.5:1. */
-  color: #4e5f79;
+  color: var(--color-ink-muted);
   margin-bottom: 1rem;
 }
 
@@ -72,12 +66,12 @@
 }
 
 .pub-btn--primary {
-  background: var(--blue-900);
-  color: #fff;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
 }
 
 .pub-btn--primary:hover {
-  background: var(--blue-800);
+  background: var(--cta-bg-hover);
 }
 
 .pub-btn--primary:disabled {
@@ -86,12 +80,12 @@
 }
 
 .pub-btn--tg {
-  background: #1772a3;
+  background: var(--color-telegram);
   color: #fff;
 }
 
 .pub-btn--tg:hover {
-  background: #125d86;
+  background: var(--color-telegram-hover);
 }
 
 /* ── Landing hero ───────────────────────────────────── */
@@ -261,7 +255,7 @@
   align-items: center;
   gap: 0.4rem;
   min-height: 44px;
-  color: #125d86;
+  color: var(--color-telegram-hover);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -579,14 +573,14 @@
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 60;
+  z-index: var(--z-floating);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 52px;
   padding: 0 1.1rem;
   border-radius: 999px;
-  background: #1772a3;
+  background: var(--color-telegram);
   color: #fff;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(34, 158, 217, 0.45);
@@ -596,7 +590,7 @@
 }
 
 .pub-sticky-tg:hover {
-  background: #125d86;
+  background: var(--color-telegram-hover);
 }
 
 /* Out of the way while the inquiry form or the Telegram band is on screen. */

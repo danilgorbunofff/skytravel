@@ -58,4 +58,4 @@ Server tests need MySQL: `mysql -u root -e "CREATE DATABASE IF NOT EXISTS skytra
 
 - Lint is scoped to `client/src server/src bots/src e2e` (root `eslint .` crawled vendored tooling and was extremely slow).
 - Project lives under `~/Desktop`; if tooling is mysteriously slow, iCloud Desktop sync may be the cause.
-- Known lint warnings (4): react-refresh/only-export-components in ui/badge, ui/button, PublicTourCard; exhaustive-deps in TourDetailModal.
+- Known lint warnings (3): react-refresh/only-export-components in ui/badge, ui/button, PublicTourCard.

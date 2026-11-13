@@ -1,4 +1,7 @@
-:root {
+/* Scoped to while an admin layout is mounted: once loaded, this stylesheet stays in the
+   document, and unscoped it repainted the public site (same variable names) for the rest
+   of the session. :root keeps the values reachable from portalled dialogs and drawers. */
+:root:has(.admin-root) {
   --blue-900: #0f2f6d;
   --blue-700: #2a6bdc;
   --accent: #f2c94c;
@@ -14,7 +17,7 @@
   box-sizing: border-box;
 }
 
-body {
+body:has(.admin-root) {
   margin: 0;
   font-family: "Manrope", "Segoe UI", sans-serif;
   background: radial-gradient(circle at top, #f5f8ff, #e8eff9 55%, #e1e9f6);

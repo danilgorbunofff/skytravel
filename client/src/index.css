@@ -1,5 +1,44 @@
 @import "tailwindcss";
 
+/* ── Design tokens ────────────────────────────────────────────────────
+   One source for the public site (site.css / public.css) and the shadcn/Tailwind
+   screens. "static" keeps every variable on :root even when no utility uses it,
+   because the plain stylesheets reference them directly. */
+@theme static {
+  /* Brand: navy + blue + warm yellow. Conversion CTAs are yellow with navy text. */
+  --color-brand-navy: #123d8c;
+  --color-brand-navy-600: #1b4da8;
+  --color-brand-blue: #2666cb;
+  --color-brand-yellow: #f3d43b;
+  --color-brand-yellow-hover: #e6c52b;
+  --color-telegram: #1772a3;
+  --color-telegram-hover: #125d86;
+
+  /* Text and lines (slate). Ink 500 is the lightest text allowed on white (4.8:1). */
+  --color-ink: #223147;
+  --color-ink-900: #0f172a;
+  --color-ink-700: #334155;
+  --color-ink-600: #475569;
+  --color-ink-500: #64748b;
+  --color-ink-muted: #4e5f79;
+  --color-line: #d7e0ee;
+  --color-line-strong: #cbd5e1;
+  --color-line-soft: #e2e8f0;
+  --color-surface: #eef3fa;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-subtle: #f8fafc;
+
+  /* Status (text-safe on white and on their tints). */
+  --color-danger-ink: #b91c1c;
+  --color-success-ink: #15803d;
+
+  /* Stacking layers for page chrome; component internals keep small local values. */
+  --z-header: 50;
+  --z-floating: 100;
+  --z-overlay: 200;
+  --z-modal: 1000;
+}
+
 @theme {
   --color-background: #f8fafc;
   --color-foreground: #0f172a;
@@ -7,7 +46,7 @@
   --color-card-foreground: #0f172a;
   --color-popover: #ffffff;
   --color-popover-foreground: #0f172a;
-  --color-primary: #1e40af;
+  --color-primary: var(--color-brand-blue);
   --color-primary-foreground: #f8fafc;
   --color-secondary: #f1f5f9;
   --color-secondary-foreground: #0f172a;
@@ -19,7 +58,7 @@
   --color-destructive-foreground: #f8fafc;
   --color-border: #d1d5db;
   --color-input: #e2e8f0;
-  --color-ring: #3b82f6;
+  --color-ring: var(--color-brand-blue);
   --color-sidebar: #0f2f6d;
   --color-sidebar-foreground: #f3f6ff;
   --color-sidebar-accent: rgba(255, 255, 255, 0.2);

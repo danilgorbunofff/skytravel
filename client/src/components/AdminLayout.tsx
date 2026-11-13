@@ -39,7 +39,7 @@ export default function AdminLayout({
   }, []);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[260px_1fr]">
+    <div className="admin-root grid min-h-screen lg:grid-cols-[260px_1fr]">
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
         <div

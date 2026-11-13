@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
               this.props.onReset?.();
               this.setState({ hasError: false, error: undefined });
             }}
-            className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
+            className="rounded-md bg-primary px-4 py-2 text-white hover:bg-brand-navy"
           >
             Zkusit znovu
           </button>
